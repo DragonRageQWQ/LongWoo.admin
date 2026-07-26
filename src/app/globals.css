@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root {
+  --color-lw-black: #101010;
+  --color-lw-gray: #F3F3F3;
+  --color-lw-white: #FFFFFF;
+  --color-lw-accent: #2563EB;
+}
+
+@theme inline {
+  --color-lw-black: var(--color-lw-black);
+  --color-lw-gray: var(--color-lw-gray);
+  --color-lw-white: var(--color-lw-white);
+  --color-lw-accent: var(--color-lw-accent);
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  color: var(--color-lw-black);
+  background: var(--color-lw-white);
+}
