@@ -1,0 +1,825 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>购买自设兽装 - 第1步上传设定图 | LongWoo 工作室</title>
+    <style id="theme-vars">
+/* LongWoo Studio Design System */
+:root {
+  /* Colors */
+  --color-background: #FFFFFF;
+  --color-surface: #F3F3F3;
+  --color-primary: #101010;
+  --color-primary-light: rgba(16, 16, 16, 0.6);
+  --color-primary-lighter: rgba(16, 16, 16, 0.3);
+  --color-primary-lightest: rgba(16, 16, 16, 0.1);
+  --color-primary-lightest2: rgba(16, 16, 16, 0.05);
+  --color-border: rgba(16, 16, 16, 0.1);
+  --color-border-light: rgba(16, 16, 16, 0.05);
+  --color-success: #22C55E;
+  --color-error: #EF4444;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+
+  /* Semantic Brand Variables (required by fill-html-head.mjs, prefix: longwoo) */
+  --longwoo-background: #FFFFFF;
+  --longwoo-foreground: #101010;
+  --longwoo-primary: #101010;
+  --longwoo-card: #FFFFFF;
+  --longwoo-muted: #F3F3F3;
+  --longwoo-border: rgba(16, 16, 16, 0.1);
+  --longwoo-accent: #101010;
+
+  /* Semantic State Variables */
+  --state-success: #22C55E;
+  --state-error: #EF4444;
+  --state-warning: #F59E0B;
+  --state-info: #3B82F6;
+
+  /* Typography */
+  --font-family: 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+  --font-size-hero: 48px;
+  --line-height: 1.5;
+  --line-height-tight: 1.2;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Radius Aliases (required by fill-html-head.mjs, prefix: longwoo) */
+  --longwoo-radius-sm: 8px;
+  --longwoo-radius-md: 12px;
+  --longwoo-radius-lg: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.05);
+
+  /* Layout */
+  --nav-height: 56px;
+  --bottom-nav-height: 64px;
+  --content-max-width: 480px;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--longwoo-background);
+    --color-foreground: var(--longwoo-foreground);
+    --color-card: var(--longwoo-card);
+    --color-primary: var(--longwoo-primary);
+    --color-muted: var(--longwoo-muted);
+    --color-accent: var(--longwoo-accent);
+    --color-border: var(--longwoo-border);
+    --radius-sm: var(--longwoo-radius-sm);
+    --radius-md: var(--longwoo-radius-md);
+    --radius-lg: var(--longwoo-radius-lg);
+  }
+  @layer base {
+    body { background: var(--longwoo-background); color: var(--longwoo-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--longwoo-background); }
+      .text-background { color: var(--longwoo-background); }
+      .border-background { border-color: var(--longwoo-background); }
+      .ring-background { --tw-ring-color: var(--longwoo-background); }
+      .bg-foreground { background-color: var(--longwoo-foreground); }
+      .text-foreground { color: var(--longwoo-foreground); }
+      .border-foreground { border-color: var(--longwoo-foreground); }
+      .ring-foreground { --tw-ring-color: var(--longwoo-foreground); }
+      .bg-card { background-color: var(--longwoo-card); }
+      .text-card { color: var(--longwoo-card); }
+      .border-card { border-color: var(--longwoo-card); }
+      .ring-card { --tw-ring-color: var(--longwoo-card); }
+      .bg-primary { background-color: var(--longwoo-primary); }
+      .text-primary { color: var(--longwoo-primary); }
+      .border-primary { border-color: var(--longwoo-primary); }
+      .ring-primary { --tw-ring-color: var(--longwoo-primary); }
+      .bg-muted { background-color: var(--longwoo-muted); }
+      .text-muted { color: var(--longwoo-muted); }
+      .border-muted { border-color: var(--longwoo-muted); }
+      .ring-muted { --tw-ring-color: var(--longwoo-muted); }
+      .bg-accent { background-color: var(--longwoo-accent); }
+      .text-accent { color: var(--longwoo-accent); }
+      .border-accent { border-color: var(--longwoo-accent); }
+      .ring-accent { --tw-ring-color: var(--longwoo-accent); }
+      .bg-border { background-color: var(--longwoo-border); }
+      .text-border { color: var(--longwoo-border); }
+      .border-border { border-color: var(--longwoo-border); }
+      .ring-border { --tw-ring-color: var(--longwoo-border); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <div class="top-nav">
+    <button class="back-btn" aria-label="返回" onclick="history.back()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+    <span class="top-nav-title">购买自设兽装</span>
+    <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    </svg>
+  </div>
+
+  <!-- Info Section -->
+  <div class="info-section">
+    <h1 class="info-title">购买 自设兽装</h1>
+    <p class="info-subtitle">预计 4-6 周后交付*</p>
+    <p class="info-price">首次购置价格依照15000RMB-25000RMB区间计算</p>
+  </div>
+
+  <!-- Step Indicator -->
+  <div class="step-indicator">
+    <div class="step-item">
+      <div class="step-circle active">1</div>
+      <div class="step-label active">上传设定图</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item">
+      <div class="step-circle inactive">2</div>
+      <div class="step-label">选配内容</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item">
+      <div class="step-circle inactive">3</div>
+      <div class="step-label">折抵权益</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item">
+      <div class="step-circle inactive">4</div>
+      <div class="step-label">联系方式</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item">
+      <div class="step-circle inactive">5</div>
+      <div class="step-label">等待估价</div>
+    </div>
+  </div>
+
+  <!-- Main Content: Two Column Layout -->
+  <div class="main-content">
+    <!-- Left Column: Upload Zone -->
+    <div class="upload-column">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*" style="display:none;">
+        <div class="upload-placeholder" id="uploadPlaceholder">
+          <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            <polyline points="16 12 12 16 8 12"></polyline>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+          </svg>
+          <p class="upload-text">点击上传设定图</p>
+          <p class="upload-hint">支持 JPG / PNG / WEBP</p>
+        </div>
+        <div class="upload-preview" id="uploadPreview" style="display:none;">
+          <img id="previewImage" alt="设定图预览">
+          <button class="preview-remove" id="removeFile" aria-label="移除文件" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Form Content -->
+    <div class="form-column">
+      <h2 class="step-title">第一步：请上传设定图</h2>
+
+      <div class="upload-status" id="uploadStatus" style="display:none;">
+        <svg class="status-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span class="status-text">上传完成</span>
+      </div>
+
+      <div class="uploaded-file-info" id="fileInfo" style="display:none;">
+        <div class="file-name" id="fileName"></div>
+        <div class="file-size" id="fileSize"></div>
+      </div>
+
+      <button class="next-step-btn" id="nextStepBtn" type="button" disabled>下一步：选配内容</button>
+    </div>
+  </div>
+
+  <!-- Terms Section -->
+  <div class="terms-section">
+    <h3 class="terms-title">委托须知</h3>
+    <div class="terms-item">条款一（待定）</div>
+    <div class="terms-item">条款二（待定）</div>
+    <div class="terms-item">条款三（待定）</div>
+  </div>
+
+  <!-- Bottom Spacer -->
+  <div class="bottom-spacer"></div>
+
+  <!-- Bottom Navigation -->
+  <div class="bottom-nav">
+    <button class="nav-item active" aria-label="首页" onclick="window.location.href='index.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>首页</span>
+    </button>
+    <button class="nav-item" aria-label="产品">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+      </svg>
+      <span>产品</span>
+    </button>
+    <button class="nav-item" aria-label="估价">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"></line>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+      </svg>
+      <span>估价</span>
+    </button>
+    <button class="nav-item" aria-label="订单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+      <span>订单</span>
+    </button>
+    <button class="nav-item" aria-label="我的">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>我的</span>
+    </button>
+  </div>
+
+
+    <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--color-background);
+      color: var(--color-primary);
+      line-height: var(--line-height);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      max-width: var(--content-max-width);
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Top navigation bar */
+    .top-nav {
+      height: var(--nav-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-md);
+      border-bottom: 1px solid var(--color-border-light);
+    }
+
+    .back-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--color-primary);
+    }
+
+    .top-nav-title {
+      font-size: var(--font-size-md);
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+
+    .lock-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--color-primary);
+    }
+
+    /* Info section */
+    .info-section {
+      padding: var(--space-lg) var(--space-md) var(--space-md);
+    }
+
+    .info-title {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .info-subtitle {
+      font-size: var(--font-size-sm);
+      color: var(--color-primary-light);
+      margin-bottom: var(--space-xs);
+    }
+
+    .info-price {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-lighter);
+      line-height: 1.6;
+    }
+
+    /* Step indicator */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-md) var(--space-lg);
+      margin: var(--space-md) var(--space-md);
+      background-color: var(--color-surface);
+      border-radius: var(--radius-md);
+    }
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      position: relative;
+    }
+
+    .step-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      margin-bottom: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .step-circle.active {
+      background-color: var(--color-primary);
+      color: var(--color-background);
+    }
+
+    .step-circle.inactive {
+      background-color: var(--color-border);
+      color: var(--color-primary-lighter);
+    }
+
+    .step-label {
+      font-size: 10px;
+      color: var(--color-primary-lighter);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .step-label.active {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background-color: var(--color-border);
+      margin: 0 4px;
+      margin-bottom: 20px;
+    }
+
+    /* Main content area - two column layout */
+    .main-content {
+      display: flex;
+      padding: var(--space-md);
+      gap: var(--space-md);
+    }
+
+    /* Left column - upload area */
+    .upload-column {
+      flex: 0 0 40%;
+      max-width: 40%;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg) var(--space-sm);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 260px;
+      background-color: var(--color-surface);
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      position: relative;
+    }
+
+    .upload-zone:hover {
+      border-color: var(--color-primary-lighter);
+    }
+
+    .upload-zone.uploaded {
+      border-style: solid;
+      border-color: var(--color-success);
+      background-color: rgba(34, 197, 94, 0.04);
+    }
+
+    .upload-icon {
+      width: 48px;
+      height: 48px;
+      color: var(--color-primary-lighter);
+      margin-bottom: var(--space-md);
+    }
+
+    .upload-zone.uploaded .upload-icon {
+      color: var(--color-success);
+    }
+
+    .upload-text {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-lighter);
+      line-height: 1.6;
+    }
+
+    .upload-zone.uploaded .upload-text {
+      color: var(--color-primary-light);
+    }
+
+    /* Right column - form area */
+    .form-column {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .step-title {
+      font-size: var(--font-size-md);
+      font-weight: 600;
+      color: var(--color-primary);
+      margin-bottom: var(--space-lg);
+      line-height: var(--line-height-tight);
+    }
+
+    .upload-status {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-md);
+      background-color: rgba(34, 197, 94, 0.08);
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--space-md);
+    }
+
+    .status-check {
+      width: 20px;
+      height: 20px;
+      color: var(--color-success);
+      flex-shrink: 0;
+    }
+
+    .status-text {
+      font-size: var(--font-size-sm);
+      color: var(--color-success);
+      font-weight: 500;
+    }
+
+    .uploaded-file-info {
+      padding: var(--space-sm);
+      background-color: var(--color-surface);
+      border-radius: var(--radius-sm);
+      margin-top: var(--space-sm);
+    }
+
+    .file-name {
+      font-size: var(--font-size-sm);
+      color: var(--color-primary);
+      font-weight: 500;
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-size {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-lighter);
+    }
+
+    /* Terms section */
+    .terms-section {
+      padding: var(--space-md) var(--space-md);
+      margin-top: var(--space-md);
+      border-top: 1px solid var(--color-border-light);
+    }
+
+    .terms-title {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--color-primary);
+      margin-bottom: var(--space-md);
+    }
+
+    .terms-item {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-lighter);
+      line-height: 1.8;
+      padding-left: var(--space-md);
+      position: relative;
+      margin-bottom: var(--space-xs);
+    }
+
+    .terms-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background-color: var(--color-primary-lighter);
+    }
+
+    /* Bottom navigation */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: var(--content-max-width);
+      height: var(--bottom-nav-height);
+      background-color: var(--color-background);
+      border-top: 1px solid var(--color-border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      z-index: 100;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      background: none;
+      padding: var(--space-xs) var(--space-sm);
+    }
+
+    .nav-item svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .nav-item span {
+      font-size: 10px;
+      color: var(--color-primary-lighter);
+    }
+
+    .nav-item.active svg {
+      color: var(--color-primary);
+    }
+
+    .nav-item.active span {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    /* Bottom spacer */
+    .bottom-spacer {
+      height: calc(var(--bottom-nav-height) + var(--space-lg));
+    }
+
+    /* Upload placeholder hint */
+    .upload-hint {
+      font-size: 10px;
+      color: var(--color-primary-lighter);
+      margin-top: 4px;
+    }
+
+    /* Upload preview */
+    .upload-preview {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .upload-preview img {
+      max-width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+    }
+
+    .preview-remove {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background-color: rgba(16, 16, 16, 0.7);
+      color: #fff;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .preview-remove:hover {
+      background-color: var(--color-error);
+    }
+
+    /* Next step button */
+    .next-step-btn {
+      display: block;
+      width: 100%;
+      padding: var(--space-md);
+      margin-top: var(--space-lg);
+      background-color: var(--color-primary);
+      color: var(--color-background);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .next-step-btn:disabled {
+      background-color: var(--color-border);
+      color: var(--color-primary-lighter);
+      cursor: not-allowed;
+    }
+
+    .next-step-btn:not(:disabled):hover {
+      opacity: 0.85;
+    }
+  </style>
+
+  <script>
+    (function() {
+      // 每次进入页面都重置上传状态（不持久化）
+      var fileInput = document.getElementById('fileInput');
+      var uploadZone = document.getElementById('uploadZone');
+      var uploadPlaceholder = document.getElementById('uploadPlaceholder');
+      var uploadPreview = document.getElementById('uploadPreview');
+      var previewImage = document.getElementById('previewImage');
+      var removeFile = document.getElementById('removeFile');
+      var uploadStatus = document.getElementById('uploadStatus');
+      var fileInfo = document.getElementById('fileInfo');
+      var fileName = document.getElementById('fileName');
+      var fileSize = document.getElementById('fileSize');
+      var nextStepBtn = document.getElementById('nextStepBtn');
+
+      function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+      }
+
+      function showFile(file) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var dataUrl = e.target.result;
+          previewImage.src = dataUrl;
+          uploadPlaceholder.style.display = 'none';
+          uploadPreview.style.display = 'flex';
+          uploadZone.classList.add('uploaded');
+          uploadStatus.style.display = 'flex';
+          fileName.textContent = file.name;
+          fileSize.textContent = formatSize(file.size);
+          fileInfo.style.display = 'block';
+          nextStepBtn.disabled = false;
+          // 保存到 sessionStorage 供后续步骤页面读取
+          try {
+            sessionStorage.setItem('longwoo_design_ref_image', dataUrl);
+            sessionStorage.setItem('longwoo_design_ref_name', file.name);
+            sessionStorage.setItem('longwoo_design_ref_size', formatSize(file.size));
+          } catch (err) {
+            // 存储失败时忽略，不影响当前页预览
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function resetUpload() {
+        fileInput.value = '';
+        previewImage.src = '';
+        uploadPlaceholder.style.display = 'flex';
+        uploadPreview.style.display = 'none';
+        uploadZone.classList.remove('uploaded');
+        uploadStatus.style.display = 'none';
+        fileName.textContent = '';
+        fileSize.textContent = '';
+        fileInfo.style.display = 'none';
+        nextStepBtn.disabled = true;
+        // 清除存储，保持状态一致
+        try {
+          sessionStorage.removeItem('longwoo_design_ref_image');
+          sessionStorage.removeItem('longwoo_design_ref_name');
+          sessionStorage.removeItem('longwoo_design_ref_size');
+        } catch (err) {}
+      }
+
+      // 点击上传区域触发文件选择
+      uploadZone.addEventListener('click', function(e) {
+        // 避免点击移除按钮时触发
+        if (e.target.closest('.preview-remove')) return;
+        fileInput.click();
+      });
+
+      // 文件选择后显示预览
+      fileInput.addEventListener('change', function() {
+        if (fileInput.files && fileInput.files[0]) {
+          showFile(fileInput.files[0]);
+        }
+      });
+
+      // 移除已上传文件
+      removeFile.addEventListener('click', function(e) {
+        e.stopPropagation();
+        resetUpload();
+      });
+
+      // 下一步跳转
+      nextStepBtn.addEventListener('click', function() {
+        if (!nextStepBtn.disabled) {
+          window.location.href = 'order-step2.html';
+        }
+      });
+
+      // 页面加载时确保重置（不保留上次的上传状态）
+      window.addEventListener('pageshow', function(event) {
+        // 如果是从 bfcache 恢复，也重置
+        resetUpload();
+      });
+    })();
+  </script>
+</body>
+</html>

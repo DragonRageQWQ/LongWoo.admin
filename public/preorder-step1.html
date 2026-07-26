@@ -1,0 +1,600 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>购买预设兽装 - 第1步选择设定 | LongWoo 工作室</title>
+    <style id="theme-vars">
+/* LongWoo Studio Design System */
+:root {
+  /* Colors */
+  --color-background: #FFFFFF;
+  --color-surface: #F3F3F3;
+  --color-primary: #101010;
+  --color-primary-light: rgba(16, 16, 16, 0.6);
+  --color-primary-lighter: rgba(16, 16, 16, 0.3);
+  --color-primary-lightest: rgba(16, 16, 16, 0.1);
+  --color-primary-lightest2: rgba(16, 16, 16, 0.05);
+  --color-border: rgba(16, 16, 16, 0.1);
+  --color-border-light: rgba(16, 16, 16, 0.05);
+  --color-success: #22C55E;
+  --color-error: #EF4444;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+
+  /* Semantic Brand Variables (required by fill-html-head.mjs, prefix: longwoo) */
+  --longwoo-background: #FFFFFF;
+  --longwoo-foreground: #101010;
+  --longwoo-primary: #101010;
+  --longwoo-card: #FFFFFF;
+  --longwoo-muted: #F3F3F3;
+  --longwoo-border: rgba(16, 16, 16, 0.1);
+  --longwoo-accent: #101010;
+
+  /* Semantic State Variables */
+  --state-success: #22C55E;
+  --state-error: #EF4444;
+  --state-warning: #F59E0B;
+  --state-info: #3B82F6;
+
+  /* Typography */
+  --font-family: 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+  --font-size-hero: 48px;
+  --line-height: 1.5;
+  --line-height-tight: 1.2;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Radius Aliases (required by fill-html-head.mjs, prefix: longwoo) */
+  --longwoo-radius-sm: 8px;
+  --longwoo-radius-md: 12px;
+  --longwoo-radius-lg: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.05);
+
+  /* Layout */
+  --nav-height: 56px;
+  --bottom-nav-height: 64px;
+  --content-max-width: 480px;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--longwoo-background);
+    --color-foreground: var(--longwoo-foreground);
+    --color-card: var(--longwoo-card);
+    --color-primary: var(--longwoo-primary);
+    --color-muted: var(--longwoo-muted);
+    --color-accent: var(--longwoo-accent);
+    --color-border: var(--longwoo-border);
+    --radius-sm: var(--longwoo-radius-sm);
+    --radius-md: var(--longwoo-radius-md);
+    --radius-lg: var(--longwoo-radius-lg);
+  }
+  @layer base {
+    body { background: var(--longwoo-background); color: var(--longwoo-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--longwoo-background); }
+      .text-background { color: var(--longwoo-background); }
+      .border-background { border-color: var(--longwoo-background); }
+      .ring-background { --tw-ring-color: var(--longwoo-background); }
+      .bg-foreground { background-color: var(--longwoo-foreground); }
+      .text-foreground { color: var(--longwoo-foreground); }
+      .border-foreground { border-color: var(--longwoo-foreground); }
+      .ring-foreground { --tw-ring-color: var(--longwoo-foreground); }
+      .bg-card { background-color: var(--longwoo-card); }
+      .text-card { color: var(--longwoo-card); }
+      .border-card { border-color: var(--longwoo-card); }
+      .ring-card { --tw-ring-color: var(--longwoo-card); }
+      .bg-primary { background-color: var(--longwoo-primary); }
+      .text-primary { color: var(--longwoo-primary); }
+      .border-primary { border-color: var(--longwoo-primary); }
+      .ring-primary { --tw-ring-color: var(--longwoo-primary); }
+      .bg-muted { background-color: var(--longwoo-muted); }
+      .text-muted { color: var(--longwoo-muted); }
+      .border-muted { border-color: var(--longwoo-muted); }
+      .ring-muted { --tw-ring-color: var(--longwoo-muted); }
+      .bg-accent { background-color: var(--longwoo-accent); }
+      .text-accent { color: var(--longwoo-accent); }
+      .border-accent { border-color: var(--longwoo-accent); }
+      .ring-accent { --tw-ring-color: var(--longwoo-accent); }
+      .bg-border { background-color: var(--longwoo-border); }
+      .text-border { color: var(--longwoo-border); }
+      .border-border { border-color: var(--longwoo-border); }
+      .ring-border { --tw-ring-color: var(--longwoo-border); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <div class="top-nav">
+    <button class="back-btn" aria-label="返回" onclick="history.back()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+    <span class="top-nav-title">购买预设兽装</span>
+    <div class="top-nav-placeholder"></div>
+  </div>
+
+  <!-- Info Section -->
+  <div class="info-section">
+    <h1 class="info-title">购买 预设兽装 (掉落)</h1>
+    <p class="info-subtitle">成品部分立即交付 剩余部分预计 4-6 周后交付*</p>
+    <p class="info-price">购置价格依照每件设定单独定价计算</p>
+  </div>
+
+  <!-- Step Indicator -->
+  <div class="step-indicator">
+    <div class="step-item">
+      <div class="step-circle active">1</div>
+      <div class="step-label active">选择设定</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item">
+      <div class="step-circle inactive">2</div>
+      <div class="step-label">联系方式</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item">
+      <div class="step-circle inactive">3</div>
+      <div class="step-label">等待确认</div>
+    </div>
+  </div>
+
+  <!-- Product Cards List -->
+  <div class="product-list">
+
+    <!-- Product 1: 百丈冰 -->
+    <div class="product-card">
+      <img class="product-card-image" src="assets/image_7_yi19x4.jpg" alt="百丈冰">
+      <div class="product-card-body">
+        <div class="product-card-price">RMB 35,000 / 百丈冰</div>
+        <div class="product-card-info">含 双视图/标准全装/定制外衣/定制道具</div>
+        <div class="product-card-copyright">全部版权&copy;&️转让/可商用*</div>
+        <div class="product-card-delivery">
+          成品部分（含头/手）立即交付<br>
+          剩余部分预计 4-6 周后交付*
+        </div>
+      </div>
+      <button class="select-btn" onclick="window.location.href='preorder-step2.html'">选择</button>
+    </div>
+
+    <!-- Product 2: 千钧破 -->
+    <div class="product-card">
+      <img class="product-card-image" src="assets/image_8_yi19x4.jpg" alt="千钧破">
+      <div class="product-card-body">
+        <div class="product-card-price">RMB 32,000 / 千钧破</div>
+        <div class="product-card-info">含 双视图/标准全装/定制外衣/定制道具</div>
+        <div class="product-card-copyright">部分版权&copy;&️转让/不可商用*</div>
+        <div class="product-card-delivery">
+          成品部分立即交付 剩余部分预计 4-6 周后交付*
+        </div>
+      </div>
+      <button class="select-btn" onclick="window.location.href='preorder-step2.html'">选择</button>
+    </div>
+
+    <!-- Product 3: 万里凝 -->
+    <div class="product-card">
+      <img class="product-card-image" src="assets/image_9_yi19x4.jpg" alt="万里凝">
+      <div class="product-card-body">
+        <div class="product-card-price">RMB 32,000 / 万里凝</div>
+        <div class="product-card-info">含 双视图/标准全装/定制外衣/定制道具</div>
+        <div class="product-card-copyright">全部版权&copy;&️转让/不可商用*</div>
+        <div class="product-card-delivery">
+          成品部分立即交付 剩余部分预计 4-6 周后交付*
+        </div>
+      </div>
+      <button class="select-btn" onclick="window.location.href='preorder-step2.html'">选择</button>
+    </div>
+
+  </div>
+
+  <!-- Bottom Spacer -->
+  <div class="bottom-spacer"></div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+
+    <!-- 购买兽装 -->
+    <a href="index.html" class="nav-item">
+      <div class="nav-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 2L3 6V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V6L18 2H6Z"/>
+          <path d="M3 6H21"/>
+          <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10"/>
+        </svg>
+      </div>
+      <span class="nav-item-label">购买兽装</span>
+    </a>
+
+    <!-- 购买兽装现货 -->
+    <a href="#" class="nav-item">
+      <div class="nav-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </div>
+      <span class="nav-item-label">购买现货</span>
+    </a>
+
+    <!-- 购买掉落 -->
+    <a href="#" class="nav-item active">
+      <div class="nav-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#101010" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L12 16"/>
+          <path d="M12 16L7 11"/>
+          <path d="M12 16L17 11"/>
+          <path d="M4 19H20"/>
+        </svg>
+      </div>
+      <span class="nav-item-label">购买掉落</span>
+    </a>
+
+    <!-- 查询进度&售后 -->
+    <a href="#" class="nav-item">
+      <div class="nav-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 7V12L15 15"/>
+        </svg>
+      </div>
+      <span class="nav-item-label">进度&售后</span>
+    </a>
+
+    <!-- 我的订单 -->
+    <a href="#" class="nav-item">
+      <div class="nav-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"/>
+          <path d="M14 2V8H20"/>
+          <path d="M8 13H16"/>
+          <path d="M8 17H12"/>
+        </svg>
+      </div>
+      <span class="nav-item-label">我的订单</span>
+    </a>
+
+  </nav>
+
+
+    <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--color-background);
+      color: var(--color-primary);
+      line-height: var(--line-height);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      max-width: var(--content-max-width);
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Top navigation bar */
+    .top-nav {
+      height: var(--nav-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-md);
+      border-bottom: 1px solid var(--color-border-light);
+    }
+
+    .back-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--color-primary);
+    }
+
+    .top-nav-title {
+      font-size: var(--font-size-md);
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+
+    .top-nav-placeholder {
+      width: 32px;
+    }
+
+    /* Info section */
+    .info-section {
+      padding: var(--space-lg) var(--space-md) var(--space-md);
+    }
+
+    .info-title {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .info-subtitle {
+      font-size: var(--font-size-sm);
+      color: var(--color-primary-light);
+      margin-bottom: var(--space-xs);
+    }
+
+    .info-price {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-lighter);
+      line-height: 1.6;
+    }
+
+    /* Step indicator */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-md) var(--space-lg);
+      margin: var(--space-md) var(--space-md);
+      background-color: var(--color-surface);
+      border-radius: var(--radius-md);
+    }
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      position: relative;
+    }
+
+    .step-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      margin-bottom: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .step-circle.active {
+      background-color: var(--color-primary);
+      color: var(--color-background);
+    }
+
+    .step-circle.inactive {
+      background-color: var(--color-border);
+      color: var(--color-primary-lighter);
+    }
+
+    .step-label {
+      font-size: 10px;
+      color: var(--color-primary-lighter);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .step-label.active {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background-color: var(--color-border);
+      margin: 0 4px;
+      margin-bottom: 20px;
+    }
+
+    /* Product cards list */
+    .product-list {
+      padding: 0 var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    /* Product card */
+    .product-card {
+      background-color: var(--color-background);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      border: 1px solid var(--color-border-light);
+      transition: box-shadow 0.2s ease;
+    }
+
+    .product-card:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    .product-card-image {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      display: block;
+      background-color: var(--color-surface);
+    }
+
+    .product-card-body {
+      padding: var(--space-md);
+    }
+
+    .product-card-price {
+      font-size: var(--font-size-md);
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .product-card-info {
+      font-size: var(--font-size-sm);
+      color: var(--color-primary-light);
+      line-height: 1.6;
+      margin-bottom: var(--space-xs);
+    }
+
+    .product-card-copyright {
+      font-size: var(--font-size-sm);
+      color: var(--color-primary-light);
+      line-height: 1.6;
+      margin-bottom: var(--space-xs);
+    }
+
+    .product-card-delivery {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-lighter);
+      line-height: 1.8;
+    }
+
+    /* Select button */
+    .select-btn {
+      display: block;
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      background-color: var(--color-primary);
+      color: #FFFFFF;
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      border: none;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: opacity 0.2s ease;
+      margin: var(--space-md) calc(var(--space-md) * -1) 0;
+      padding: var(--space-md);
+      box-sizing: border-box;
+    }
+
+    .select-btn:hover {
+      opacity: 0.85;
+    }
+
+    /* Bottom spacer */
+    .bottom-spacer {
+      height: calc(var(--bottom-nav-height) + var(--space-lg));
+    }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: var(--content-max-width);
+      height: var(--bottom-nav-height);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--color-border-light);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 var(--space-xs);
+      box-sizing: border-box;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      text-decoration: none;
+      cursor: pointer;
+      padding: var(--space-xs);
+      min-width: 60px;
+      border: none;
+      background: none;
+    }
+
+    .nav-item-icon {
+      width: 22px;
+      height: 22px;
+    }
+
+    .nav-item-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .nav-item-label {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-light);
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    .nav-item.active .nav-item-label {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .nav-item.active .nav-item-icon svg {
+      stroke: var(--color-primary);
+    }
+  </style>
+</body>
+</html>
