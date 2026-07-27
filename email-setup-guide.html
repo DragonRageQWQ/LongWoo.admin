@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resend 域名验证 & Supabase 邮件模板配置指南</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', -apple-system, sans-serif;
+      background: #F3F3F3;
+      color: #101010;
+      line-height: 1.7;
+      padding: 0;
+    }
+    .header {
+      background: #0D3B3B;
+      color: #fff;
+      padding: 48px 24px;
+      text-align: center;
+    }
+    .header h1 { font-size: 28px; font-weight: 700; letter-spacing: 1px; }
+    .header p { font-size: 14px; opacity: 0.7; margin-top: 8px; }
+    .container {
+      max-width: 800px;
+      margin: -24px auto 48px;
+      padding: 0 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: #0D3B3B;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: 700;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .step-title {
+      display: flex;
+      align-items: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: #0D3B3B;
+      margin-bottom: 16px;
+    }
+    .step-content { padding-left: 44px; }
+    .step-content p { margin-bottom: 12px; color: #444; font-size: 15px; }
+    .step-content ol { margin: 12px 0 12px 20px; color: #444; font-size: 15px; }
+    .step-content ol li { margin-bottom: 8px; }
+    .step-content ul { margin: 12px 0 12px 20px; color: #444; font-size: 15px; }
+    .step-content ul li { margin-bottom: 8px; }
+    .highlight {
+      background: #F0F7F7;
+      border-left: 3px solid #0D3B3B;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 12px 0;
+      font-size: 14px;
+      color: #0D3B3B;
+    }
+    .warning {
+      background: #FFF7ED;
+      border-left: 3px solid #EA580C;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 12px 0;
+      font-size: 14px;
+      color: #9A3412;
+    }
+    .success {
+      background: #F0FDF4;
+      border-left: 3px solid #16A34A;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 12px 0;
+      font-size: 14px;
+      color: #15803D;
+    }
+    code {
+      background: #f5f5f5;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+      color: #0D3B3B;
+    }
+    .code-block {
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 12px 0;
+      font-size: 13px;
+      font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+    .divider {
+      height: 1px;
+      background: #EEE;
+      margin: 24px 0;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 6px;
+    }
+    .tag-resend { background: #EEF2FF; color: #4338CA; }
+    .tag-supabase { background: #ECFDF5; color: #047857; }
+    .tag-vercel { background: #FFF7ED; color: #C2410C; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .summary-item {
+      background: #FAFAFA;
+      border: 1px solid #EEE;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .summary-item .icon { font-size: 28px; margin-bottom: 8px; }
+    .summary-item .label { font-size: 13px; color: #888; }
+    .summary-item .value { font-size: 15px; font-weight: 600; color: #0D3B3B; margin-top: 4px; }
+    .footer {
+      text-align: center;
+      padding: 24px;
+      color: #999;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Resend 域名验证 & Supabase 邮件模板配置指南</h1>
+    <p>LongWoo 龙坞 — 邮箱验证码服务完整配置流程</p>
+  </div>
+
+  <div class="container">
+
+    <!-- 概览 -->
+    <div class="card">
+      <div class="step-title">
+        <span class="step-number">0</span>
+        配置概览
+      </div>
+      <div class="step-content">
+        <p>本指南将引导你完成以下操作，使所有用户邮箱都能收到带有 LongWoo 品牌样式的验证码邮件：</p>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="icon">1</div>
+            <div class="label">检查 Resend 域名状态</div>
+            <div class="value">longwoo.studio</div>
+          </div>
+          <div class="summary-item">
+            <div class="icon">2</div>
+            <div class="label">更新 Supabase SMTP</div>
+            <div class="value">发件邮箱</div>
+          </div>
+          <div class="summary-item">
+            <div class="icon">3</div>
+            <div class="label">替换邮件模板</div>
+            <div class="value">LongWoo 品牌</div>
+          </div>
+          <div class="summary-item">
+            <div class="icon">4</div>
+            <div class="label">配置环境变量</div>
+            <div class="value">Vercel + 本地</div>
+          </div>
+          <div class="summary-item">
+            <div class="icon">5</div>
+            <div class="label">测试验证码</div>
+            <div class="value">发送测试</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 步骤 1 -->
+    <div class="card">
+      <div class="step-title">
+        <span class="step-number">1</span>
+        检查 Resend 域名验证状态 <span class="tag tag-resend">Resend</span>
+      </div>
+      <div class="step-content">
+        <p>你已在腾讯云 DNSPod 添加了 4 条 DNS 记录（DKIM、SPF MX、SPF TXT、DMARC）。现在需要确认 Resend 是否已验证通过：</p>
+        <ol>
+          <li>打开 <a href="https://resend.com/domains" target="_blank" style="color:#0D3B3B;">https://resend.com/domains</a> 并登录</li>
+          <li>找到 <code>longwoo.studio</code> 域名记录</li>
+          <li>查看状态列：
+            <ul>
+              <li><strong style="color:#16A34A;">Verified（已验证）</strong> — DNS 记录已生效，可以继续下一步</li>
+              <li><strong style="color:#EA580C;">Pending（等待中）</strong> — DNS 传播中，通常需要 5~30 分钟，请等待后刷新页面</li>
+              <li><strong style="color:#DC2626;">Failed（失败）</strong> — DNS 记录可能有误，点击域名查看详情，对比记录值是否正确</li>
+            </ul>
+          </li>
+          <li>如果状态仍为 Pending，可以点击域名进入详情页，查看每条记录的验证状态</li>
+        </ol>
+        <div class="highlight">
+          <strong>提示：</strong>DNS 传播通常需要几分钟到半小时。如果超过 1 小时仍未验证，请检查 DNS 记录的值是否与 Resend 提供的完全一致。
+        </div>
+      </div>
+    </div>
+
+    <!-- 步骤 2 -->
+    <div class="card">
+      <div class="step-title">
+        <span class="step-number">2</span>
+        更新 Supabase SMTP 发件邮箱 <span class="tag tag-supabase">Supabase</span>
+      </div>
+      <div class="step-content">
+        <p>域名验证通过后，需要将 Supabase 的 SMTP 发件邮箱从 <code>onboarding@resend.dev</code> 改为 <code>noreply@longwoo.studio</code>：</p>
+        <ol>
+          <li>打开 <a href="https://supabase.com/dashboard" target="_blank" style="color:#0D3B3B;">Supabase Dashboard</a> 并登录</li>
+          <li>选择你的项目（vwxdjdmvgbfbpivpvxdg）</li>
+          <li>左侧菜单点击 <strong>Authentication</strong> → <strong>Providers</strong></li>
+          <li>找到 <strong>Email</strong> 并展开</li>
+          <li>滚动到 <strong>SMTP Settings</strong> 区域</li>
+          <li>如果之前已启用自定义 SMTP，直接修改以下字段：</li>
+        </ol>
+        <div class="code-block">
+Host:       smtp.resend.com
+Port:       465
+Username:   resend
+Password:   [你的 Resend API Key]
+Sender email: <strong style="color:#4ADE80;">noreply@longwoo.studio</strong>
+Sender name:  LongWoo 龙坞
+        </div>
+        <ol start="7">
+          <li>将 <strong>Sender email</strong> 从 <code>onboarding@resend.dev</code> 改为 <code>noreply@longwoo.studio</code></li>
+          <li>将 <strong>Sender name</strong> 设为 <code>LongWoo 龙坞</code></li>
+          <li>点击 <strong>Save</strong> 保存</li>
+        </ol>
+        <div class="warning">
+          <strong>重要：</strong>如果 Resend 域名状态还是 Pending，请不要修改发件邮箱。<code>onboarding@resend.dev</code> 只能发送到已验证的邮箱，而 <code>noreply@longwoo.studio</code> 在域名验证通过后可以向任意邮箱发送。
+        </div>
+      </div>
+    </div>
+
+    <!-- 步骤 3 -->
+    <div class="card">
+      <div class="step-title">
+        <span class="step-number">3</span>
+        替换 Supabase 邮件模板（两个都要替换！）<span class="tag tag-supabase">Supabase</span>
+      </div>
+      <div class="step-content">
+        <div class="warning" style="margin-bottom:16px;">
+          <strong>关键：</strong>Supabase 有多个邮件模板。<strong>Confirm signup</strong>（新用户注册时触发）和 <strong>Magic Link</strong>（已有用户登录时触发）<strong>两个模板都必须替换</strong>，否则新用户会收到默认的英文确认链接邮件，而不是验证码。
+        </div>
+
+        <p><strong>3.1 替换 Confirm signup 模板（新用户首次登录时使用）：</strong></p>
+        <ol>
+          <li>在 Supabase Dashboard 左侧菜单点击 <strong>Authentication</strong> → <strong>Email Templates</strong></li>
+          <li>选择 <strong>Confirm signup</strong> 模板</li>
+          <li>将 <strong>Subject</strong> 修改为：<code>【LongWoo 龙坞】您的登录验证码</code></li>
+          <li>将 <strong>Message body</strong> 中的内容<strong>全部清空</strong></li>
+          <li>打开项目根目录下的 <code>supabase-email-template.html</code> 文件</li>
+          <li>复制文件中的<strong>全部 HTML 内容</strong></li>
+          <li>粘贴到 Supabase 的 <strong>Message body</strong> 输入框中</li>
+          <li>点击 <strong>Save</strong> 保存</li>
+        </ol>
+
+        <div class="divider"></div>
+
+        <p><strong>3.2 替换 Magic Link 模板（已有用户登录时使用）：</strong></p>
+        <ol>
+          <li>在同一个 Email Templates 页面，选择 <strong>Magic Link</strong> 模板</li>
+          <li>将 <strong>Subject</strong> 修改为：<code>【LongWoo 龙坞】您的登录验证码</code></li>
+          <li>将 <strong>Message body</strong> 中的内容<strong>全部清空</strong></li>
+          <li>将刚才复制的 <code>supabase-email-template.html</code> 内容<strong>同样粘贴</strong>到这里</li>
+          <li>点击 <strong>Save</strong> 保存</li>
+        </ol>
+
+        <div class="highlight">
+          <strong>模板说明：</strong>模板中的 <code>{{ .Token }}</code> 是 Supabase 的模板变量，发送邮件时会自动替换为实际的 6 位验证码。两个模板使用相同的 HTML 内容即可，请勿修改此变量。
+        </div>
+
+        <div class="warning">
+          <strong>为什么收到的是确认链接？</strong>因为 <strong>Confirm signup</strong> 模板还没替换。当新邮箱首次使用 <code>signInWithOtp</code> 登录时，Supabase 会使用 Confirm signup 模板发送邮件。只有替换了该模板并使用 <code>{{ .Token }}</code> 变量，才会发送数字验证码而非链接。
+        </div>
+
+        <p>你也可以先打开 <code>supabase-email-preview.html</code> 在浏览器中预览邮件效果（使用示例验证码 839214）。模板已改用纯文字 Logo，不依赖外部图片，不会被 QQ 邮箱等邮件客户端拦截。</p>
+      </div>
+    </div>
+
+    <!-- 步骤 4 -->
+    <div class="card">
+      <div class="step-title">
+        <span class="step-number">4</span>
+        配置环境变量 <span class="tag tag-vercel">Vercel</span>
+      </div>
+      <div class="step-content">
+        <p>订单回复通知邮件通过 Resend API 直接发送，需要配置 API Key：</p>
+
+        <p><strong>4.1 获取 Resend API Key：</strong></p>
+        <ol>
+          <li>打开 <a href="https://resend.com/api-keys" target="_blank" style="color:#0D3B3B;">https://resend.com/api-keys</a></li>
+          <li>点击 <strong>Create API Key</strong></li>
+          <li>Name 填入 <code>longwoo-platform</code></li>
+          <li>Permission 选择 <strong>Full Access</strong> 或 <strong>Sending Access</strong></li>
+          <li>点击 <strong>Create</strong>，复制生成的 API Key（以 <code>re_</code> 开头）</li>
+        </ol>
+
+        <p><strong>4.2 配置 Vercel 环境变量（线上环境）：</strong></p>
+        <ol>
+          <li>打开 <a href="https://vercel.com/dashboard" target="_blank" style="color:#0D3B3B;">Vercel Dashboard</a></li>
+          <li>选择 longwoo-platform 项目</li>
+          <li>进入 <strong>Settings</strong> → <strong>Environment Variables</strong></li>
+          <li>添加以下两个变量：</li>
+        </ol>
+        <div class="code-block">
+Key:   RESEND_API_KEY
+Value: re_你的API密钥
+
+Key:   RESEND_FROM_EMAIL
+Value: noreply@longwoo.studio
+        </div>
+        <ol start="5">
+          <li>添加完成后，进入 <strong>Deployments</strong> → 点击最新部署旁的 <strong>...</strong> → <strong>Redeploy</strong></li>
+        </ol>
+
+        <p><strong>4.3 配置本地环境变量（本地开发）：</strong></p>
+        <ol>
+          <li>打开项目根目录的 <code>.env.local</code> 文件</li>
+          <li>在 <code>RESEND_API_KEY=</code> 后面填入你的 API Key</li>
+          <li>保存文件</li>
+        </ol>
+        <div class="code-block">
+RESEND_API_KEY=re_你的API密钥
+RESEND_FROM_EMAIL=noreply@longwoo.studio
+        </div>
+      </div>
+    </div>
+
+    <!-- 步骤 5 -->
+    <div class="card">
+      <div class="step-title">
+        <span class="step-number">5</span>
+        测试验证码邮件 <span class="tag tag-supabase">测试</span>
+      </div>
+      <div class="step-content">
+        <p>所有配置完成后，进行端到端测试：</p>
+        <ol>
+          <li>访问 <a href="https://www.longwoo.studio/login" target="_blank" style="color:#0D3B3B;">https://www.longwoo.studio/login</a></li>
+          <li>输入一个<strong>非测试邮箱</strong>（例如 QQ 邮箱、163 邮箱、Gmail 等）</li>
+          <li>点击 <strong>发送验证码</strong></li>
+          <li>检查该邮箱是否收到邮件，确认：
+            <ul>
+              <li>发件人显示为 <code>LongWoo 龙坞 &lt;noreply@longwoo.studio&gt;</code></li>
+              <li>邮件主题为 <code>【LongWoo 龙坞】您的登录验证码</code></code></li>
+              <li>邮件顶部显示 LongWoo Logo</li>
+              <li>验证码显示在深色品牌色背景的方框中</li>
+              <li>邮件配色为深墨绿色（#0D3B3B）</li>
+            </ul>
+          </li>
+          <li>将验证码输入登录页面，确认可以成功登录</li>
+        </ol>
+        <div class="success">
+          <strong>测试通过：</strong>如果以上所有检查点都符合预期，说明邮箱验证码服务已完全配置成功！所有用户都可以收到品牌化的验证码邮件。
+        </div>
+      </div>
+    </div>
+
+    <!-- 常见问题 -->
+    <div class="card">
+      <div class="step-title">
+        <span class="step-number">?</span>
+        常见问题排查
+      </div>
+      <div class="step-content">
+        <p><strong>Q: 邮件没有收到？</strong></p>
+        <ul>
+          <li>检查垃圾邮件/广告邮件文件夹</li>
+          <li>确认 Resend 域名状态为 Verified</li>
+          <li>在 Resend Dashboard → Logs 页面查看发送日志</li>
+          <li>确认 Supabase SMTP Sender email 已改为 <code>noreply@longwoo.studio</code></li>
+        </ul>
+
+        <div class="divider"></div>
+
+        <p><strong>Q: 邮件收到但 Logo 不显示？</strong></p>
+        <ul>
+          <li>确认 <code>https://www.longwoo.studio/logo.png</code> 可以正常访问</li>
+          <li>部分邮件客户端会拦截外链图片，需要用户点击"显示图片"</li>
+          <li>Logo 文件已在项目 <code>public/logo.png</code> 中，部署后可访问</li>
+        </ul>
+
+        <div class="divider"></div>
+
+        <p><strong>Q: 验证码仍然是确认链接而不是数字码？</strong></p>
+        <ul>
+          <li>在 Supabase Dashboard → Authentication → Providers → Email</li>
+          <li>确认 <strong>Enable Email Provider</strong> 已开启</li>
+          <li>确认 <strong>Confirm Email</strong> 设置正确</li>
+          <li>SMTP 配置后，Supabase 会自动发送 OTP 数字验证码而非链接</li>
+        </ul>
+
+        <div class="divider"></div>
+
+        <p><strong>Q: Resend 域名一直显示 Pending？</strong></p>
+        <ul>
+          <li>登录 DNSPod（腾讯云 DNS 控制台）</li>
+          <li>检查 4 条 DNS 记录是否已添加：DKIM TXT、SPF MX、SPF TXT、DMARC TXT</li>
+          <li>对比记录值与 Resend 域名详情页中显示的值是否完全一致</li>
+          <li>DNS 传播最长可能需要 24 小时，但通常 30 分钟内完成</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <p>LongWoo 龙坞 — 创意设计工作室</p>
+    <p style="margin-top:4px;">© 2026 LongWoo. All rights reserved.</p>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>登录验证码 - LongWoo 龙坞</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F3F3F3; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+
+  <!-- 外层背景 -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #F3F3F3;">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+
+        <!-- 主邮件容器 -->
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width: 560px; width: 100%; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 20px rgba(0, 0, 0, 0.06);">
+
+          <!-- ========== 品牌头部（纯 CSS 文字 Logo，不使用图片） ========== -->
+          <tr>
+            <td style="background-color: #0D3B3B; padding: 36px 40px 32px; text-align: center;">
+              <!-- 文字 Logo -->
+              <h1 style="color: #FFFFFF; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: 4px; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;">龙坞 LONGWOO</h1>
+              <p style="color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 400; margin: 6px 0 0; letter-spacing: 3px; text-transform: uppercase;">Creative Design Studio</p>
+            </td>
+          </tr>
+
+          <!-- ========== 装饰条 ========== -->
+          <tr>
+            <td style="background-color: #1A5050; height: 4px; line-height: 4px; font-size: 4px;">&nbsp;</td>
+          </tr>
+
+          <!-- ========== 正文内容 ========== -->
+          <tr>
+            <td style="padding: 40px 40px 24px;">
+              <h2 style="color: #0D3B3B; font-size: 22px; font-weight: 700; margin: 0 0 8px; line-height: 1.4;">登录验证码</h2>
+              <p style="color: #666666; font-size: 15px; line-height: 1.7; margin: 0 0 28px;">
+                您好！您正在登录 <strong style="color: #0D3B3B;">LongWoo 龙坞</strong>。请使用以下验证码完成身份验证：
+              </p>
+
+              <!-- 验证码展示区 -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 28px;">
+                <tr>
+                  <td style="background-color: #0D3B3B; border-radius: 12px; padding: 28px 24px; text-align: center;">
+                    <p style="color: rgba(255,255,255,0.6); font-size: 12px; font-weight: 400; margin: 0 0 12px; letter-spacing: 2px; text-transform: uppercase;">Verification Code</p>
+                    <span style="color: #FFFFFF; font-size: 38px; font-weight: 700; letter-spacing: 10px; font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace; display: inline-block; padding-left: 10px;">{{ .Token }}</span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 有效期提示 -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px;">
+                <tr>
+                  <td style="background-color: #F0F7F7; border-left: 3px solid #0D3B3B; border-radius: 0 8px 8px 0; padding: 12px 16px;">
+                    <p style="color: #0D3B3B; font-size: 13px; line-height: 1.6; margin: 0;">
+                      <strong>验证码有效期为 1 小时</strong>，请尽快使用。如需重新获取，请返回登录页面重新发送。
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 安全提醒 -->
+              <p style="color: #999999; font-size: 13px; line-height: 1.6; margin: 0 0 8px;">
+                <strong style="color: #666;">安全提醒：</strong>如果这不是您本人的操作，请忽略此邮件。他人需要此验证码才能登录您的账户，请勿将验证码分享给任何人。
+              </p>
+            </td>
+          </tr>
+
+          <!-- ========== 分割线 ========== -->
+          <tr>
+            <td style="padding: 0 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #EEEEEE;">
+                <tr><td style="height: 1px; line-height: 1px; font-size: 1px;">&nbsp;</td></tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ========== 底部信息 ========== -->
+          <tr>
+            <td style="padding: 24px 40px 36px;">
+              <p style="color: #AAAAAA; font-size: 12px; line-height: 1.7; margin: 0 0 4px;">
+                此邮件由 LongWoo 龙坞系统自动发送，请勿直接回复。
+              </p>
+              <p style="color: #AAAAAA; font-size: 12px; line-height: 1.7; margin: 0 0 16px;">
+                如有任何疑问，请访问 <a href="https://www.longwoo.studio" style="color: #0D3B3B; text-decoration: none; border-bottom: 1px solid #0D3B3B;">www.longwoo.studio</a> 联系我们。
+              </p>
+              <p style="color: #CCCCCC; font-size: 11px; line-height: 1.6; margin: 0;">
+                &copy; 2026 LongWoo 龙坞. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- 邮件容器外底部留白 -->
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width: 560px; width: 100%;">
+          <tr>
+            <td style="padding: 20px 0; text-align: center;">
+              <p style="color: #BBBBBB; font-size: 11px; line-height: 1.5; margin: 0;">
+                LongWoo 龙坞 &mdash; 创意设计工作室
+              </p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

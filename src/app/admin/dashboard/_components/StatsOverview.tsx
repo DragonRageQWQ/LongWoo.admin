@@ -1,0 +1,264 @@
+import { createClient } from "@/lib/supabase/server";
+import {
+  ClipboardPlus,
+  Clock,
+  PackageCheck,
+  CircleCheck,
+  TrendingUp,
+} from "lucide-react";
+
+// 获取本地日期字符串 (YYYY-MM-DD)
+function getLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// 格式化日期为短显示
+function formatShortDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}-${day}`;
+}
+
+// 计算最近7天日期数组
+function getLast7Days(): Date[] {
+  const days: Date[] = [];
+  const today = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    days.push(d);
+  }
+  return days;
+}
+
+interface StatCard {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
+}
+
+interface TrendItem {
+  date: string;
+  label: string;
+  count: number;
+}
+
+async function fetchStats() {
+  const supabase = await createClient();
+
+  // 今日起止时间
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+
+  const todayStartISO = todayStart.toISOString();
+  const todayEndISO = todayEnd.toISOString();
+
+  // 并行查询各项统计数据
+  const [todayResult, pendingResult, acceptedResult, completedResult] =
+    await Promise.all([
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", todayStartISO)
+        .lt("created_at", todayEndISO),
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending"),
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "accepted"),
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "completed"),
+    ]);
+
+  // 最近7天趋势: 一次性查询7天内的所有订单，然后在前端按日期分组
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(now.getDate() - 6);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+  const { data: recentOrders } = await supabase
+    .from("orders")
+    .select("created_at")
+    .gte("created_at", sevenDaysAgoISO)
+    .order("created_at", { ascending: true });
+
+  // 按日期分组统计
+  const last7Days = getLast7Days();
+  const trendMap = new Map<string, number>();
+  last7Days.forEach((d) => {
+    trendMap.set(getLocalDateString(d), 0);
+  });
+
+  if (recentOrders && recentOrders.length > 0) {
+    recentOrders.forEach((order) => {
+      const orderDate = new Date(order.created_at);
+      const dateKey = getLocalDateString(orderDate);
+      if (trendMap.has(dateKey)) {
+        trendMap.set(dateKey, (trendMap.get(dateKey) || 0) + 1);
+      }
+    });
+  }
+
+  const trend: TrendItem[] = last7Days.map((d) => ({
+    date: getLocalDateString(d),
+    label: formatShortDate(d),
+    count: trendMap.get(getLocalDateString(d)) || 0,
+  }));
+
+  const stats: StatCard[] = [
+    {
+      label: "今日新增委托",
+      value: todayResult.count ?? 0,
+      icon: ClipboardPlus,
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+    },
+    {
+      label: "待估价委托",
+      value: pendingResult.count ?? 0,
+      icon: Clock,
+      iconBg: "bg-yellow-50",
+      iconColor: "text-yellow-600",
+    },
+    {
+      label: "已接单委托",
+      value: acceptedResult.count ?? 0,
+      icon: PackageCheck,
+      iconBg: "bg-green-50",
+      iconColor: "text-green-600",
+    },
+    {
+      label: "已完成委托",
+      value: completedResult.count ?? 0,
+      icon: CircleCheck,
+      iconBg: "bg-gray-100",
+      iconColor: "text-gray-600",
+    },
+  ];
+
+  return { stats, trend };
+}
+
+export default async function StatsOverview() {
+  let stats: StatCard[] = [];
+  let trend: TrendItem[] = [];
+  let loadError: string | null = null;
+
+  try {
+    const result = await fetchStats();
+    stats = result.stats;
+    trend = result.trend;
+  } catch (error) {
+    console.error("加载统计数据失败:", error);
+    loadError = "数据加载失败，请稍后刷新重试";
+  }
+
+  // 计算趋势最大值用于柱状条比例
+  const maxCount = Math.max(...trend.map((t) => t.count), 1);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-lw-black">数据概览</h1>
+        <p className="text-sm text-gray-400 mt-1">
+          查看委托单的实时数据统计与趋势
+        </p>
+      </div>
+
+      {loadError ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center text-red-600 text-sm">
+          {loadError}
+        </div>
+      ) : (
+        <>
+          {/* 统计卡片 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div
+                  key={stat.label}
+                  className="bg-white rounded-lg shadow-sm p-5 border border-gray-50"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-gray-400 mb-2">
+                        {stat.label}
+                      </p>
+                      <p className="text-3xl font-bold text-lw-black">
+                        {stat.value}
+                      </p>
+                    </div>
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.iconBg}`}
+                    >
+                      <Icon className={`w-5 h-5 ${stat.iconColor}`} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 最近7天委托趋势 */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-50 p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <TrendingUp className="w-5 h-5 text-lw-accent" />
+              <h2 className="text-base font-semibold text-lw-black">
+                最近7天委托趋势
+              </h2>
+            </div>
+
+            {trend.every((t) => t.count === 0) ? (
+              <p className="text-sm text-gray-400 text-center py-8">
+                最近7天暂无新增委托
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {trend.map((item) => (
+                  <div key={item.date} className="flex items-center gap-4">
+                    <span className="text-sm text-gray-500 w-16 flex-shrink-0">
+                      {item.label}
+                    </span>
+                    <div className="flex-1 flex items-center gap-3">
+                      <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                        <div
+                          className="bg-lw-accent h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                          style={{
+                            width: `${(item.count / maxCount) * 100}%`,
+                            minWidth: item.count > 0 ? "2rem" : "0",
+                          }}
+                        >
+                          {item.count > 0 && (
+                            <span className="text-[10px] font-medium text-white">
+                              {item.count}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm font-medium text-lw-black w-8 text-right">
+                        {item.count}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
