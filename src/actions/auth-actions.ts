@@ -233,10 +233,13 @@ export async function verifyEmailOtpAndLogin(
     //         中可能未执行完毕就被 Next.js 提交响应 → cookie 未写入
     const cookieStore = await cookies()
 
+    // expires_at 兜底：某些 Supabase 版本 /auth/v1/verify 响应不含 expires_at
+    const expiresAt = sessionData.expires_at ?? Math.floor(Date.now() / 1000) + (sessionData.expires_in ?? 3600)
+
     const tokenData = JSON.stringify({
       access_token: sessionData.access_token,
       refresh_token: sessionData.refresh_token,
-      expires_at: sessionData.expires_at,
+      expires_at: expiresAt,
       expires_in: sessionData.expires_in ?? 3600,
       token_type: sessionData.token_type ?? 'bearer',
       user: sessionData.user,
@@ -270,13 +273,19 @@ export async function verifyEmailOtpAndLogin(
 
     if (encoded.length <= MAX_CHUNK_SIZE) {
       cookieStore.set(cookieName, encoded, cookieOptions)
+      console.log('[Login] Cookie 已设置（单 cookie）:', cookieName, '长度:', encoded.length)
     } else {
       const chunkCount = Math.ceil(encoded.length / MAX_CHUNK_SIZE)
       for (let i = 0; i < chunkCount; i++) {
         const chunk = encoded.slice(i * MAX_CHUNK_SIZE, (i + 1) * MAX_CHUNK_SIZE)
         cookieStore.set(`${cookieName}.${i}`, chunk, cookieOptions)
       }
+      console.log('[Login] Cookie 已设置（分片）:', cookieName, '分片数:', chunkCount, '总长度:', encoded.length)
     }
+
+    // 验证 cookie 是否真的写入成功（读取回验）
+    const verifyCookie = cookieStore.get(cookieName)
+    console.log('[Login] Cookie 回验:', verifyCookie ? `成功 (值长度: ${verifyCookie.value.length})` : '失败 - cookie 未找到')
 
     // 第5+6步：并行执行消费验证码和创建/获取 profile
     console.log('[Login] 第5+6步：并行消费验证码和获取 profile...')

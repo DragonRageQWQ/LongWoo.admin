@@ -111,12 +111,12 @@ function LoginForm() {
   };
 
   const redirectByRole = (role?: string) => {
-    if (role === "admin") {
-      router.push("/admin/dashboard");
-    } else {
-      router.push("/profile");
-    }
-    router.refresh();
+    // 使用 window.location.href 强制整页刷新
+    // router.push() 是客户端软导航，可能在浏览器处理 Set-Cookie 之前发起 RSC 请求
+    // 导致中间件读不到 session cookie → 重定向回 /login → 用户看到登录页不动
+    // window.location.href 是整页跳转，浏览器会先处理 Server Action 响应中的 Set-Cookie
+    const target = role === "admin" ? "/admin/dashboard" : "/profile";
+    window.location.href = target;
   };
 
   // ==================== 发送邮箱验证码 ====================
@@ -172,14 +172,16 @@ function LoginForm() {
     setEmailVerifying(true);
     try {
       const result = await verifyEmailOtpAndLogin(email, emailCode);
+      console.log("[Login] Server Action 返回:", result);
 
-      if (!result.success) {
-        setError(result.error ?? "验证失败");
+      if (!result || !result.success) {
+        setError(result?.error ?? "验证失败");
         return;
       }
 
       redirectByRole(result.role);
-    } catch {
+    } catch (err) {
+      console.error("[Login] 客户端异常:", err);
       setError("登录时发生未知错误");
     } finally {
       setEmailVerifying(false);
@@ -249,14 +251,16 @@ function LoginForm() {
     setPasswordLoading(true);
     try {
       const result = await loginWithPassword(passwordEmail, password);
+      console.log("[Login] 密码登录 Server Action 返回:", result);
 
-      if (!result.success) {
-        setError(result.error ?? "登录失败，请检查邮箱和密码");
+      if (!result || !result.success) {
+        setError(result?.error ?? "登录失败，请检查邮箱和密码");
         return;
       }
 
       redirectByRole(result.role);
-    } catch {
+    } catch (err) {
+      console.error("[Login] 密码登录客户端异常:", err);
       setError("登录时发生未知错误");
     } finally {
       setPasswordLoading(false);
