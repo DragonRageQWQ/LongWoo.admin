@@ -125,15 +125,14 @@ export async function sendEmailOtp(
 //
 // 核心流程：
 // 1. 从数据库校验验证码（不消费，失败可重试）
-// 2. 调用 generateLink 获取 magic link token_hash
-// 3. HTTP POST 到 /auth/v1/verify 交换 session token
-// 4. 使用 SSR 客户端的 setSession() 设置会话
-//    — setSession 内部会通过 onAuthStateChange → applyServerStorage
-//      自动以 base64url 编码 + 正确分片写入 cookie
-//    — 之前的手动 cookie 设置因未做 base64url 编码，
-//      URL 编码后超出 4096 字节限制被浏览器静默丢弃
-// 5. 会话建立成功后消费验证码
-// 6. 创建/获取 profile
+// 2. 调用 admin.generateLink 获取 magic link token_hash
+//    — 必须传 send_email: false，否则 Supabase 会尝试用内置邮件服务发信
+//      而本项目用 Resend，Supabase 内置邮件未配置，会导致调用失败
+// 3. 使用 SSR 客户端的 verifyOtp 交换 token 并写入会话 cookie
+//    — verifyOtp 内部完成：调用 /auth/v1/verify → 获取 session → applyServerStorage
+//    — applyServerStorage 自动处理 base64url 编码 + 正确分片写入 cookie
+// 4. 会话建立成功后消费验证码
+// 5. 创建/获取 profile
 
 export async function verifyEmailOtpAndLogin(
   email: string,
@@ -151,9 +150,6 @@ export async function verifyEmailOtpAndLogin(
     return { success: false, error: '请输入6位验证码' }
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
   try {
     // 第1步：校验验证码（不消费，以便后续失败时用户可重试）
     const result = await verifyOtp(email, code, false)
@@ -162,76 +158,47 @@ export async function verifyEmailOtpAndLogin(
       return { success: false, error: '验证码无效或已过期，请重新获取' }
     }
 
-    // 第2步：生成 magic link（admin API 默认不发送邮件）
+    // 第2步：生成 magic link（必须禁用邮件发送）
     const admin = createAdminClient()
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email,
-    })
+      options: {
+        send_email: false,
+      } as Record<string, unknown>,
+    } as Parameters<typeof admin.auth.admin.generateLink>[0])
 
     if (linkError || !linkData) {
-      console.error('生成 magic link 失败:', linkError?.message)
-      return { success: false, error: '登录失败，请重新获取验证码' }
+      console.error('[Login] generateLink 失败:', linkError?.message, linkError?.status)
+      return { success: false, error: '生成登录令牌失败，请稍后重试' }
     }
 
     const tokenHash = linkData.properties?.hashed_token
     if (!tokenHash) {
-      console.error('token_hash 数据不完整')
-      return { success: false, error: '登录失败，请重新获取验证码' }
+      console.error('[Login] token_hash 缺失，properties:', JSON.stringify(linkData.properties ?? {}).substring(0, 200))
+      return { success: false, error: '登录令牌异常，请稍后重试' }
     }
 
-    // 第3步：交换 token_hash 获取 session token
-    const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseAnonKey,
-      },
-      body: JSON.stringify({
-        token_hash: tokenHash,
-        type: 'magiclink',
-      }),
-    })
-
-    if (!verifyResponse.ok) {
-      const errText = await verifyResponse.text()
-      console.error('Supabase verify 失败:', verifyResponse.status, errText)
-      return { success: false, error: '登录失败，请重新获取验证码' }
-    }
-
-    const sessionData = await verifyResponse.json()
-
-    if (!sessionData.access_token || !sessionData.refresh_token) {
-      console.error('verify 返回数据不完整')
-      return { success: false, error: '登录失败，请重新获取验证码' }
-    }
-
-    // 第4步：使用 SSR 客户端的 setSession 写入会话 cookie
-    //
-    // 关键：必须用 setSession 而非手动 cookieStore.set
-    // @supabase/ssr v0.12 默认 cookieEncoding="base64url"
-    // setSession → onAuthStateChange → applyServerStorage
-    //   → 以 "base64-" 前缀 + base64url 编码写入
-    //   → 按 encodeURIComponent 后的长度正确分片
-    // 手动写 raw JSON 会被 Next.js cookie.serialize URL 编码
-    //   → 超过 4096 字节 → 浏览器静默丢弃
+    // 第3步：使用 SSR 客户端的 verifyOtp 交换 token 并建立会话
+    // verifyOtp 内部调用 /auth/v1/verify，然后通过 onAuthStateChange
+    // → applyServerStorage 自动写入 base64url 编码的分片 cookie
     const supabase = await createClient()
-    const { error: sessionError } = await supabase.auth.setSession({
-      access_token: sessionData.access_token,
-      refresh_token: sessionData.refresh_token,
+    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: 'magiclink',
     })
 
-    if (sessionError) {
-      console.error('setSession 失败:', sessionError.message)
-      return { success: false, error: '登录失败，请重新获取验证码' }
+    if (verifyError || !verifyData.session) {
+      console.error('[Login] verifyOtp 失败:', verifyError?.message, verifyError?.status)
+      return { success: false, error: '令牌验证失败，请重新获取验证码' }
     }
 
-    // 第5步：会话建立成功，消费验证码
+    // 第4步：会话建立成功，消费验证码
     await consumeOtp(email, code)
 
-    // 第6步：创建/获取 profile
-    const userId = sessionData.user?.id
-    const userEmail = sessionData.user?.email ?? email
+    // 第5步：创建/获取 profile
+    const userId = verifyData.user?.id
+    const userEmail = verifyData.user?.email ?? email
     const profile = userId
       ? await getOrCreateProfile(admin, userId, { email: userEmail })
       : null
@@ -239,8 +206,8 @@ export async function verifyEmailOtpAndLogin(
     revalidatePath('/')
     return { success: true, role: profile?.role ?? 'user' }
   } catch (error) {
-    console.error('验证码登录异常:', error)
-    return { success: false, error: '验证时发生未知错误' }
+    console.error('[Login] 验证码登录异常:', error)
+    return { success: false, error: '验证时发生未知错误，请稍后重试' }
   }
 }
 
