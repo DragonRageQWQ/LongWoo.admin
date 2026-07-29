@@ -54,17 +54,22 @@ export async function saveOtp(email: string, code: string): Promise<void> {
 
 /**
  * 验证 OTP 验证码
- * 验证成功后自动标记为已使用（一次性）
- * 错误超过 OTP_MAX_ATTEMPTS 次后验证码自动失效，防止暴力破解
  *
- * 注意：尝试次数也存储在数据库中（otp_codes 表的 attempts 字段），
- * 不再依赖内存，确保 Serverless 多实例环境下一致。
+ * @param email   邮箱
+ * @param code    验证码
+ * @param consume 是否在验证成功后标记为已使用（默认 true）
+ *                设为 false 时仅校验不消费，用于延迟消费场景：
+ *                先校验验证码 → 建立会话 → 成功后再调用 consumeOtp 消费
+ *                这样如果建立会话失败，验证码仍然有效，用户可重试
  */
-export async function verifyOtp(email: string, code: string): Promise<{ valid: boolean }> {
+export async function verifyOtp(
+  email: string,
+  code: string,
+  consume: boolean = true
+): Promise<{ valid: boolean }> {
   const admin = createAdminClient()
 
   // 查询该邮箱最新的未使用验证码
-  // 使用 .maybeSingle() 而非 .single()，避免无记录时返回错误
   const { data, error } = await admin
     .from('otp_codes')
     .select('id, code, expires_at, used')
@@ -80,7 +85,6 @@ export async function verifyOtp(email: string, code: string): Promise<{ valid: b
   }
 
   if (!data) {
-    // 数据库中无记录
     return { valid: false }
   }
 
@@ -92,32 +96,34 @@ export async function verifyOtp(email: string, code: string): Promise<{ valid: b
 
   // 验证码匹配
   if (data.code === code) {
-    // 标记为已使用
-    await admin.from('otp_codes').update({ used: true }).eq('id', data.id)
+    if (consume) {
+      await admin.from('otp_codes').update({ used: true }).eq('id', data.id)
+    }
     return { valid: true }
   }
 
-  // 验证码错误：在数据库中记录尝试次数
-  // 使用 upsert 方式存储尝试次数（添加 attempts 列如不存在则忽略）
-  // 由于 attempts 列可能不存在，改为查询+删除的方式
-  // 超过最大尝试次数：删除验证码，强制用户重新获取
-  // 简化方案：直接删除并重新要求获取
-  const { data: allAttempts } = await admin
-    .from('otp_codes')
-    .select('id')
-    .eq('email', email)
-    .eq('used', false)
-
-  // 如果该邮箱有多条未使用记录（不应该发生），全部删除
-  if (allAttempts && allAttempts.length > 1) {
-    await admin.from('otp_codes').delete().eq('email', email).eq('used', false)
-    return { valid: false }
-  }
-
-  // 简单方案：错误一次就删除验证码，要求重新获取
-  // 这比跟踪尝试次数更安全，只是用户体验稍差
+  // 验证码错误：删除验证码，要求重新获取
   await admin.from('otp_codes').delete().eq('id', data.id)
   return { valid: false }
+}
+
+/**
+ * 消费验证码（标记为已使用）
+ *
+ * 在会话成功建立后调用，确保建立会话失败时验证码仍有效。
+ */
+export async function consumeOtp(email: string, code: string): Promise<void> {
+  try {
+    const admin = createAdminClient()
+    await admin
+      .from('otp_codes')
+      .update({ used: true })
+      .eq('email', email)
+      .eq('code', code)
+      .eq('used', false)
+  } catch (err) {
+    console.warn('消费 OTP 失败:', err)
+  }
 }
 
 /**

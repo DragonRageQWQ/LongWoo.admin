@@ -5,14 +5,13 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getOrCreateProfile } from '@/lib/profile'
-import { saveOtp, verifyOtp, hasActiveOtp } from '@/lib/otp-store'
+import { saveOtp, verifyOtp, hasActiveOtp, consumeOtp } from '@/lib/otp-store'
 import { loginOtpEmailTemplate } from '@/lib/email-templates'
 import type { Profile } from '@/types/database'
 import { randomInt } from 'crypto'
 import { headers } from 'next/headers'
 
 // ==================== 邮箱验证码速率限制 ====================
-// 基于 IP + 邮箱组合做限制，防止邮件轰炸和垃圾用户注册
 
 interface OtpRateLimitEntry {
   count: number
@@ -20,11 +19,9 @@ interface OtpRateLimitEntry {
 }
 
 const otpRateLimitStore = new Map<string, OtpRateLimitEntry>()
-const OTP_RATE_LIMIT_WINDOW = 60 * 1000  // 1 分钟窗口
-const OTP_RATE_LIMIT_MAX = 3             // 每分钟最多 3 次
-const OTP_COOLDOWN = 60 * 1000           // 同一邮箱 60 秒冷却
+const OTP_RATE_LIMIT_WINDOW = 60 * 1000
+const OTP_RATE_LIMIT_MAX = 3
 
-// 定期清理过期项
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now()
@@ -41,10 +38,7 @@ function checkOtpRateLimit(key: string): boolean {
   const entry = otpRateLimitStore.get(key)
 
   if (!entry || entry.resetAt < now) {
-    otpRateLimitStore.set(key, {
-      count: 1,
-      resetAt: now + OTP_RATE_LIMIT_WINDOW,
-    })
+    otpRateLimitStore.set(key, { count: 1, resetAt: now + OTP_RATE_LIMIT_WINDOW })
     return true
   }
 
@@ -57,13 +51,6 @@ function checkOtpRateLimit(key: string): boolean {
 }
 
 // ==================== 发送邮箱验证码 ====================
-//
-// 流程：
-// 1. 确保用户在 Supabase Auth 中存在（不存在则创建）
-// 2. 生成 6 位验证码，存入 otp_codes 数据库表（10分钟有效）
-// 3. 通过 Resend 发送验证码邮件
-//
-// 不再提前调用 generateLink — token_hash 在验证成功后即时生成，避免过期
 
 export async function sendEmailOtp(
   email: string
@@ -72,7 +59,6 @@ export async function sendEmailOtp(
     return { success: false, error: '请输入有效的邮箱地址' }
   }
 
-  // 速率限制：基于 IP 和邮箱
   const headersList = await headers()
   const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
   if (!checkOtpRateLimit(`ip:${ip}`)) {
@@ -85,22 +71,12 @@ export async function sendEmailOtp(
   const admin = createAdminClient()
 
   try {
-    // 确保用户在 Supabase Auth 中存在
-    // 先查询，不存在则创建（不发送确认邮件）
-    const { data: existingUsers } = await admin.auth.admin.listUsers()
-    const userExists = existingUsers?.users?.some(u => u.email?.toLowerCase() === email.toLowerCase())
-
-    if (!userExists) {
-      const { error: createError } = await admin.auth.admin.createUser({
-        email,
-        email_confirm: true,
-      })
-
-      if (createError) {
-        console.error('创建用户失败:', createError.message)
-        return { success: false, error: '发送验证码失败，请稍后重试' }
-      }
-    }
+    // 直接尝试创建用户，如果已存在会返回错误，忽略即可
+    // 比 listUsers() 高效得多（后者会拉取所有用户）
+    await admin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+    })
 
     // 生成 6 位验证码
     const otpCode = String(randomInt(100000, 1000000))
@@ -113,48 +89,32 @@ export async function sendEmailOtp(
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@longwoo.studio'
 
     if (resendApiKey) {
-      try {
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: email,
-            subject: '【LongWoo 龙坞】登录验证码',
-            html: loginOtpEmailTemplate(otpCode),
-          }),
-        })
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: email,
+          subject: '【LongWoo 龙坞】登录验证码',
+          html: loginOtpEmailTemplate(otpCode),
+        }),
+      })
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error('Resend 发送失败:', errorText)
-          // 邮件发送失败时返回错误，不再静默吞掉
-          return {
-            success: false,
-            error: '验证码邮件发送失败，请稍后重试或联系客服',
-          }
-        }
-      } catch (err) {
-        console.error('邮件发送异常:', err)
-        return {
-          success: false,
-          error: '邮件服务暂时不可用，请稍后重试',
-        }
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Resend 发送失败:', errorText)
+        return { success: false, error: '验证码邮件发送失败，请稍后重试或联系客服' }
       }
     } else {
-      // Dev 模式：输出到控制台
       console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       console.log(`📧 邮箱验证码 [${email}]: ${otpCode}`)
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`)
     }
 
-    // 验证码仅通过邮件发送，不返回给前端
-    return {
-      success: true,
-    }
+    return { success: true }
   } catch (error) {
     console.error('发送验证码异常:', error)
     return { success: false, error: '发送验证码时发生未知错误' }
@@ -163,11 +123,17 @@ export async function sendEmailOtp(
 
 // ==================== 验证邮箱验证码并登录 ====================
 //
-// 全流程在服务端完成：
-// 1. 从数据库校验验证码
-// 2. 验证成功后，即时调用 generateLink 获取 token_hash
-// 3. 用服务端 SSR 客户端调用 verifyOtp 建立会话（自动设置 cookie）
-// 4. 创建/获取 profile，返回角色给前端
+// 核心流程：
+// 1. 从数据库校验验证码（不消费，失败可重试）
+// 2. 调用 generateLink 获取 magic link token_hash
+// 3. HTTP POST 到 /auth/v1/verify 交换 session token
+// 4. 使用 SSR 客户端的 setSession() 设置会话
+//    — setSession 内部会通过 onAuthStateChange → applyServerStorage
+//      自动以 base64url 编码 + 正确分片写入 cookie
+//    — 之前的手动 cookie 设置因未做 base64url 编码，
+//      URL 编码后超出 4096 字节限制被浏览器静默丢弃
+// 5. 会话建立成功后消费验证码
+// 6. 创建/获取 profile
 
 export async function verifyEmailOtpAndLogin(
   email: string,
@@ -185,21 +151,23 @@ export async function verifyEmailOtpAndLogin(
     return { success: false, error: '请输入6位验证码' }
   }
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
   try {
-    // 第1步：从数据库校验验证码
-    const result = await verifyOtp(email, code)
+    // 第1步：校验验证码（不消费，以便后续失败时用户可重试）
+    const result = await verifyOtp(email, code, false)
 
     if (!result.valid) {
       return { success: false, error: '验证码无效或已过期，请重新获取' }
     }
 
-    // 第2步：验证码校验成功，即时生成 magic link（不发送邮件）
+    // 第2步：生成 magic link（admin API 默认不发送邮件）
     const admin = createAdminClient()
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email,
-      options: { send_email: false } as Record<string, unknown>,
-    } as Parameters<typeof admin.auth.admin.generateLink>[0])
+    })
 
     if (linkError || !linkData) {
       console.error('生成 magic link 失败:', linkError?.message)
@@ -212,22 +180,61 @@ export async function verifyEmailOtpAndLogin(
       return { success: false, error: '登录失败，请重新获取验证码' }
     }
 
-    // 第3步：用服务端 SSR 客户端建立会话（自动设置 cookie）
-    const supabase = await createClient()
-    const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: 'magiclink',
+    // 第3步：交换 token_hash 获取 session token
+    const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseAnonKey,
+      },
+      body: JSON.stringify({
+        token_hash: tokenHash,
+        type: 'magiclink',
+      }),
     })
 
-    if (sessionError || !sessionData?.user) {
-      console.error('服务端建立会话失败:', sessionError?.message)
+    if (!verifyResponse.ok) {
+      const errText = await verifyResponse.text()
+      console.error('Supabase verify 失败:', verifyResponse.status, errText)
       return { success: false, error: '登录失败，请重新获取验证码' }
     }
 
-    // 第4步：创建/获取 profile
-    const profile = await getOrCreateProfile(admin, sessionData.user.id, {
-      email: sessionData.user.email ?? email,
+    const sessionData = await verifyResponse.json()
+
+    if (!sessionData.access_token || !sessionData.refresh_token) {
+      console.error('verify 返回数据不完整')
+      return { success: false, error: '登录失败，请重新获取验证码' }
+    }
+
+    // 第4步：使用 SSR 客户端的 setSession 写入会话 cookie
+    //
+    // 关键：必须用 setSession 而非手动 cookieStore.set
+    // @supabase/ssr v0.12 默认 cookieEncoding="base64url"
+    // setSession → onAuthStateChange → applyServerStorage
+    //   → 以 "base64-" 前缀 + base64url 编码写入
+    //   → 按 encodeURIComponent 后的长度正确分片
+    // 手动写 raw JSON 会被 Next.js cookie.serialize URL 编码
+    //   → 超过 4096 字节 → 浏览器静默丢弃
+    const supabase = await createClient()
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: sessionData.access_token,
+      refresh_token: sessionData.refresh_token,
     })
+
+    if (sessionError) {
+      console.error('setSession 失败:', sessionError.message)
+      return { success: false, error: '登录失败，请重新获取验证码' }
+    }
+
+    // 第5步：会话建立成功，消费验证码
+    await consumeOtp(email, code)
+
+    // 第6步：创建/获取 profile
+    const userId = sessionData.user?.id
+    const userEmail = sessionData.user?.email ?? email
+    const profile = userId
+      ? await getOrCreateProfile(admin, userId, { email: userEmail })
+      : null
 
     revalidatePath('/')
     return { success: true, role: profile?.role ?? 'user' }
@@ -262,7 +269,7 @@ export async function ensureProfileAfterLogin(userInfo: {
   }
 }
 
-// ==================== 用户登录（邮箱密码，保留给管理员使用） ====================
+// ==================== 用户登录（邮箱密码） ====================
 
 export async function loginUser(
   email: string,
@@ -330,8 +337,6 @@ export async function getSession(): Promise<{
   const supabase = await createClient()
 
   try {
-    // 使用 getUser() 替代 getSession()，确保 JWT 与 Supabase 服务器验证
-    // getSession() 仅从 cookie 读取，不验证有效性，可被伪造
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !user) {
@@ -346,7 +351,6 @@ export async function getSession(): Promise<{
 
     if (profileError) {
       console.error('获取用户信息失败:', profileError.message)
-      // 尝试用 admin 客户端获取（可能 RLS 问题）
       const admin = createAdminClient()
       const { data: adminProfile } = await admin
         .from('profiles')
