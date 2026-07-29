@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser, canUserAccessOrder } from '@/lib/auth'
 import { escapeHtml, escapePostgrestKeyword } from '@/lib/postgrest-utils'
+import { validateOrderInput, validateUrl } from '@/lib/order-utils'
 import { maskPhone, maskEmail } from '@/lib/utils'
 import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/database'
 
@@ -60,44 +61,6 @@ function checkQueryRateLimit(key: string): boolean {
 }
 
 // ==================== 创建委托单 ====================
-
-// 共享的输入验证函数（Server Action 和 API Route 统一使用）
-export function validateOrderInput(data: {
-  customerName?: string
-  customerPhone?: string
-  customerEmail?: string
-  requirements?: string
-}): string | null {
-  if (!data.customerName || data.customerName.trim().length === 0) {
-    return '请填写联系人姓名'
-  }
-  if (data.customerName.length > 50) {
-    return '联系人姓名不能超过50个字符'
-  }
-  if (!data.customerPhone || !/^1[3-9]\d{9}$/.test(data.customerPhone)) {
-    return '请输入有效的手机号码'
-  }
-  if (!data.customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.customerEmail)) {
-    return '请输入有效的邮箱地址'
-  }
-  if (!data.requirements || data.requirements.trim().length < 10) {
-    return '需求描述至少需要10个字符'
-  }
-  if (data.requirements.length > 5000) {
-    return '需求描述不能超过5000个字符'
-  }
-  return null
-}
-
-// 验证 URL 协议仅允许 http/https，防止 javascript: 等 XSS
-export function validateUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
 
 export async function createOrder(formData: {
   serviceTypeId?: string
