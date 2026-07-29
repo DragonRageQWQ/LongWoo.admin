@@ -256,8 +256,8 @@ function LoginForm() {
   };
 
   // ==================== 密码登录：邮箱失焦检查是否已设置密码 ====================
-  // 当用户在密码登录 Tab 输入邮箱后，调用 checkEmailHasPassword 判断该邮箱是否已设置密码
-  // - 邮箱不存在 或 未设置密码：提示用户改用邮箱验证码登录
+  // 当用户在密码登录 Tab 输入邮箱后，调用 checkEmailHasPassword 判断该邮箱是否可使用密码登录
+  // - 统一返回 canUsePassword，避免泄露"邮箱是否存在"或"是否已设置密码"等敏感信息
   const handlePasswordEmailBlur = async () => {
     if (!passwordEmail) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(passwordEmail)) return;
@@ -265,10 +265,8 @@ function LoginForm() {
     setPasswordChecking(true);
     try {
       const result = await checkEmailHasPassword(passwordEmail);
-      if (!result.exists) {
-        setInfo("该邮箱尚未注册，请先使用邮箱验证码登录");
-      } else if (!result.hasPassword) {
-        setInfo("该邮箱尚未设置密码，请使用邮箱验证码登录");
+      if (!result.canUsePassword) {
+        setInfo("该邮箱无法使用密码登录，请使用邮箱验证码登录");
       }
     } catch {
       // 检查失败时不阻断流程，交给登录接口校验
@@ -382,10 +380,14 @@ function LoginForm() {
             </p>
           </div>
 
-          <div className="flex border-b border-gray-200 mb-6">
+          <div className="flex border-b border-gray-200 mb-6" role="tablist">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
+                role="tab"
+                id={`tab-${tab.key}`}
+                aria-selected={activeTab === tab.key}
+                aria-controls={`tabpanel-${tab.key}`}
                 onClick={() => handleTabChange(tab.key)}
                 className={`flex-1 pb-3 text-sm font-medium transition-colors relative cursor-pointer ${
                   activeTab === tab.key
@@ -415,7 +417,13 @@ function LoginForm() {
 
           <div className="flex-1">
             {activeTab === "email" && (
-              <form onSubmit={handleVerifyEmailOtp} className="space-y-5">
+              <form
+                onSubmit={handleVerifyEmailOtp}
+                role="tabpanel"
+                id="tabpanel-email"
+                aria-labelledby="tab-email"
+                className="space-y-5"
+              >
                 <div>
                   <label
                     htmlFor="email-input"
@@ -490,7 +498,13 @@ function LoginForm() {
             )}
 
             {activeTab === "password" && (
-              <form onSubmit={handlePasswordLogin} className="space-y-5">
+              <form
+                onSubmit={handlePasswordLogin}
+                role="tabpanel"
+                id="tabpanel-password"
+                aria-labelledby="tab-password"
+                className="space-y-5"
+              >
                 <div>
                   <label
                     htmlFor="password-email-input"
@@ -552,7 +566,12 @@ function LoginForm() {
             )}
 
             {activeTab === "qq" && (
-              <div className="space-y-6">
+              <div
+                role="tabpanel"
+                id="tabpanel-qq"
+                aria-labelledby="tab-qq"
+                className="space-y-6"
+              >
                 <div className="text-center py-6">
                   <div className="w-16 h-16 mx-auto rounded-2xl bg-[#12B7F5]/10 flex items-center justify-center mb-4">
                     <QQIcon className="w-8 h-8 text-[#12B7F5]" />

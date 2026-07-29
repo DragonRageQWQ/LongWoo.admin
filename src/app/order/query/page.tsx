@@ -16,9 +16,10 @@ import {
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Button from "@/components/ui/Button";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import { queryOrderByNo } from "@/actions/order-actions";
-import { statusLabels, statusColors, formatDate } from "@/lib/utils";
-import type { Order, OrderAttachment, OrderReply, OrderStatus } from "@/types/database";
+import { formatDate } from "@/lib/utils";
+import type { Order, OrderAttachment, OrderReply } from "@/types/database";
 
 type QueryResult = Order & {
   attachments?: OrderAttachment[];
@@ -63,18 +64,6 @@ export default function OrderQueryPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const renderStatusBadge = (status: OrderStatus) => {
-    const label = statusLabels[status] || status;
-    const colorClass = statusColors[status] || "bg-gray-100 text-gray-800";
-    return (
-      <span
-        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colorClass}`}
-      >
-        {label}
-      </span>
-    );
   };
 
   return (
@@ -166,7 +155,7 @@ export default function OrderQueryPage() {
                   <h3 className="text-lg font-bold text-lw-black">
                     {result.order_no}
                   </h3>
-                  {renderStatusBadge(result.status)}
+                  <StatusBadge status={result.status} />
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
                   创建时间：{formatDate(result.created_at)}

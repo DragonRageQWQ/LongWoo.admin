@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, LogOut, Loader2 } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { getSession, logoutUser } from "@/actions/auth-actions";
-import type { Profile } from "@/types/database";
+import { logoutUser } from "@/actions/auth-actions";
+import { useSession } from "@/components/providers/SessionProvider";
 
 const navLinks = [
   { label: "首页", href: "/" },
@@ -16,41 +16,9 @@ const navLinks = [
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
-  const hasChecked = useRef(false);
-
-  // 检查登录状态：仅在挂载时执行一次，避免每次路由跳转都发起请求
-  useEffect(() => {
-    if (hasChecked.current) return;
-    hasChecked.current = true;
-
-    let cancelled = false;
-
-    const checkSession = async () => {
-      try {
-        const result = await getSession();
-        if (!cancelled) {
-          if (result.success && result.profile) {
-            setProfile(result.profile);
-          } else {
-            setProfile(null);
-          }
-        }
-      } catch {
-        if (!cancelled) setProfile(null);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    checkSession();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { profile, loading } = useSession();
 
   const handleLogout = async () => {
     setLoggingOut(true);

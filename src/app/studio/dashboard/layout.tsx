@@ -1,0 +1,14 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "工作台 - LongWoo Studio",
+  robots: { index: false, follow: false },
+};
+
+export default function StudioLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return children;
+}

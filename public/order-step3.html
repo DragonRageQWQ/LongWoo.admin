@@ -82,26 +82,7 @@
 }
 
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
-    <style type="text/tailwindcss">
-  @theme inline {
-    --color-background: var(--longwoo-background);
-    --color-foreground: var(--longwoo-foreground);
-    --color-card: var(--longwoo-card);
-    --color-primary: var(--longwoo-primary);
-    --color-muted: var(--longwoo-muted);
-    --color-accent: var(--longwoo-accent);
-    --color-border: var(--longwoo-border);
-    --radius-sm: var(--longwoo-radius-sm);
-    --radius-md: var(--longwoo-radius-md);
-    --radius-lg: var(--longwoo-radius-lg);
-  }
-  @layer base {
-    body { background: var(--longwoo-background); color: var(--longwoo-foreground); }
-    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
-    th { @apply whitespace-nowrap; }
-  }
-    </style>
+    <link rel="stylesheet" href="/css/tailwind-static.css">
     <style id="semantic-token-fallback">
       .bg-background { background-color: var(--longwoo-background); }
       .text-background { color: var(--longwoo-background); }
@@ -255,41 +236,50 @@
         <h2 class="active-step-title">第四步：请填写您的数据与联系方式</h2>
 
         <div class="form-grid">
+          <div class="form-field full-width">
+            <label>姓名 <span class="req-star">*</span></label>
+            <input type="text" id="contactName" placeholder="请输入您的姓名" autocomplete="name">
+          </div>
+          <div class="form-field full-width">
+            <label>手机号 <span class="req-star">*</span></label>
+            <input type="tel" id="contactPhone" maxlength="11" placeholder="请输入手机号" autocomplete="tel">
+          </div>
           <div class="form-field">
             <label>身高(CM)</label>
-            <input type="number" placeholder="身高">
+            <input type="number" id="bodyHeight" placeholder="身高">
           </div>
           <div class="form-field">
             <label>体重(KG)</label>
-            <input type="number" placeholder="体重">
+            <input type="number" id="bodyWeight" placeholder="体重">
           </div>
           <div class="form-field">
             <label>胸围(CM)</label>
-            <input type="number" placeholder="胸围">
+            <input type="number" id="bodyChest" placeholder="胸围">
           </div>
           <div class="form-field">
             <label>腰围(CM)</label>
-            <input type="number" placeholder="腰围">
+            <input type="number" id="bodyWaist" placeholder="腰围">
           </div>
           <div class="form-field">
             <label>臀围(CM)</label>
-            <input type="number" placeholder="臀围">
+            <input type="number" id="bodyHip" placeholder="臀围">
           </div>
           <div class="form-field">
             <label>鞋码</label>
-            <input type="number" placeholder="鞋码">
+            <input type="number" id="shoeSize" placeholder="鞋码">
           </div>
           <div class="form-field full-width">
-            <label>Email</label>
-            <input type="email" placeholder="your@email.com">
+            <label>Email <span class="req-star">*</span></label>
+            <input type="email" id="contactEmail" placeholder="your@email.com" autocomplete="email">
           </div>
           <div class="form-field full-width">
             <label>任意平台可以联系到您的账号（如：Bilibili QQ X...）</label>
-            <textarea placeholder="请输入您的社交平台账号"></textarea>
+            <textarea id="socialAccount" placeholder="请输入您的社交平台账号"></textarea>
           </div>
         </div>
 
-        <button class="submit-btn" onclick="window.location.href='order-step4.html'">提 交</button>
+        <button class="submit-btn" id="submitBtn" type="button">提 交</button>
+        <p class="form-tip" id="formTip"></p>
       </div>
 
     </div>
@@ -706,6 +696,23 @@
       opacity: 0.85;
     }
 
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .req-star {
+      color: var(--color-error);
+    }
+
+    .form-tip {
+      font-size: var(--font-size-xs);
+      color: var(--color-error);
+      margin-top: var(--space-sm);
+      min-height: 14px;
+      text-align: center;
+    }
+
     /* Price summary */
     .price-summary {
       margin: var(--space-md);
@@ -825,6 +832,7 @@
 
   <script>
     (function() {
+      // ---- 设定图恢复（来自 step1）----
       try {
         var imgData = sessionStorage.getItem('longwoo_design_ref_image');
         if (imgData) {
@@ -836,6 +844,70 @@
           img.src = imgData;
         }
       } catch (err) {}
+
+      // ---- 表单字段与 sessionStorage key 映射 ----
+      var FIELD_KEYS = [
+        ['contactName', 'longwoo_contact_name'],
+        ['contactPhone', 'longwoo_contact_phone'],
+        ['contactEmail', 'longwoo_contact_email'],
+        ['bodyHeight', 'longwoo_body_height'],
+        ['bodyWeight', 'longwoo_body_weight'],
+        ['bodyChest', 'longwoo_body_chest'],
+        ['bodyWaist', 'longwoo_body_waist'],
+        ['bodyHip', 'longwoo_body_hip'],
+        ['shoeSize', 'longwoo_shoe_size'],
+        ['socialAccount', 'longwoo_social_account']
+      ];
+
+      // 页面加载时从 sessionStorage 恢复已填数据（避免刷新丢失）
+      FIELD_KEYS.forEach(function(pair) {
+        var el = document.getElementById(pair[0]);
+        if (!el) return;
+        try {
+          var v = sessionStorage.getItem(pair[1]);
+          if (v !== null) el.value = v;
+        } catch (e) {}
+      });
+
+      // 输入时实时保存
+      FIELD_KEYS.forEach(function(pair) {
+        var el = document.getElementById(pair[0]);
+        if (!el) return;
+        el.addEventListener('input', function() {
+          try { sessionStorage.setItem(pair[1], el.value); } catch (e) {}
+        });
+      });
+
+      var submitBtn = document.getElementById('submitBtn');
+      var formTip = document.getElementById('formTip');
+
+      function showTip(msg) {
+        if (formTip) {
+          formTip.textContent = msg;
+          formTip.style.color = 'var(--color-error)';
+        }
+      }
+
+      // 提交：校验 -> 存 sessionStorage -> 进入等待估价页
+      submitBtn.addEventListener('click', function() {
+        var name = (document.getElementById('contactName').value || '').trim();
+        var phone = (document.getElementById('contactPhone').value || '').trim();
+        var email = (document.getElementById('contactEmail').value || '').trim();
+
+        if (!name) { showTip('请输入姓名'); return; }
+        if (!phone || !/^1[3-9]\d{9}$/.test(phone)) { showTip('请输入有效的手机号'); return; }
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showTip('请输入有效的邮箱'); return; }
+
+        // 保存全部字段到 sessionStorage，供最终付款步骤提交后端
+        FIELD_KEYS.forEach(function(pair) {
+          var el = document.getElementById(pair[0]);
+          if (!el) return;
+          try { sessionStorage.setItem(pair[1], el.value || ''); } catch (e) {}
+        });
+
+        showTip('');
+        window.location.href = 'order-step4.html';
+      });
     })();
   </script>
 </body>

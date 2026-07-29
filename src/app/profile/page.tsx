@@ -215,6 +215,11 @@ export default function ProfilePage() {
       setPasswordError("密码长度不能超过64位");
       return;
     }
+    // 密码复杂度：至少包含字母和数字
+    if (!/[a-zA-Z]/.test(passwordInput) || !/\d/.test(passwordInput)) {
+      setPasswordError("密码必须包含字母和数字");
+      return;
+    }
     if (passwordInput !== passwordConfirm) {
       setPasswordError("两次输入的密码不一致");
       return;

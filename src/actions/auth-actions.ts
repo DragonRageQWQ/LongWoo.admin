@@ -283,16 +283,18 @@ export async function getSession(): Promise<{
   const supabase = await createClient()
 
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // 使用 getUser() 替代 getSession()，确保 JWT 与 Supabase 服务器验证
+    // getSession() 仅从 cookie 读取，不验证有效性，可被伪造
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-    if (sessionError || !session) {
+    if (userError || !user) {
       return { success: false, error: '未获取到会话信息' }
     }
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (profileError) {
@@ -302,15 +304,15 @@ export async function getSession(): Promise<{
       const { data: adminProfile } = await admin
         .from('profiles')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single()
 
       return {
         success: true,
         session: {
           user: {
-            id: session.user.id,
-            email: session.user.email,
+            id: user.id,
+            email: user.email,
           },
         },
         profile: (adminProfile as Profile) ?? null,
@@ -321,8 +323,8 @@ export async function getSession(): Promise<{
       success: true,
       session: {
         user: {
-          id: session.user.id,
-          email: session.user.email,
+          id: user.id,
+          email: user.email,
         },
       },
       profile: profile as Profile,

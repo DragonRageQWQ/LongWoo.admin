@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /studio/
+Disallow: /profile
+Disallow: /api/
+
+Sitemap: https://www.longwoo.studio/sitemap.xml

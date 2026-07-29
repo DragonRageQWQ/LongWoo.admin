@@ -82,26 +82,7 @@
 }
 
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
-    <style type="text/tailwindcss">
-  @theme inline {
-    --color-background: var(--longwoo-background);
-    --color-foreground: var(--longwoo-foreground);
-    --color-card: var(--longwoo-card);
-    --color-primary: var(--longwoo-primary);
-    --color-muted: var(--longwoo-muted);
-    --color-accent: var(--longwoo-accent);
-    --color-border: var(--longwoo-border);
-    --radius-sm: var(--longwoo-radius-sm);
-    --radius-md: var(--longwoo-radius-md);
-    --radius-lg: var(--longwoo-radius-lg);
-  }
-  @layer base {
-    body { background: var(--longwoo-background); color: var(--longwoo-foreground); }
-    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
-    th { @apply whitespace-nowrap; }
-  }
-    </style>
+    <link rel="stylesheet" href="/css/tailwind-static.css">
     <style id="semantic-token-fallback">
       .bg-background { background-color: var(--longwoo-background); }
       .text-background { color: var(--longwoo-background); }

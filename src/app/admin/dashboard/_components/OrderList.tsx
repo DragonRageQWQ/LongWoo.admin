@@ -11,8 +11,9 @@ import {
   Inbox,
 } from "lucide-react";
 import { getOrders } from "@/actions/order-actions";
-import { statusLabels, statusColors, formatDate } from "@/lib/utils";
-import type { Order, OrderStatus } from "@/types/database";
+import { formatDate } from "@/lib/utils";
+import type { Order } from "@/types/database";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import OrderDetailModal from "./OrderDetailModal";
 
 // 分页大小
@@ -194,19 +195,6 @@ export default function OrderList({
     return text.slice(0, maxLength) + "...";
   };
 
-  // 渲染状态徽章
-  const renderStatusBadge = (status: OrderStatus) => {
-    const label = statusLabels[status] || status;
-    const colorClass = statusColors[status] || "bg-gray-100 text-gray-800";
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
-      >
-        {label}
-      </span>
-    );
-  };
-
   // 生成分页页码
   const getPageNumbers = () => {
     const pages: number[] = [];
@@ -374,7 +362,7 @@ export default function OrderList({
                         </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {renderStatusBadge(order.status)}
+                        <StatusBadge status={order.status} size="sm" />
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                         {formatDate(order.created_at)}
@@ -402,7 +390,7 @@ export default function OrderList({
                     <span className="text-sm font-medium text-lw-black">
                       {order.order_no}
                     </span>
-                    {renderStatusBadge(order.status)}
+                    <StatusBadge status={order.status} size="sm" />
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600">
                     <span>客户: {order.customer_name}</span>

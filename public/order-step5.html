@@ -82,26 +82,7 @@
 }
 
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
-    <style type="text/tailwindcss">
-  @theme inline {
-    --color-background: var(--longwoo-background);
-    --color-foreground: var(--longwoo-foreground);
-    --color-card: var(--longwoo-card);
-    --color-primary: var(--longwoo-primary);
-    --color-muted: var(--longwoo-muted);
-    --color-accent: var(--longwoo-accent);
-    --color-border: var(--longwoo-border);
-    --radius-sm: var(--longwoo-radius-sm);
-    --radius-md: var(--longwoo-radius-md);
-    --radius-lg: var(--longwoo-radius-lg);
-  }
-  @layer base {
-    body { background: var(--longwoo-background); color: var(--longwoo-foreground); }
-    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
-    th { @apply whitespace-nowrap; }
-  }
-    </style>
+    <link rel="stylesheet" href="/css/tailwind-static.css">
     <style id="semantic-token-fallback">
       .bg-background { background-color: var(--longwoo-background); }
       .text-background { color: var(--longwoo-background); }
@@ -711,16 +692,109 @@
   </style>
 
   <script>
-    function confirmPayment() {
-      // 清理会话数据，设计稿中保留状态展示
+    // 从 sessionStorage 收集各步骤填写的所有数据
+    function collectOrderData() {
+      function get(k) {
+        try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; }
+      }
+      return {
+        customerName: get('longwoo_contact_name'),
+        customerPhone: get('longwoo_contact_phone'),
+        customerEmail: get('longwoo_contact_email'),
+        bodyHeight: get('longwoo_body_height'),
+        bodyWeight: get('longwoo_body_weight'),
+        bodyChest: get('longwoo_body_chest'),
+        bodyWaist: get('longwoo_body_waist'),
+        bodyHip: get('longwoo_body_hip'),
+        shoeSize: get('longwoo_shoe_size'),
+        socialAccount: get('longwoo_social_account'),
+        designRefName: get('longwoo_design_ref_name'),
+        addonOption: get('longwoo_step2_addon'),
+        benefitOption: get('longwoo_step3_benefit')
+      };
+    }
+
+    // 将各步骤数据拼接为订单需求描述（写入 orders.requirements）
+    function buildRequirements(d) {
+      var lines = [];
+      lines.push('【下单来源】自设兽装购买流程（静态页下单）');
+      if (d.designRefName) lines.push('【设定图】' + d.designRefName);
+      if (d.addonOption) lines.push('【选配内容】' + d.addonOption);
+      if (d.benefitOption) lines.push('【折抵权益】' + d.benefitOption);
+      var body = [];
+      if (d.bodyHeight) body.push('身高' + d.bodyHeight + 'CM');
+      if (d.bodyWeight) body.push('体重' + d.bodyWeight + 'KG');
+      if (d.bodyChest) body.push('胸围' + d.bodyChest + 'CM');
+      if (d.bodyWaist) body.push('腰围' + d.bodyWaist + 'CM');
+      if (d.bodyHip) body.push('臀围' + d.bodyHip + 'CM');
+      if (d.shoeSize) body.push('鞋码' + d.shoeSize);
+      if (body.length) lines.push('【身体数据】' + body.join('，'));
+      if (d.socialAccount) lines.push('【社交账号】' + d.socialAccount);
+      return lines.join('\n');
+    }
+
+    // 提交成功后清理全部 sessionStorage 下单数据
+    function clearOrderSession() {
+      var keys = [
+        'longwoo_design_ref_image', 'longwoo_design_ref_name', 'longwoo_design_ref_size',
+        'longwoo_contact_name', 'longwoo_contact_phone', 'longwoo_contact_email',
+        'longwoo_body_height', 'longwoo_body_weight', 'longwoo_body_chest',
+        'longwoo_body_waist', 'longwoo_body_hip', 'longwoo_shoe_size', 'longwoo_social_account',
+        'longwoo_step2_addon', 'longwoo_step3_benefit'
+      ];
+      keys.forEach(function (k) { try { sessionStorage.removeItem(k); } catch (e) {} });
+    }
+
+    async function confirmPayment() {
+      var btn = document.querySelector('.pay-btn');
+
+      // 1. 收集 sessionStorage 中的所有步骤数据
+      var data = collectOrderData();
+
+      // 2. 校验必填联系方式（来自 step3 联系方式表单）
+      if (!data.customerName) { alert('请先在“联系方式”步骤填写姓名'); return; }
+      if (!data.customerPhone) { alert('请先在“联系方式”步骤填写手机号'); return; }
+      if (!data.customerEmail) { alert('请先在“联系方式”步骤填写邮箱'); return; }
+
+      // 3. 拼接需求描述
+      var requirements = buildRequirements(data);
+      if (requirements.length < 10) { alert('需求信息不足，请返回补充联系方式与身体数据'); return; }
+
+      // 4. 提交中状态
+      if (btn) { btn.disabled = true; btn.textContent = '提交中...'; }
+
       try {
-        sessionStorage.removeItem('longwoo_design_ref_image');
-        sessionStorage.removeItem('longwoo_design_ref_name');
-        sessionStorage.removeItem('longwoo_design_ref_size');
-      } catch (e) {}
-      // 滚动到付款完成状态
-      var success = document.querySelector('.success-section');
-      if (success) success.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // 5. 通过 fetch POST 到后端 API 创建订单
+        var res = await fetch('/api/order/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerName: data.customerName,
+            customerPhone: data.customerPhone,
+            customerEmail: data.customerEmail,
+            requirements: requirements
+          })
+        });
+        var result = await res.json();
+
+        if (result.success && result.orderNo) {
+          // 6. 成功：显示订单号
+          var codeEl = document.querySelector('.success-order-code');
+          if (codeEl) codeEl.textContent = '您的订单代码：' + result.orderNo;
+          // 7. 清理 sessionStorage
+          clearOrderSession();
+          // 8. 滚动到付款完成状态
+          var success = document.querySelector('.success-section');
+          if (success) success.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          // 失败：显示错误信息
+          alert(result.error || '提交失败，请重试');
+        }
+      } catch (e) {
+        alert('网络错误，请稍后重试');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '付 款'; }
+      }
     }
   </script>
 </body>

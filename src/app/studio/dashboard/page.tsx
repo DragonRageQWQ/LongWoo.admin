@@ -40,8 +40,9 @@ import {
   updateOrderStatus,
   replySite,
 } from "@/actions/order-actions";
-import { statusLabels, statusColors, formatDate } from "@/lib/utils";
-import type { Order, OrderStatus, OrderAttachment, OrderReply, OperationLog } from "@/types/database";
+import { statusLabels, formatDate } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import type { Order, OrderAttachment, OrderReply, OperationLog } from "@/types/database";
 
 type TabKey = "pending" | "estimated" | "accepted" | "processing" | "delivered" | "completed" | "rejected";
 
@@ -193,19 +194,6 @@ export default function StudioDashboardPage() {
     if (needRefresh) {
       loadData();
     }
-  };
-
-  // 渲染状态徽章
-  const renderStatusBadge = (status: OrderStatus) => {
-    const label = statusLabels[status] || status;
-    const colorClass = statusColors[status] || "bg-gray-100 text-gray-800";
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
-      >
-        {label}
-      </span>
-    );
   };
 
   return (
@@ -391,7 +379,7 @@ export default function StudioDashboardPage() {
                       <span className="text-sm font-medium text-lw-black">
                         {order.order_no}
                       </span>
-                      {renderStatusBadge(order.status)}
+                      <StatusBadge status={order.status} size="sm" />
                     </div>
                     <div className="flex items-center justify-between text-sm text-gray-600">
                       <span>{order.service_types?.name || "未指定"}</span>
@@ -689,19 +677,6 @@ function StudioOrderDetailModal({
     }
   };
 
-  // 渲染状态徽章
-  const renderStatusBadge = (status: OrderStatus) => {
-    const label = statusLabels[status] || status;
-    const colorClass = statusColors[status] || "bg-gray-100 text-gray-800";
-    return (
-      <span
-        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colorClass}`}
-      >
-        {label}
-      </span>
-    );
-  };
-
   return (
     <div
       className="fixed inset-0 bg-black/50 z-50 flex items-start sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
@@ -709,11 +684,21 @@ function StudioOrderDetailModal({
         if (e.target === e.currentTarget) handleClose();
       }}
     >
-      <div className="bg-white w-full sm:max-w-5xl sm:rounded-xl shadow-xl min-h-screen sm:min-h-0 sm:max-h-[90vh] flex flex-col my-0 sm:my-8">
+      <div
+        className="bg-white w-full sm:max-w-5xl sm:rounded-xl shadow-xl min-h-screen sm:min-h-0 sm:max-h-[90vh] flex flex-col my-0 sm:my-8"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="studio-order-detail-modal-title"
+      >
         {/* 弹窗头部 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white sm:rounded-t-xl z-10">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-lw-black">委托单详情</h2>
+            <h2
+              id="studio-order-detail-modal-title"
+              className="text-lg font-bold text-lw-black"
+            >
+              委托单详情
+            </h2>
             {order && (
               <span className="text-sm text-gray-400">{order.order_no}</span>
             )}
@@ -783,7 +768,7 @@ function StudioOrderDetailModal({
                       <Calendar className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-400 mb-0.5">状态</p>
-                        {renderStatusBadge(order.status)}
+                        <StatusBadge status={order.status} />
                       </div>
                     </div>
                     <div className="flex items-start gap-2.5 py-2">

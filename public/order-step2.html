@@ -82,26 +82,7 @@
 }
 
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
-    <style type="text/tailwindcss">
-  @theme inline {
-    --color-background: var(--longwoo-background);
-    --color-foreground: var(--longwoo-foreground);
-    --color-card: var(--longwoo-card);
-    --color-primary: var(--longwoo-primary);
-    --color-muted: var(--longwoo-muted);
-    --color-accent: var(--longwoo-accent);
-    --color-border: var(--longwoo-border);
-    --radius-sm: var(--longwoo-radius-sm);
-    --radius-md: var(--longwoo-radius-md);
-    --radius-lg: var(--longwoo-radius-lg);
-  }
-  @layer base {
-    body { background: var(--longwoo-background); color: var(--longwoo-foreground); }
-    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
-    th { @apply whitespace-nowrap; }
-  }
-    </style>
+    <link rel="stylesheet" href="/css/tailwind-static.css">
     <style id="semantic-token-fallback">
       .bg-background { background-color: var(--longwoo-background); }
       .text-background { color: var(--longwoo-background); }
@@ -343,7 +324,30 @@
       const options = parent.querySelectorAll('.radio-option');
       options.forEach(opt => opt.classList.remove('selected'));
       el.classList.add('selected');
+      saveStep2Addon(el);
     }
+
+    // 将选中的选配内容保存到 sessionStorage，供最终付款步骤提交
+    function saveStep2Addon(el) {
+      try {
+        var labelEl = el.querySelector('.radio-label');
+        var priceEl = el.querySelector('.radio-price');
+        var label = labelEl ? labelEl.textContent.trim() : '';
+        var price = priceEl ? priceEl.textContent.trim() : '';
+        var value = label + (price ? '（' + price + '）' : '');
+        sessionStorage.setItem('longwoo_step2_addon', value);
+      } catch (e) {}
+    }
+
+    // 页面加载时若未存储过选配，则保存默认选中项
+    (function () {
+      try {
+        if (!sessionStorage.getItem('longwoo_step2_addon')) {
+          var selected = document.querySelector('.radio-option.selected');
+          if (selected) saveStep2Addon(selected);
+        }
+      } catch (e) {}
+    })();
   </script>
 
 

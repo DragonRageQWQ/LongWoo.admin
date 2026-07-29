@@ -1,9 +1,61 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { maskPhone } from '@/lib/utils'
 import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/database'
+
+// ==================== 订单查询速率限制（内存版） ====================
+// 基于 IP + 手机号组合做限制，同一组合 1 分钟内最多查询 5 次
+
+interface RateLimitEntry {
+  count: number
+  resetAt: number
+}
+
+const queryRateLimitStore = new Map<string, RateLimitEntry>()
+
+// 速率限制窗口：1 分钟
+const RATE_LIMIT_WINDOW = 60 * 1000
+// 窗口内最大查询次数
+const RATE_LIMIT_MAX = 5
+
+// 定期清理过期项（每5分钟）
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now()
+    for (const [key, entry] of queryRateLimitStore.entries()) {
+      if (entry.resetAt < now) {
+        queryRateLimitStore.delete(key)
+      }
+    }
+  }, 5 * 60 * 1000)
+}
+
+/**
+ * 检查速率限制是否通过
+ * @returns true 表示允许查询，false 表示超限
+ */
+function checkQueryRateLimit(key: string): boolean {
+  const now = Date.now()
+  const entry = queryRateLimitStore.get(key)
+
+  if (!entry || entry.resetAt < now) {
+    queryRateLimitStore.set(key, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW,
+    })
+    return true
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return false
+  }
+
+  entry.count++
+  return true
+}
 
 // ==================== 安全辅助函数 ====================
 
@@ -756,6 +808,15 @@ export async function queryOrderByNo(
   }
   error?: string
 }> {
+  // 速率限制：基于 IP + 手机号组合，1分钟内最多查询5次
+  const headersList = await headers()
+  const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const rateLimitKey = `${ip}:${phone}`
+
+  if (!checkQueryRateLimit(rateLimitKey)) {
+    return { success: false, error: '查询过于频繁，请稍后再试' }
+  }
+
   const supabase = await createClient()
 
   try {

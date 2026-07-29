@@ -149,6 +149,11 @@ export async function updatePassword(
       return { success: false, error: '密码长度不能超过64位' }
     }
 
+    // 密码复杂度：至少包含字母和数字
+    if (!/[a-zA-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+      return { success: false, error: '密码必须包含字母和数字' }
+    }
+
     // 使用 admin 客户端设置密码（Supabase Auth）
     const admin = createAdminClient()
     const { error: updateError } = await admin.auth.admin.updateUserById(
@@ -222,12 +227,14 @@ export async function loginWithPassword(
 }
 
 // ==================== 检查邮箱是否已设置密码 ====================
+// 统一返回 canUsePassword，避免泄露"邮箱是否存在"或"是否已设置密码"等敏感信息
+// canUsePassword: 邮箱存在且已设置密码时为 true，否则为 false
 
 export async function checkEmailHasPassword(
   email: string
-): Promise<{ hasPassword: boolean; exists: boolean }> {
+): Promise<{ canUsePassword: boolean }> {
   try {
-    if (!email) return { hasPassword: false, exists: false }
+    if (!email) return { canUsePassword: false }
 
     const admin = createAdminClient()
 
@@ -239,14 +246,13 @@ export async function checkEmailHasPassword(
       .single()
 
     if (!profile) {
-      return { hasPassword: false, exists: false }
+      return { canUsePassword: false }
     }
 
     return {
-      hasPassword: profile.has_password ?? false,
-      exists: true,
+      canUsePassword: profile.has_password ?? false,
     }
   } catch {
-    return { hasPassword: false, exists: false }
+    return { canUsePassword: false }
   }
 }
