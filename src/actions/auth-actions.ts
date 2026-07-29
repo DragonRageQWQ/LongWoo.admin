@@ -6,7 +6,55 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getOrCreateProfile } from '@/lib/profile'
 import { saveOtp, verifyOtp, hasActiveOtp } from '@/lib/otp-store'
+import { loginOtpEmailTemplate } from '@/lib/email-templates'
 import type { Profile } from '@/types/database'
+import { randomInt } from 'crypto'
+import { headers } from 'next/headers'
+
+// ==================== 邮箱验证码速率限制 ====================
+// 基于 IP + 邮箱组合做限制，防止邮件轰炸和垃圾用户注册
+
+interface OtpRateLimitEntry {
+  count: number
+  resetAt: number
+}
+
+const otpRateLimitStore = new Map<string, OtpRateLimitEntry>()
+const OTP_RATE_LIMIT_WINDOW = 60 * 1000  // 1 分钟窗口
+const OTP_RATE_LIMIT_MAX = 3             // 每分钟最多 3 次
+const OTP_COOLDOWN = 60 * 1000           // 同一邮箱 60 秒冷却
+
+// 定期清理过期项
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now()
+    for (const [key, entry] of otpRateLimitStore.entries()) {
+      if (entry.resetAt < now) {
+        otpRateLimitStore.delete(key)
+      }
+    }
+  }, 5 * 60 * 1000)
+}
+
+function checkOtpRateLimit(key: string): boolean {
+  const now = Date.now()
+  const entry = otpRateLimitStore.get(key)
+
+  if (!entry || entry.resetAt < now) {
+    otpRateLimitStore.set(key, {
+      count: 1,
+      resetAt: now + OTP_RATE_LIMIT_WINDOW,
+    })
+    return true
+  }
+
+  if (entry.count >= OTP_RATE_LIMIT_MAX) {
+    return false
+  }
+
+  entry.count++
+  return true
+}
 
 // ==================== 发送邮箱验证码（自定义 OTP 系统） ====================
 //
@@ -23,6 +71,16 @@ export async function sendEmailOtp(
 ): Promise<{ success: boolean; error?: string }> {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { success: false, error: '请输入有效的邮箱地址' }
+  }
+
+  // 速率限制：基于 IP 和邮箱
+  const headersList = await headers()
+  const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  if (!checkOtpRateLimit(`ip:${ip}`)) {
+    return { success: false, error: '请求过于频繁，请1分钟后再试' }
+  }
+  if (!checkOtpRateLimit(`email:${email.toLowerCase()}`)) {
+    return { success: false, error: '该邮箱请求过于频繁，请稍后再试' }
   }
 
   const admin = createAdminClient()
@@ -72,11 +130,11 @@ export async function sendEmailOtp(
       return { success: false, error: '生成验证码失败' }
     }
 
-    // 自己生成6位数字验证码（不依赖 Supabase 的 email_otp，它返回8位）
-    const otpCode = String(Math.floor(100000 + Math.random() * 900000))
+    // 使用密码学安全的随机数生成 6 位验证码
+    const otpCode = String(randomInt(100000, 1000000))
 
-    // 存入内存（10分钟有效）
-    saveOtp(email, otpCode, tokenHash)
+    // 存入数据库（10分钟有效，自动降级为内存存储）
+    await saveOtp(email, otpCode, tokenHash)
 
     // 发送验证码邮件
     const resendApiKey = process.env.RESEND_API_KEY
@@ -94,50 +152,25 @@ export async function sendEmailOtp(
             from: fromEmail,
             to: email,
             subject: '【LongWoo 龙坞】登录验证码',
-            html: `
-              <!DOCTYPE html>
-              <html lang="zh-CN">
-              <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-              <body style="margin:0;padding:0;background-color:#F3F3F3;font-family:'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',-apple-system,sans-serif;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F3F3F3;">
-                  <tr><td align="center" style="padding:32px 16px;">
-                    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,0.06);">
-                      <tr><td style="background-color:#0D3B3B;padding:28px 40px;text-align:center;">
-                        <h1 style="color:#FFFFFF;font-size:22px;font-weight:700;margin:0;letter-spacing:3px;">龙坞 LONGWOO</h1>
-                        <p style="color:rgba(255,255,255,0.5);font-size:10px;margin:4px 0 0;letter-spacing:2px;">Creative Design Studio</p>
-                      </td></tr>
-                      <tr><td style="background-color:#1A5050;height:4px;line-height:4px;font-size:4px;">&nbsp;</td></tr>
-                      <tr><td style="padding:32px 40px;">
-                        <h2 style="color:#0D3B3B;font-size:18px;font-weight:700;margin:0 0 16px;">登录验证码</h2>
-                        <p style="color:#666;font-size:15px;line-height:1.7;margin:0 0 20px;">您好，您正在登录 LongWoo 龙坞，验证码为：</p>
-                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
-                          <tr><td style="background-color:#F0F7F7;border-left:3px solid #0D3B3B;border-radius:0 8px 8px 0;padding:24px;text-align:center;">
-                            <span style="font-size:36px;font-weight:700;letter-spacing:10px;color:#0D3B3B;">${otpCode}</span>
-                          </td></tr>
-                        </table>
-                        <p style="color:#999;font-size:13px;line-height:1.6;margin:0;">验证码 10 分钟内有效，请勿泄露给他人。如非本人操作，请忽略此邮件。</p>
-                      </td></tr>
-                      <tr><td style="padding:0 40px;">
-                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EEE;"><tr><td style="height:1px;line-height:1px;font-size:1px;">&nbsp;</td></tr></table>
-                      </td></tr>
-                      <tr><td style="padding:20px 40px 28px;">
-                        <p style="color:#AAA;font-size:12px;line-height:1.6;margin:0;">此邮件由 LongWoo 龙坞系统自动发送，请勿直接回复。</p>
-                        <p style="color:#CCC;font-size:11px;margin:4px 0 0;">© 2026 LongWoo 龙坞. All rights reserved.</p>
-                      </td></tr>
-                    </table>
-                  </td></tr>
-                </table>
-              </body>
-              </html>
-            `,
+            html: loginOtpEmailTemplate(otpCode),
           }),
         })
 
         if (!response.ok) {
-          console.error('Resend 发送失败:', await response.text())
+          const errorText = await response.text()
+          console.error('Resend 发送失败:', errorText)
+          // 邮件发送失败时返回错误，不再静默吞掉
+          return {
+            success: false,
+            error: '验证码邮件发送失败，请稍后重试或联系客服',
+          }
         }
       } catch (err) {
         console.error('邮件发送异常:', err)
+        return {
+          success: false,
+          error: '邮件服务暂时不可用，请稍后重试',
+        }
       }
     } else {
       // Dev 模式：输出到控制台
@@ -177,7 +210,7 @@ export async function verifyEmailOtpAndLogin(
   }
 
   try {
-    const result = verifyOtp(email, code)
+    const result = await verifyOtp(email, code)
 
     if (!result.valid) {
       return { success: false, error: '验证码无效或已过期，请重新获取' }
@@ -208,7 +241,7 @@ export async function ensureProfileAfterLogin(userInfo: {
     })
 
     revalidatePath('/')
-    return { success: true, role: profile?.role ?? 'studio' }
+    return { success: true, role: profile?.role ?? 'user' }
   } catch (error) {
     console.error('确保 Profile 异常:', error)
     return { success: false, error: '处理用户信息时发生未知错误' }

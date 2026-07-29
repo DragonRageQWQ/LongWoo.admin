@@ -1,10 +1,16 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import type { ServiceType } from "@/types/database";
 
-// 禁用静态渲染，确保每次请求都获取最新数据
-export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "服务项目 - LongWoo Studio",
+  description: "浏览 LongWoo 工作室提供的兽装定制服务项目，包括全装定制、半装定制等多种选项。",
+};
+
+// 服务类型变更频率低，使用 ISR 每小时重新生成
+export const revalidate = 3600;
 
 export default async function ServicesPage() {
   const supabase = await createClient();

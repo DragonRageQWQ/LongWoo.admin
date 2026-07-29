@@ -25,6 +25,26 @@ import { createClient } from '@/lib/supabase/server'
  *   失败 { success: false, error: string }
  */
 export async function POST(request: NextRequest) {
+  // CSRF 保护：校验 Origin 头，确保请求来自本站
+  const origin = request.headers.get('origin')
+  const host = request.headers.get('host')
+  if (origin && host) {
+    try {
+      const originHost = new URL(origin).host
+      if (originHost !== host) {
+        return NextResponse.json(
+          { success: false, error: '跨站请求被拒绝' },
+          { status: 403 }
+        )
+      }
+    } catch {
+      return NextResponse.json(
+        { success: false, error: '无效的请求来源' },
+        { status: 403 }
+      )
+    }
+  }
+
   // 仅接受 JSON
   let body: Record<string, unknown>
   try {
@@ -121,8 +141,9 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (orderError || !order) {
+      console.error('创建订单失败:', orderError?.message)
       return NextResponse.json(
-        { success: false, error: orderError?.message || '创建订单失败' },
+        { success: false, error: '创建订单失败，请稍后重试' },
         { status: 500 }
       )
     }

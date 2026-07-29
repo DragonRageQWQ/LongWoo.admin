@@ -8,7 +8,7 @@ import { getOrCreateProfile } from '@/lib/profile'
  * 处理 QQ 和微信 OAuth 登录回调：
  * 1. 从 URL 获取 code
  * 2. 使用 supabase.auth.exchangeCodeForSession(code) 交换 session
- * 3. 成功后根据 role 重定向到 /admin/dashboard 或 /studio/dashboard
+ * 3. 成功后根据 role 重定向到 /admin/dashboard（管理员）或 /profile（普通用户）
  * 4. 失败重定向到 /login?error=oauth_failed
  *
  * 注意：在 Next.js App Router 中，route.ts 和 page.tsx 不能同时存在于同一目录。
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    let role = 'studio'
+    let role = 'user'
 
     if (profileError || !profile) {
       // profile 不存在，使用公共工具函数自动创建
@@ -79,14 +79,15 @@ export async function GET(request: NextRequest) {
         email: user.email,
         avatarUrl: user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null,
       })
-      role = createdProfile?.role ?? 'studio'
+      role = createdProfile?.role ?? 'user'
     } else {
       role = profile.role
     }
 
     // 根据 role 重定向到对应的面板
+    // 管理员 → /admin/dashboard，普通用户 → /profile
     const redirectTo =
-      role === 'admin' ? '/admin/dashboard' : '/studio/dashboard'
+      role === 'admin' ? '/admin/dashboard' : '/profile'
 
     // 重新设置 response 为正确的重定向目标
     // 需要保留之前设置的 cookies

@@ -14,7 +14,7 @@ import { getOrCreateProfile } from '@/lib/profile'
  * 5. 用 Supabase Admin 创建/查找用户（邮箱格式：qq_<openid>@longwoo.studio）
  * 6. 生成 magic link 并验证，建立 Supabase 会话（写入 cookie）
  * 7. 创建/更新 profiles 记录
- * 8. 根据 role 重定向到 /admin/dashboard 或 /studio/dashboard
+ * 8. 根据 role 重定向到 /admin/dashboard（管理员）或 /profile（普通用户）
  */
 
 // ==================== 辅助函数：交换 code 获取 access_token ====================
@@ -233,10 +233,11 @@ export async function GET(request: NextRequest) {
       avatarUrl: userInfo.avatarUrl,
     })
 
-    const role = profile?.role ?? 'studio'
+    const role = profile?.role ?? 'user'
 
     // Step 10: 根据 role 重定向到对应面板
-    const redirectTo = role === 'admin' ? '/admin/dashboard' : '/studio/dashboard'
+    // 管理员 → /admin/dashboard，普通用户 → /profile
+    const redirectTo = role === 'admin' ? '/admin/dashboard' : '/profile'
 
     // 构建最终重定向响应，保留所有已设置的 cookie
     const finalResponse = NextResponse.redirect(`${origin}${redirectTo}`)

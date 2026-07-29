@@ -213,7 +213,7 @@ function LoginForm() {
           userId: session.user.id,
           email: session.user.email ?? email,
         });
-        redirectByRole(result.success ? result.role : "studio");
+        redirectByRole(result.success ? result.role : "user");
         return;
       }
 
@@ -226,7 +226,7 @@ function LoginForm() {
       if (result.success) {
         redirectByRole(result.role);
       } else {
-        redirectByRole("studio");
+        redirectByRole("user");
       }
     } catch {
       setError("登录时发生未知错误");

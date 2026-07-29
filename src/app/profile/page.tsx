@@ -70,7 +70,7 @@ export default function ProfilePage() {
             id: result.session.user.id,
             uid: null,
             email: result.session.user.email ?? "",
-            role: "studio",
+            role: "user",
             display_name: "新用户",
             phone: null,
             avatar_url: null,
@@ -532,7 +532,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between py-2">
               <span className="text-sm text-gray-500">账号角色</span>
               <span className="text-sm text-gray-700">
-                {isAdmin ? "管理员" : "普通用户（工作室）"}
+                {isAdmin ? "管理员" : "普通用户"}
               </span>
             </div>
           </div>

@@ -3,6 +3,18 @@ export function maskPhone(phone: string): string {
   return phone.slice(0, 3) + '****' + phone.slice(-4)
 }
 
+export function maskEmail(email: string): string {
+  if (!email) return email
+  const atIndex = email.indexOf('@')
+  if (atIndex <= 0) return email
+  const local = email.slice(0, atIndex)
+  const domain = email.slice(atIndex)
+  const maskedLocal = local.length <= 2
+    ? local[0] + '*'
+    : local.slice(0, 2) + '*'.repeat(Math.min(local.length - 2, 4))
+  return maskedLocal + domain
+}
+
 export function formatDate(date: string): string {
   return new Date(date).toLocaleDateString('zh-CN', {
     year: 'numeric', month: '2-digit', day: '2-digit',

@@ -4,7 +4,7 @@ import type { Profile } from '@/types/database'
  * 获取或创建用户 Profile（公共工具函数）
  *
  * 供 auth-actions.ts 和 QQ OAuth 回调共用，消除重复逻辑。
- * 所有新用户默认 role 为 'studio'（普通用户），管理员仅可后台手动赋予。
+ * 所有新用户默认 role 为 'user'（普通用户），管理员仅可后台手动赋予。
  *
  * UID 由数据库触发器自动生成（从 10001 开始递增）。
  * 新用户默认昵称为 "新朋友+uid"（如 "新朋友10001"）。
@@ -56,13 +56,13 @@ export async function getOrCreateProfile(
       }
     }
 
-    // 自动创建 profile 记录，默认 role 为 studio
+    // 自动创建 profile 记录，默认 role 为 user
     // uid 和 has_password 由数据库默认值/触发器处理
     const now = new Date().toISOString()
     const newProfile = {
       id: userId,
       email: options?.email ?? '',
-      role: 'studio',
+      role: 'user',
       phone: options?.phone ?? null,
       display_name: options?.displayName ?? null, // null → 数据库触发器会设置为 "新朋友+uid"
       avatar_url: options?.avatarUrl ?? null,
@@ -87,17 +87,44 @@ export async function getOrCreateProfile(
     let result = created as Profile
 
     if (!result.uid) {
-      // 应用层生成 uid：使用时间戳后6位作为临时 uid
-      const fallbackUid = Math.floor(Date.now() % 1000000) + 10000
-      const { data: updated } = await supabase
-        .from('profiles')
-        .update({ uid: fallbackUid })
-        .eq('id', userId)
-        .select()
-        .single()
+      // 应用层生成 uid：确保大于 ZERO_USER_UID(10001)，避免与超级管理员冲突
+      // 使用数据库 RPC 原子递增，避免并发冲突
+      const { data: rpcUid, error: rpcError } = await supabase
+        .rpc('generate_uid')
 
-      if (updated) {
-        result = updated as Profile
+      if (!rpcError && rpcUid && rpcUid > 10001) {
+        const { data: updated } = await supabase
+          .from('profiles')
+          .update({ uid: rpcUid })
+          .eq('id', userId)
+          .select()
+          .single()
+
+        if (updated) {
+          result = updated as Profile
+        }
+      } else {
+        // RPC 不可用时降级：查询最大 uid + 1，确保不与零号用户冲突
+        const { data: maxRow } = await supabase
+          .from('profiles')
+          .select('uid')
+          .order('uid', { ascending: false })
+          .range(0, 0)
+          .single()
+
+        const maxUid = maxRow?.uid ?? 10001
+        const fallbackUid = Math.max(maxUid + 1, 10002)
+
+        const { data: updated } = await supabase
+          .from('profiles')
+          .update({ uid: fallbackUid })
+          .eq('id', userId)
+          .select()
+          .single()
+
+        if (updated) {
+          result = updated as Profile
+        }
       }
     }
 

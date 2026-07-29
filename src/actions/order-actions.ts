@@ -3,7 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { maskPhone } from '@/lib/utils'
+import { getCurrentUser, canUserAccessOrder } from '@/lib/auth'
+import { escapeHtml, escapePostgrestKeyword } from '@/lib/postgrest-utils'
+import { maskPhone, maskEmail } from '@/lib/utils'
 import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/database'
 
 // ==================== 订单查询速率限制（内存版） ====================
@@ -57,83 +59,45 @@ function checkQueryRateLimit(key: string): boolean {
   return true
 }
 
-// ==================== 安全辅助函数 ====================
-
-/**
- * HTML 转义，防止 XSS 注入
- * 在将用户输入插入 HTML 邮件模板前调用
- */
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
-/**
- * 获取当前登录用户信息及角色
- * 返回 null 表示未登录
- */
-async function getCurrentUser(): Promise<{
-  userId: string
-  role: 'studio' | 'admin'
-} | null> {
-  const supabase = await createClient()
-
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return null
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    return {
-      userId: session.user.id,
-      role: (profile?.role as 'studio' | 'admin') ?? 'studio',
-    }
-  } catch {
-    return null
-  }
-}
-
-/**
- * 验证当前用户是否有权操作指定订单
- * - admin 角色可操作所有订单
- * - studio 角色只能操作分配给自己的订单（studio_user_id 匹配）
- * - 对于 pending/estimated 状态的订单（尚未分配），studio 也可操作（估价、接单）
- */
-async function canUserAccessOrder(
-  orderId: string,
-  userId: string,
-  role: string
-): Promise<boolean> {
-  if (role === 'admin') return true
-
-  const supabase = await createClient()
-
-  const { data: order } = await supabase
-    .from('orders')
-    .select('status, studio_user_id')
-    .eq('id', orderId)
-    .single()
-
-  if (!order) return false
-
-  // 订单已分配给某个工作室用户，检查是否是当前用户
-  if (order.studio_user_id) {
-    return order.studio_user_id === userId
-  }
-
-  // 订单尚未分配（pending/estimated 状态），允许工作室用户操作
-  return order.status === 'pending' || order.status === 'estimated'
-}
-
 // ==================== 创建委托单 ====================
+
+// 共享的输入验证函数（Server Action 和 API Route 统一使用）
+export function validateOrderInput(data: {
+  customerName?: string
+  customerPhone?: string
+  customerEmail?: string
+  requirements?: string
+}): string | null {
+  if (!data.customerName || data.customerName.trim().length === 0) {
+    return '请填写联系人姓名'
+  }
+  if (data.customerName.length > 50) {
+    return '联系人姓名不能超过50个字符'
+  }
+  if (!data.customerPhone || !/^1[3-9]\d{9}$/.test(data.customerPhone)) {
+    return '请输入有效的手机号码'
+  }
+  if (!data.customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.customerEmail)) {
+    return '请输入有效的邮箱地址'
+  }
+  if (!data.requirements || data.requirements.trim().length < 10) {
+    return '需求描述至少需要10个字符'
+  }
+  if (data.requirements.length > 5000) {
+    return '需求描述不能超过5000个字符'
+  }
+  return null
+}
+
+// 验证 URL 协议仅允许 http/https，防止 javascript: 等 XSS
+export function validateUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 
 export async function createOrder(formData: {
   serviceTypeId?: string
@@ -148,6 +112,12 @@ export async function createOrder(formData: {
     fileType?: string
   }>
 }): Promise<{ success: boolean; orderNo?: string; error?: string }> {
+  // 输入验证
+  const validationError = validateOrderInput(formData)
+  if (validationError) {
+    return { success: false, error: validationError }
+  }
+
   const supabase = await createClient()
 
   try {
@@ -180,7 +150,8 @@ export async function createOrder(formData: {
       .single()
 
     if (orderError) {
-      return { success: false, error: orderError.message }
+      console.error('创建委托单失败:', orderError.message)
+      return { success: false, error: '创建委托单失败，请稍后重试' }
     }
 
     // 如有附件则插入 order_attachments
@@ -274,7 +245,7 @@ export async function getOrders(filters: {
 
     // 关键词搜索：订单号、客户名、需求描述
     if (filters.search && filters.search.trim()) {
-      const keyword = filters.search.trim()
+      const keyword = escapePostgrestKeyword(filters.search.trim())
       query = query.or(`order_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%,requirements.ilike.%${keyword}%`)
     }
 
@@ -289,7 +260,8 @@ export async function getOrders(filters: {
     const { data, error, count } = await query
 
     if (error) {
-      return { success: false, error: error.message }
+      console.error('查询委托单列表失败:', error.message)
+      return { success: false, error: '查询失败，请稍后重试' }
     }
 
     // 对 customer_phone 做脱敏处理
@@ -404,7 +376,7 @@ export async function submitEstimate(
       return { success: false, error: '无权操作此委托单' }
     }
 
-    const { error: updateError } = await supabase
+    const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
       .update({
         status: 'estimated',
@@ -412,9 +384,12 @@ export async function submitEstimate(
         estimate_notes: notes,
       })
       .eq('id', orderId)
+      .eq('status', 'pending')
+      .select()
+      .single()
 
-    if (updateError) {
-      return { success: false, error: updateError.message }
+    if (updateError || !updatedOrder) {
+      return { success: false, error: '该委托单状态已变更，请刷新后重试' }
     }
 
     // 记录 operation_logs
@@ -464,16 +439,22 @@ export async function acceptOrder(
     // 使用当前登录用户 ID，忽略传入的 studioUserId（防止伪造）
     const userId = currentUser.userId
 
-    const { error: updateError } = await supabase
+    // 条件更新：仅当订单仍处于 pending/estimated 状态且尚未被接单时才更新
+    // 防止并发接单竞态条件（两个用户同时接同一个单）
+    const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
       .update({
         status: 'accepted',
         studio_user_id: userId,
       })
       .eq('id', orderId)
+      .in('status', ['pending', 'estimated'])
+      .is('studio_user_id', null)
+      .select()
+      .single()
 
-    if (updateError) {
-      return { success: false, error: updateError.message }
+    if (updateError || !updatedOrder) {
+      return { success: false, error: '该委托单已被接单或状态已变更，请刷新后重试' }
     }
 
     // 记录 operation_logs
@@ -520,16 +501,28 @@ export async function rejectOrder(
       return { success: false, error: '无权操作此委托单' }
     }
 
-    const { error: updateError } = await supabase
+    // 输入验证
+    const trimmedReason = reason.trim()
+    if (!trimmedReason) {
+      return { success: false, error: '请输入拒单原因' }
+    }
+    if (trimmedReason.length > 500) {
+      return { success: false, error: '拒单原因不能超过500个字符' }
+    }
+
+    const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
       .update({
         status: 'rejected',
-        reject_reason: reason,
+        reject_reason: trimmedReason,
       })
       .eq('id', orderId)
+      .in('status', ['pending', 'estimated'])
+      .select()
+      .single()
 
-    if (updateError) {
-      return { success: false, error: updateError.message }
+    if (updateError || !updatedOrder) {
+      return { success: false, error: '该委托单状态已变更，请刷新后重试' }
     }
 
     // 记录 operation_logs
@@ -586,16 +579,31 @@ export async function updateOrderStatus(
     // 构建更新对象
     const updateData: Record<string, unknown> = { status: newStatus }
     if (deliveryUrl) {
+      // 验证 URL 协议，防止 javascript: 等 XSS
+      if (!validateUrl(deliveryUrl)) {
+        return { success: false, error: '交付链接必须是 http:// 或 https:// 开头的有效网址' }
+      }
       updateData.delivery_url = deliveryUrl
     }
 
-    const { error: updateError } = await supabase
+    // 状态转换校验：确保只允许合法的状态转换
+    const allowedTransitions: Record<string, string[]> = {
+      processing: ['accepted'],
+      delivered: ['processing'],
+      completed: ['delivered'],
+    }
+    const allowedFromStatuses = allowedTransitions[newStatus] || []
+    
+    const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
       .update(updateData)
       .eq('id', orderId)
+      .in('status', allowedFromStatuses)
+      .select()
+      .single()
 
-    if (updateError) {
-      return { success: false, error: updateError.message }
+    if (updateError || !updatedOrder) {
+      return { success: false, error: '该委托单状态不允许此操作，请刷新后重试' }
     }
 
     // 记录 operation_logs
@@ -642,17 +650,27 @@ export async function replySite(
       return { success: false, error: '无权操作此委托单' }
     }
 
+    // 输入验证
+    const trimmedContent = content.trim()
+    if (!trimmedContent) {
+      return { success: false, error: '请输入回复内容' }
+    }
+    if (trimmedContent.length > 2000) {
+      return { success: false, error: '回复内容不能超过2000个字符' }
+    }
+
     const { error: replyError } = await supabase
       .from('order_replies')
       .insert({
         order_id: orderId,
         reply_type: 'site',
-        content,
+        content: trimmedContent,
         sender_id: currentUser.userId,
       })
 
     if (replyError) {
-      return { success: false, error: replyError.message }
+      console.error('站内回复失败:', replyError.message)
+      return { success: false, error: '回复失败，请稍后重试' }
     }
 
     revalidatePath('/studio/dashboard')
@@ -782,7 +800,8 @@ export async function replyEmail(
       })
 
     if (replyError) {
-      return { success: false, error: replyError.message }
+      console.error('邮件回复失败:', replyError.message)
+      return { success: false, error: '回复失败，请稍后重试' }
     }
 
     revalidatePath('/studio/dashboard')
@@ -849,6 +868,7 @@ export async function queryOrderByNo(
       data: {
         ...order,
         customer_phone: maskPhone(order.customer_phone),
+        customer_email: maskEmail(order.customer_email),
         attachments: attachments || [],
         replies: (replies || []) as OrderReply[],
       },
@@ -904,14 +924,15 @@ export async function getStudioOrders(filters: {
 
     // 关键词搜索：订单号、客户名、需求描述
     if (filters.search && filters.search.trim()) {
-      const keyword = filters.search.trim()
+      const keyword = escapePostgrestKeyword(filters.search.trim())
       query = query.or(`order_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%,requirements.ilike.%${keyword}%`)
     }
 
     const { data, error, count } = await query
 
     if (error) {
-      return { success: false, error: error.message }
+      console.error('查询工作室订单失败:', error.message)
+      return { success: false, error: '查询失败，请稍后重试' }
     }
 
     // 对 customer_phone 做脱敏处理
@@ -1020,7 +1041,8 @@ export async function getServiceTypes(): Promise<{
       .order('sort_order', { ascending: true })
 
     if (error) {
-      return { success: false, error: error.message }
+      console.error('获取服务类型失败:', error.message)
+      return { success: false, error: '获取服务类型失败，请稍后重试' }
     }
 
     return { success: true, data: data || [] }

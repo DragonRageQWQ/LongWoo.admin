@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import AdminSidebar, { type AdminTab } from "./_components/AdminSidebar";
 import StatsOverview from "./_components/StatsOverview";
 import OrderList from "./_components/OrderList";
+import UserManagement from "./_components/UserManagement";
 
 // 支持的有效标签页
 const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "settings"];
@@ -44,7 +45,7 @@ function DashboardContent({ activeTab }: { activeTab: AdminTab }) {
     case "orders":
       return <OrderList />;
     case "users":
-      return <PlaceholderPanel title="用户管理" />;
+      return <UserManagement />;
     case "settings":
       return <PlaceholderPanel title="系统设置" />;
     default:

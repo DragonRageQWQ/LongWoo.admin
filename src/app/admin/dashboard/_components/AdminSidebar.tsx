@@ -27,7 +27,7 @@ const navItems: NavItem[] = [
   { key: "all-orders", label: "全部订单", icon: Inbox },
   { key: "overview", label: "数据概览", icon: LayoutDashboard },
   { key: "orders", label: "委托管理", icon: ClipboardList },
-  { key: "users", label: "用户管理", icon: Users, disabled: true },
+  { key: "users", label: "用户管理", icon: Users },
   { key: "settings", label: "系统设置", icon: Settings, disabled: true },
 ];
 

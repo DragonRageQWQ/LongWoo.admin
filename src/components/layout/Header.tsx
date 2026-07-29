@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, LogOut, Loader2 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { logoutUser } from "@/actions/auth-actions";
-import { useSession } from "@/components/providers/SessionProvider";
+import { useSession, clearSessionCache } from "@/components/providers/SessionProvider";
 
 const navLinks = [
   { label: "首页", href: "/" },
@@ -14,7 +14,7 @@ const navLinks = [
   { label: "工作室介绍", href: "/about" },
 ];
 
-export default function Header() {
+function HeaderContent() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
@@ -23,6 +23,7 @@ export default function Header() {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
+      clearSessionCache();
       await logoutUser();
     } catch (error) {
       console.error("退出登录失败:", error);
@@ -205,4 +206,8 @@ export default function Header() {
       </div>
     </header>
   );
+}
+
+export default function Header() {
+  return <HeaderContent />;
 }

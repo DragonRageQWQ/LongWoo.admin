@@ -1,8 +1,10 @@
+export type UserRole = 'user' | 'admin'
+
 export type Profile = {
   id: string
   uid: number | null
   email: string
-  role: 'studio' | 'admin'
+  role: UserRole
   phone: string | null
   display_name: string
   avatar_url: string | null
