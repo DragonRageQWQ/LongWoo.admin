@@ -56,15 +56,14 @@ function checkOtpRateLimit(key: string): boolean {
   return true
 }
 
-// ==================== 发送邮箱验证码（自定义 OTP 系统） ====================
+// ==================== 发送邮箱验证码 ====================
 //
-// 完全绕过 Supabase 内置的 signInWithOtp（默认发送魔法链接而非数字验证码）
-// 改用 admin 客户端的 generateLink API：
-// 1. 生成 magic link 并提取 email_otp（6位数字）和 hashed_token
-// 2. 将 { email → code, tokenHash } 存入内存（10分钟有效）
-// 3. 通过 Resend 发送验证码邮件（如已配置）或输出到控制台（dev 模式）
-// 4. 用户输入验证码后，服务端校验并返回 tokenHash
-// 5. 客户端用 tokenHash 调用 verifyOtp 建立会话
+// 流程：
+// 1. 确保用户在 Supabase Auth 中存在（不存在则创建）
+// 2. 生成 6 位验证码，存入 otp_codes 数据库表（10分钟有效）
+// 3. 通过 Resend 发送验证码邮件
+//
+// 不再提前调用 generateLink — token_hash 在验证成功后即时生成，避免过期
 
 export async function sendEmailOtp(
   email: string
@@ -86,16 +85,12 @@ export async function sendEmailOtp(
   const admin = createAdminClient()
 
   try {
-    // 尝试为已有用户生成 magic link（不发送 Supabase 默认邮件）
-    // send_email 不在 TS 类型定义中但 API 运行时支持，用 as 断言
-    let { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-      type: 'magiclink',
-      email,
-      options: { send_email: false } as Record<string, unknown>,
-    } as Parameters<typeof admin.auth.admin.generateLink>[0])
+    // 确保用户在 Supabase Auth 中存在
+    // 先查询，不存在则创建（不发送确认邮件）
+    const { data: existingUsers } = await admin.auth.admin.listUsers()
+    const userExists = existingUsers?.users?.some(u => u.email?.toLowerCase() === email.toLowerCase())
 
-    // 用户不存在时，先创建用户再生成 link
-    if (linkError) {
+    if (!userExists) {
       const { error: createError } = await admin.auth.admin.createUser({
         email,
         email_confirm: true,
@@ -105,36 +100,13 @@ export async function sendEmailOtp(
         console.error('创建用户失败:', createError.message)
         return { success: false, error: '发送验证码失败，请稍后重试' }
       }
-
-      // 重新生成 magic link
-      const retry = await admin.auth.admin.generateLink({
-        type: 'magiclink',
-        email,
-        options: { send_email: false } as Record<string, unknown>,
-      } as Parameters<typeof admin.auth.admin.generateLink>[0])
-
-      linkData = retry.data
-      linkError = retry.error
     }
 
-    if (linkError || !linkData) {
-      console.error('生成验证码失败:', linkError?.message)
-      return { success: false, error: '发送验证码失败，请稍后重试' }
-    }
-
-    // 提取 token_hash（用于后续建立会话）
-    const tokenHash = linkData.properties?.hashed_token
-
-    if (!tokenHash) {
-      console.error('token_hash 数据不完整')
-      return { success: false, error: '生成验证码失败' }
-    }
-
-    // 使用密码学安全的随机数生成 6 位验证码
+    // 生成 6 位验证码
     const otpCode = String(randomInt(100000, 1000000))
 
-    // 存入数据库（10分钟有效，自动降级为内存存储）
-    await saveOtp(email, otpCode, tokenHash)
+    // 存入数据库（10分钟有效）
+    await saveOtp(email, otpCode)
 
     // 发送验证码邮件
     const resendApiKey = process.env.RESEND_API_KEY
@@ -192,12 +164,10 @@ export async function sendEmailOtp(
 // ==================== 验证邮箱验证码并登录 ====================
 //
 // 全流程在服务端完成：
-// 1. 校验验证码，获取 tokenHash
-// 2. 用服务端 SSR 客户端调用 verifyOtp 建立会话（自动设置 cookie）
-// 3. 创建/获取 profile
-// 4. 返回角色给前端，前端直接 redirect
-//
-// 不再让客户端调用 supabase.auth.verifyOtp，避免生产环境挂起问题
+// 1. 从数据库校验验证码
+// 2. 验证成功后，即时调用 generateLink 获取 token_hash
+// 3. 用服务端 SSR 客户端调用 verifyOtp 建立会话（自动设置 cookie）
+// 4. 创建/获取 profile，返回角色给前端
 
 export async function verifyEmailOtpAndLogin(
   email: string,
@@ -216,17 +186,36 @@ export async function verifyEmailOtpAndLogin(
   }
 
   try {
-    // 第1步：校验验证码，获取 tokenHash
+    // 第1步：从数据库校验验证码
     const result = await verifyOtp(email, code)
 
-    if (!result.valid || !result.tokenHash) {
+    if (!result.valid) {
       return { success: false, error: '验证码无效或已过期，请重新获取' }
     }
 
-    // 第2步：用服务端 SSR 客户端建立会话（自动设置 cookie）
+    // 第2步：验证码校验成功，即时生成 magic link（不发送邮件）
+    const admin = createAdminClient()
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email,
+      options: { send_email: false } as Record<string, unknown>,
+    } as Parameters<typeof admin.auth.admin.generateLink>[0])
+
+    if (linkError || !linkData) {
+      console.error('生成 magic link 失败:', linkError?.message)
+      return { success: false, error: '登录失败，请重新获取验证码' }
+    }
+
+    const tokenHash = linkData.properties?.hashed_token
+    if (!tokenHash) {
+      console.error('token_hash 数据不完整')
+      return { success: false, error: '登录失败，请重新获取验证码' }
+    }
+
+    // 第3步：用服务端 SSR 客户端建立会话（自动设置 cookie）
     const supabase = await createClient()
     const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
-      token_hash: result.tokenHash,
+      token_hash: tokenHash,
       type: 'magiclink',
     })
 
@@ -235,8 +224,7 @@ export async function verifyEmailOtpAndLogin(
       return { success: false, error: '登录失败，请重新获取验证码' }
     }
 
-    // 第3步：创建/获取 profile
-    const admin = createAdminClient()
+    // 第4步：创建/获取 profile
     const profile = await getOrCreateProfile(admin, sessionData.user.id, {
       email: sessionData.user.email ?? email,
     })
