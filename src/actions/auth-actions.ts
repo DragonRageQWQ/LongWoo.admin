@@ -154,14 +154,21 @@ export async function verifyEmailOtpAndLogin(
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
   try {
+    const startTime = Date.now()
+    console.log('[Login] ===== 开始验证码登录流程 =====', { email, timestamp: new Date().toISOString() })
+
     // 第1步：校验验证码（不消费，以便后续失败时用户可重试）
+    console.log('[Login] 第1步：校验验证码...')
     const result = await verifyOtp(email, code, false)
+    console.log('[Login] 第1步完成：', result.valid, '耗时' + (Date.now() - startTime) + 'ms')
 
     if (!result.valid) {
       return { success: false, error: '验证码无效或已过期，请重新获取' }
     }
 
     // 第2步：生成 magic link（必须禁用邮件发送）
+    console.log('[Login] 第2步：生成 magic link...')
+    const step2Start = Date.now()
     const admin = createAdminClient()
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'magiclink',
@@ -177,12 +184,15 @@ export async function verifyEmailOtpAndLogin(
     }
 
     const tokenHash = linkData.properties?.hashed_token
+    console.log('[Login] 第2步完成：token_hash 已获取 耗时' + (Date.now() - step2Start) + 'ms')
     if (!tokenHash) {
       console.error('[Login] token_hash 缺失')
       return { success: false, error: '登录令牌异常，请稍后重试' }
     }
 
     // 第3步：直接 HTTP POST 到 /auth/v1/verify 交换 session
+    console.log('[Login] 第3步：验证 token 获取 session...')
+    const step3Start = Date.now()
     const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/verify`, {
       method: 'POST',
       headers: {
@@ -209,6 +219,7 @@ export async function verifyEmailOtpAndLogin(
     }
 
     // 第4步：手动用 base64url 编码写入 session cookie
+    console.log('[Login] 第4步：写入 session cookie...')
     //
     // 完全模拟 @supabase/ssr v0.12 的 applyServerStorage 逻辑：
     //   1. JSON.stringify(session)
@@ -267,20 +278,27 @@ export async function verifyEmailOtpAndLogin(
       }
     }
 
-    // 第5步：会话建立成功，消费验证码
-    await consumeOtp(email, code)
-
-    // 第6步：创建/获取 profile
+    // 第5+6步：并行执行消费验证码和创建/获取 profile
+    console.log('[Login] 第5+6步：并行消费验证码和获取 profile...')
+    const step56Start = Date.now()
     const userId = sessionData.user.id
     const userEmail = sessionData.user.email ?? email
-    const profile = await getOrCreateProfile(admin, userId, {
-      email: userEmail,
-    })
 
-    revalidatePath('/')
-    return { success: true, role: profile?.role ?? 'user' }
+    const [, profileResult] = await Promise.all([
+      consumeOtp(email, code),
+      getOrCreateProfile(admin, userId, { email: userEmail }),
+    ])
+
+    console.log('[Login] 第5+6步完成 耗时' + (Date.now() - step56Start) + 'ms 总耗时' + (Date.now() - startTime) + 'ms')
+
+    // 移除 revalidatePath('/') - 可能导致 Server Action 响应被中止
+    // 客户端 redirectByRole 会通过 router.push 触发页面刷新
+    return { success: true, role: profileResult?.role ?? 'user' }
   } catch (error) {
-    console.error('[Login] 验证码登录异常:', error)
+    console.error('[Login] 验证码登录异常:', error instanceof Error ? error.message : String(error))
+    if (error instanceof Error && error.stack) {
+      console.error('[Login] 堆栈:', error.stack)
+    }
     return { success: false, error: '验证时发生未知错误，请稍后重试' }
   }
 }

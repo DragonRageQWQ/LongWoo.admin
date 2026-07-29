@@ -1,4 +1,7 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
+
+// Vercel Hobby 计划默认超时 10 秒，认证流程含 5+ API 调用需要更长时间
+export const maxDuration = 60;
 
 export const metadata: Metadata = {
   title: "登录 - LongWoo Studio",
@@ -13,3 +16,4 @@ export default function LoginLayout({
 }) {
   return children;
 }
+
