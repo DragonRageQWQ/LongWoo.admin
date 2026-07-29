@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function ServicesPage() {
   const supabase = await createClient();
 
-  const { data: services } = await supabase
+  const { data: services, error: servicesError } = await supabase
     .from("service_types")
     .select("*")
     .eq("is_active", true)
@@ -29,7 +29,12 @@ export default async function ServicesPage() {
         </div>
 
         {/* 服务列表 */}
-        {services && services.length > 0 ? (
+        {servicesError ? (
+          <div className="text-center py-20">
+            <p className="text-red-500 mb-2">加载服务项目时出错</p>
+            <p className="text-sm text-gray-400">请稍后刷新页面重试</p>
+          </div>
+        ) : services && services.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((service: ServiceType) => (
               <div

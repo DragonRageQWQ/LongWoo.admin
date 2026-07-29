@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, LogOut, Loader2 } from "lucide-react";
@@ -20,9 +20,13 @@ export default function Header() {
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
+  const hasChecked = useRef(false);
 
-  // 检查登录状态
+  // 检查登录状态：仅在挂载时执行一次，避免每次路由跳转都发起请求
   useEffect(() => {
+    if (hasChecked.current) return;
+    hasChecked.current = true;
+
     let cancelled = false;
 
     const checkSession = async () => {
@@ -46,7 +50,7 @@ export default function Header() {
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, []);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -60,7 +64,7 @@ export default function Header() {
 
   // 根据角色跳转到对应面板
   const getDashboardHref = () => {
-    return profile?.role === "admin" ? "/admin/dashboard" : "/studio/dashboard";
+    return profile?.role === "admin" ? "/admin/dashboard" : "/profile";
   };
 
   return (

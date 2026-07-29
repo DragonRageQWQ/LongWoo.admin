@@ -60,8 +60,14 @@ async function fetchStats() {
   const todayStartISO = todayStart.toISOString();
   const todayEndISO = todayEnd.toISOString();
 
-  // 并行查询各项统计数据
-  const [todayResult, pendingResult, acceptedResult, completedResult] =
+  // 最近7天趋势参数
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(now.getDate() - 6);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+  // 并行查询各项统计数据 + 7天趋势
+  const [todayResult, pendingResult, acceptedResult, completedResult, recentOrdersResult] =
     await Promise.all([
       supabase
         .from("orders")
@@ -80,19 +86,14 @@ async function fetchStats() {
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("status", "completed"),
+      supabase
+        .from("orders")
+        .select("created_at")
+        .gte("created_at", sevenDaysAgoISO)
+        .order("created_at", { ascending: true }),
     ]);
 
-  // 最近7天趋势: 一次性查询7天内的所有订单，然后在前端按日期分组
-  const sevenDaysAgo = new Date(now);
-  sevenDaysAgo.setDate(now.getDate() - 6);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
-  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
-
-  const { data: recentOrders } = await supabase
-    .from("orders")
-    .select("created_at")
-    .gte("created_at", sevenDaysAgoISO)
-    .order("created_at", { ascending: true });
+  const recentOrders = recentOrdersResult.data;
 
   // 按日期分组统计
   const last7Days = getLast7Days();

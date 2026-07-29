@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   User,
   Package,
@@ -23,6 +23,11 @@ import {
   FileText,
   Paperclip,
   CircleAlert,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Settings,
+  Ban,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 import {
@@ -38,7 +43,7 @@ import {
 import { statusLabels, statusColors, formatDate } from "@/lib/utils";
 import type { Order, OrderStatus, OrderAttachment, OrderReply, OperationLog } from "@/types/database";
 
-type TabKey = "pending" | "estimated" | "accepted" | "delivered";
+type TabKey = "pending" | "estimated" | "accepted" | "processing" | "delivered" | "completed" | "rejected";
 
 type OrderDetail = Order & {
   attachments?: OrderAttachment[];
@@ -50,7 +55,10 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "pending", label: "待估价", icon: Clock },
   { key: "estimated", label: "已估价", icon: Package },
   { key: "accepted", label: "已接委托", icon: Eye },
+  { key: "processing", label: "处理中", icon: Settings },
   { key: "delivered", label: "已交付", icon: CheckCircle },
+  { key: "completed", label: "已完成", icon: CircleCheck },
+  { key: "rejected", label: "已拒单", icon: Ban },
 ];
 
 export default function StudioDashboardPage() {
@@ -63,12 +71,25 @@ export default function StudioDashboardPage() {
     pending: 0,
     estimated: 0,
     accepted: 0,
+    processing: 0,
     delivered: 0,
+    completed: 0,
+    rejected: 0,
   });
+
+  // 搜索与分页
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const pageSize = 10;
 
   // 详情弹窗
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // 竞态保护：每次 loadData 递增 requestId，仅最新请求的结果会被应用
+  const requestIdRef = useRef(0);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -82,20 +103,26 @@ export default function StudioDashboardPage() {
 
   // 加载数据
   const loadData = async () => {
+    const currentRequestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
 
     try {
+      const offset = (currentPage - 1) * pageSize;
       const [ordersResult, countsResult] = await Promise.all([
-        getStudioOrders({ status: activeTab, limit: 50 }),
+        getStudioOrders({ status: activeTab, search: searchQuery || undefined, offset, limit: pageSize }),
         getOrderStatusCounts(),
       ]);
+
+      // 竞态保护：如果这不是最新请求，丢弃结果
+      if (currentRequestId !== requestIdRef.current) return;
 
       if (!ordersResult.success) {
         setError(ordersResult.error || "加载委托单失败");
         setOrders([]);
       } else {
         setOrders(ordersResult.data || []);
+        setTotalItems(ordersResult.total ?? 0);
       }
 
       if (countsResult.success && countsResult.counts) {
@@ -103,22 +130,55 @@ export default function StudioDashboardPage() {
           pending: countsResult.counts.pending,
           estimated: countsResult.counts.estimated,
           accepted: countsResult.counts.accepted,
+          processing: countsResult.counts.processing,
           delivered: countsResult.counts.delivered,
+          completed: countsResult.counts.completed,
+          rejected: countsResult.counts.rejected,
         });
       }
     } catch (err) {
+      if (currentRequestId !== requestIdRef.current) return;
       console.error("加载数据异常:", err);
       setError("加载时发生未知错误");
       setOrders([]);
     } finally {
-      setLoading(false);
+      if (currentRequestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, searchQuery, currentPage]);
+
+  // 搜索提交
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchQuery(searchInput.trim());
+    setCurrentPage(1);
+  };
+
+  // 清除搜索
+  const handleClearSearch = () => {
+    setSearchInput("");
+    setSearchQuery("");
+    setCurrentPage(1);
+  };
+
+  // 切换 Tab 时重置分页和搜索
+  const handleTabChange = (tab: TabKey) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+    setSearchInput("");
+    setSearchQuery("");
+  };
+
+  // 分页计算
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, totalItems);
 
   // 查看详情
   const handleViewDetail = (orderId: string) => {
@@ -186,7 +246,7 @@ export default function StudioDashboardPage() {
           {tabs.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === tab.key
                   ? "bg-lw-accent text-white"
@@ -199,6 +259,35 @@ export default function StudioDashboardPage() {
             </button>
           ))}
         </div>
+
+        {/* 搜索栏 */}
+        <form onSubmit={handleSearch} className="mb-4 flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="搜索订单号、客户名或需求描述..."
+              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <button
+            type="submit"
+            className="px-4 py-2 text-sm font-medium text-white bg-lw-accent rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+          >
+            搜索
+          </button>
+        </form>
 
         {/* 错误提示 */}
         {error && (
@@ -330,6 +419,36 @@ export default function StudioDashboardPage() {
             </>
           )}
         </div>
+
+        {/* 分页控件 */}
+        {!loading && orders.length > 0 && (
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-gray-500">
+              共 {totalItems} 条，显示 {startItem}-{endItem}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                上一页
+              </button>
+              <span className="text-sm text-gray-500 px-2">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                下一页
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 订单详情弹窗 */}

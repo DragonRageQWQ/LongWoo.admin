@@ -4,7 +4,7 @@ import StatsOverview from "./_components/StatsOverview";
 import OrderList from "./_components/OrderList";
 
 // 支持的有效标签页
-const validTabs: AdminTab[] = ["overview", "orders", "users", "settings"];
+const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "settings"];
 
 // 解析当前标签页
 function resolveTab(tabParam: string | undefined): AdminTab {
@@ -32,6 +32,13 @@ function PlaceholderPanel({ title }: { title: string }) {
 // 主体内容区（根据 tab 渲染不同面板）
 function DashboardContent({ activeTab }: { activeTab: AdminTab }) {
   switch (activeTab) {
+    case "all-orders":
+      return (
+        <OrderList
+          title="全部订单"
+          description="快速查看所有订单并进行操作"
+        />
+      );
     case "overview":
       return <StatsOverview />;
     case "orders":

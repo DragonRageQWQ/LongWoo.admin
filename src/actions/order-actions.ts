@@ -5,6 +5,82 @@ import { createClient } from '@/lib/supabase/server'
 import { maskPhone } from '@/lib/utils'
 import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/database'
 
+// ==================== 安全辅助函数 ====================
+
+/**
+ * HTML 转义，防止 XSS 注入
+ * 在将用户输入插入 HTML 邮件模板前调用
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * 获取当前登录用户信息及角色
+ * 返回 null 表示未登录
+ */
+async function getCurrentUser(): Promise<{
+  userId: string
+  role: 'studio' | 'admin'
+} | null> {
+  const supabase = await createClient()
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return null
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single()
+
+    return {
+      userId: session.user.id,
+      role: (profile?.role as 'studio' | 'admin') ?? 'studio',
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 验证当前用户是否有权操作指定订单
+ * - admin 角色可操作所有订单
+ * - studio 角色只能操作分配给自己的订单（studio_user_id 匹配）
+ * - 对于 pending/estimated 状态的订单（尚未分配），studio 也可操作（估价、接单）
+ */
+async function canUserAccessOrder(
+  orderId: string,
+  userId: string,
+  role: string
+): Promise<boolean> {
+  if (role === 'admin') return true
+
+  const supabase = await createClient()
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('status, studio_user_id')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) return false
+
+  // 订单已分配给某个工作室用户，检查是否是当前用户
+  if (order.studio_user_id) {
+    return order.studio_user_id === userId
+  }
+
+  // 订单尚未分配（pending/estimated 状态），允许工作室用户操作
+  return order.status === 'pending' || order.status === 'estimated'
+}
+
 // ==================== 创建委托单 ====================
 
 export async function createOrder(formData: {
@@ -23,6 +99,9 @@ export async function createOrder(formData: {
   const supabase = await createClient()
 
   try {
+    // 尝试获取当前登录用户（客户可能已登录也可能未登录）
+    const currentUser = await getCurrentUser()
+
     // 生成单号
     const { data: orderNoData, error: orderNoError } = await supabase
       .rpc('generate_order_no')
@@ -73,11 +152,12 @@ export async function createOrder(formData: {
     }
 
     // 记录 operation_logs
+    // 使用当前登录用户 ID；若未登录则尝试插入 null（依赖数据库字段是否允许 NULL）
     const { error: logError } = await supabase
       .from('operation_logs')
       .insert({
         order_id: order.id,
-        user_id: order.id, // 客户创建，暂用 order.id
+        user_id: currentUser?.userId ?? null,
         action: 'create_order',
         details: {
           customer_name: formData.customerName,
@@ -99,18 +179,31 @@ export async function createOrder(formData: {
   }
 }
 
-// ==================== 查询委托单列表 ====================
+// ==================== 查询委托单列表（Admin，带搜索、日期筛选、分页） ====================
 
 export async function getOrders(filters: {
   status?: string
+  search?: string
+  startDate?: string
+  endDate?: string
   offset?: number
   limit?: number
 }): Promise<{
   success: boolean
   data?: Order[]
   count?: number
+  total?: number
   error?: string
 }> {
+  // 鉴权：仅 admin 可调用
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return { success: false, error: '请先登录' }
+  }
+  if (currentUser.role !== 'admin') {
+    return { success: false, error: '无权访问' }
+  }
+
   const supabase = await createClient()
 
   try {
@@ -127,6 +220,20 @@ export async function getOrders(filters: {
       query = query.eq('status', filters.status)
     }
 
+    // 关键词搜索：订单号、客户名、需求描述
+    if (filters.search && filters.search.trim()) {
+      const keyword = filters.search.trim()
+      query = query.or(`order_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%,requirements.ilike.%${keyword}%`)
+    }
+
+    // 日期范围筛选（服务端）
+    if (filters.startDate) {
+      query = query.gte('created_at', `${filters.startDate}T00:00:00.000Z`)
+    }
+    if (filters.endDate) {
+      query = query.lte('created_at', `${filters.endDate}T23:59:59.999Z`)
+    }
+
     const { data, error, count } = await query
 
     if (error) {
@@ -139,7 +246,7 @@ export async function getOrders(filters: {
       customer_phone: maskPhone(order.customer_phone),
     })) as Order[]
 
-    return { success: true, data: maskedData, count: count ?? 0 }
+    return { success: true, data: maskedData, count: count ?? 0, total: count ?? 0 }
   } catch (error) {
     console.error('查询委托单列表异常:', error)
     return { success: false, error: '查询委托单列表时发生未知错误' }
@@ -159,46 +266,55 @@ export async function getOrderById(
   }
   error?: string
 }> {
+  // 鉴权：必须登录
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return { success: false, error: '请先登录' }
+  }
+
+  // 授权校验：检查用户是否有权访问此订单
+  const hasAccess = await canUserAccessOrder(id, currentUser.userId, currentUser.role)
+  if (!hasAccess) {
+    return { success: false, error: '无权查看此委托单' }
+  }
+
   const supabase = await createClient()
 
   try {
-    // 联查主表信息
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select(
-        `
-        *,
-        service_types(*),
-        profiles(*)
-        `
-      )
-      .eq('id', id)
-      .single()
+    // 并行查询主表、附件、回复、操作日志
+    const [orderResult, attachmentsResult, repliesResult, logsResult] = await Promise.all([
+      supabase
+        .from('orders')
+        .select('*, service_types(*), profiles(*)')
+        .eq('id', id)
+        .single(),
+      supabase
+        .from('order_attachments')
+        .select('*')
+        .eq('order_id', id)
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('order_replies')
+        .select('*, profiles(display_name, avatar_url)')
+        .eq('order_id', id)
+        .order('sent_at', { ascending: true }),
+      supabase
+        .from('operation_logs')
+        .select('*')
+        .eq('order_id', id)
+        .order('created_at', { ascending: true }),
+    ])
+
+    const order = orderResult.data
+    const orderError = orderResult.error
 
     if (orderError || !order) {
       return { success: false, error: orderError?.message || '未找到委托单' }
     }
 
-    // 查询附件
-    const { data: attachments } = await supabase
-      .from('order_attachments')
-      .select('*')
-      .eq('order_id', id)
-      .order('created_at', { ascending: true })
-
-    // 查询回复
-    const { data: replies } = await supabase
-      .from('order_replies')
-      .select('*, profiles(*)')
-      .eq('order_id', id)
-      .order('sent_at', { ascending: true })
-
-    // 查询操作日志
-    const { data: logs } = await supabase
-      .from('operation_logs')
-      .select('*')
-      .eq('order_id', id)
-      .order('created_at', { ascending: true })
+    const attachments = attachmentsResult.data
+    const replies = repliesResult.data
+    const logs = logsResult.data
 
     return {
       success: true,
@@ -225,6 +341,17 @@ export async function submitEstimate(
   const supabase = await createClient()
 
   try {
+    // 授权校验
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return { success: false, error: '请先登录' }
+    }
+
+    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
+    if (!hasAccess) {
+      return { success: false, error: '无权操作此委托单' }
+    }
+
     const { error: updateError } = await supabase
       .from('orders')
       .update({
@@ -243,7 +370,7 @@ export async function submitEstimate(
       .from('operation_logs')
       .insert({
         order_id: orderId,
-        user_id: '', // 由触发器或中间件填充
+        user_id: currentUser.userId,
         action: 'submit_estimate',
         details: { estimated_price: price, estimate_notes: notes },
       })
@@ -271,12 +398,19 @@ export async function acceptOrder(
   const supabase = await createClient()
 
   try {
-    // 如果没有传入 studioUserId，尝试从 session 获取
-    let userId = studioUserId
-    if (!userId) {
-      const { data: { session } } = await supabase.auth.getSession()
-      userId = session?.user?.id || ''
+    // 授权校验
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return { success: false, error: '请先登录' }
     }
+
+    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
+    if (!hasAccess) {
+      return { success: false, error: '无权操作此委托单' }
+    }
+
+    // 使用当前登录用户 ID，忽略传入的 studioUserId（防止伪造）
+    const userId = currentUser.userId
 
     const { error: updateError } = await supabase
       .from('orders')
@@ -323,8 +457,16 @@ export async function rejectOrder(
   const supabase = await createClient()
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const userId = session?.user?.id || ''
+    // 授权校验
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return { success: false, error: '请先登录' }
+    }
+
+    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
+    if (!hasAccess) {
+      return { success: false, error: '无权操作此委托单' }
+    }
 
     const { error: updateError } = await supabase
       .from('orders')
@@ -343,7 +485,7 @@ export async function rejectOrder(
       .from('operation_logs')
       .insert({
         order_id: orderId,
-        user_id: userId,
+        user_id: currentUser.userId,
         action: 'reject_order',
         details: { reason },
       })
@@ -378,8 +520,16 @@ export async function updateOrderStatus(
   }
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const userId = session?.user?.id || ''
+    // 授权校验
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return { success: false, error: '请先登录' }
+    }
+
+    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
+    if (!hasAccess) {
+      return { success: false, error: '无权操作此委托单' }
+    }
 
     // 构建更新对象
     const updateData: Record<string, unknown> = { status: newStatus }
@@ -401,7 +551,7 @@ export async function updateOrderStatus(
       .from('operation_logs')
       .insert({
         order_id: orderId,
-        user_id: userId,
+        user_id: currentUser.userId,
         action: 'update_status',
         details: { new_status: newStatus, delivery_url: deliveryUrl || null },
       })
@@ -429,8 +579,16 @@ export async function replySite(
   const supabase = await createClient()
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const userId = session?.user?.id || ''
+    // 授权校验
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return { success: false, error: '请先登录' }
+    }
+
+    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
+    if (!hasAccess) {
+      return { success: false, error: '无权操作此委托单' }
+    }
 
     const { error: replyError } = await supabase
       .from('order_replies')
@@ -438,7 +596,7 @@ export async function replySite(
         order_id: orderId,
         reply_type: 'site',
         content,
-        sender_id: userId,
+        sender_id: currentUser.userId,
       })
 
     if (replyError) {
@@ -459,14 +617,37 @@ export async function replySite(
 
 export async function replyEmail(
   orderId: string,
-  content: string,
-  toEmail: string
+  content: string
 ): Promise<{ success: boolean; error?: string; emailSent?: boolean }> {
   const supabase = await createClient()
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const userId = session?.user?.id || ''
+    // 授权校验
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return { success: false, error: '请先登录' }
+    }
+
+    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
+    if (!hasAccess) {
+      return { success: false, error: '无权操作此委托单' }
+    }
+
+    // 从订单记录中读取客户邮箱，而非信任客户端传入的邮箱地址
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('customer_email')
+      .eq('id', orderId)
+      .single()
+
+    if (orderError || !order) {
+      return { success: false, error: '未找到委托单' }
+    }
+
+    const toEmail = order.customer_email
+    if (!toEmail) {
+      return { success: false, error: '该委托单未关联客户邮箱' }
+    }
 
     let emailSent = false
 
@@ -474,6 +655,10 @@ export async function replyEmail(
     const resendApiKey = process.env.RESEND_API_KEY
     if (resendApiKey) {
       try {
+        // HTML 转义防止 XSS 注入
+        const safeContent = escapeHtml(content)
+        const safeContentHtml = safeContent.replace(/\n/g, '<br/>')
+
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -502,7 +687,7 @@ export async function replyEmail(
                         <p style="color:#666;font-size:15px;line-height:1.7;margin:0 0 20px;">您好，您的委托单有新的回复：</p>
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
                           <tr><td style="background-color:#F0F7F7;border-left:3px solid #0D3B3B;border-radius:0 8px 8px 0;padding:16px;">
-                            <p style="color:#333;font-size:14px;line-height:1.7;margin:0;">${content.replace(/\n/g, '<br/>')}</p>
+                            <p style="color:#333;font-size:14px;line-height:1.7;margin:0;">${safeContentHtml}</p>
                           </td></tr>
                         </table>
                         <p style="color:#666;font-size:14px;line-height:1.6;margin:0 0 8px;">请登录系统查看完整详情。</p>
@@ -541,7 +726,7 @@ export async function replyEmail(
         order_id: orderId,
         reply_type: 'email',
         content,
-        sender_id: userId,
+        sender_id: currentUser.userId,
       })
 
     if (replyError) {
@@ -592,14 +777,12 @@ export async function queryOrderByNo(
       .eq('order_id', order.id)
       .order('created_at', { ascending: true })
 
-    // 查询回复
+    // 查询回复（仅返回显示名称和头像，不泄露内部用户信息）
     const { data: replies } = await supabase
       .from('order_replies')
-      .select('*, profiles(*)')
+      .select('*, profiles(display_name, avatar_url)')
       .eq('order_id', order.id)
       .order('sent_at', { ascending: true })
-
-    // 返回脱敏后的信息
     return {
       success: true,
       data: {
@@ -615,23 +798,31 @@ export async function queryOrderByNo(
   }
 }
 
-// ==================== 工作室获取委托单列表（带分组统计） ====================
+// ==================== 工作室获取委托单列表（带搜索、分页、分组统计） ====================
 
 export async function getStudioOrders(filters: {
   status?: string
+  search?: string
   offset?: number
   limit?: number
 }): Promise<{
   success: boolean
   data?: Order[]
   count?: number
+  total?: number
   error?: string
 }> {
+  // 鉴权：必须登录
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return { success: false, error: '请先登录' }
+  }
+
   const supabase = await createClient()
 
   try {
     const offset = filters.offset ?? 0
-    const limit = filters.limit ?? 50
+    const limit = filters.limit ?? 20
 
     let query = supabase
       .from('orders')
@@ -641,6 +832,19 @@ export async function getStudioOrders(filters: {
 
     if (filters.status) {
       query = query.eq('status', filters.status)
+    }
+
+    // 非 admin 用户只能看到：
+    // 1. 分配给自己的订单（studio_user_id = 当前用户）
+    // 2. 尚未分配的订单（pending/estimated 状态，studio_user_id 为 null）
+    if (currentUser.role !== 'admin') {
+      query = query.or(`studio_user_id.eq.${currentUser.userId},and(studio_user_id.is.null,status.in.(pending,estimated))`)
+    }
+
+    // 关键词搜索：订单号、客户名、需求描述
+    if (filters.search && filters.search.trim()) {
+      const keyword = filters.search.trim()
+      query = query.or(`order_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%,requirements.ilike.%${keyword}%`)
     }
 
     const { data, error, count } = await query
@@ -655,7 +859,7 @@ export async function getStudioOrders(filters: {
       customer_phone: maskPhone(order.customer_phone),
     })) as Order[]
 
-    return { success: true, data: maskedData, count: count ?? 0 }
+    return { success: true, data: maskedData, count: count ?? 0, total: count ?? 0 }
   } catch (error) {
     console.error('工作室查询委托单异常:', error)
     return { success: false, error: '查询委托单时发生未知错误' }
@@ -663,6 +867,7 @@ export async function getStudioOrders(filters: {
 }
 
 // ==================== 获取委托单状态计数统计 ====================
+// 使用并行 head 查询（不传输数据行，仅返回 count），避免全表扫描
 
 export async function getOrderStatusCounts(): Promise<{
   success: boolean
@@ -678,16 +883,36 @@ export async function getOrderStatusCounts(): Promise<{
   }
   error?: string
 }> {
+  // 鉴权：必须登录
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return { success: false, error: '请先登录' }
+  }
+
   const supabase = await createClient()
 
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('status')
+    const statuses = ['pending', 'estimated', 'accepted', 'processing', 'delivered', 'completed', 'rejected'] as const
 
-    if (error) {
-      return { success: false, error: error.message }
+    // 构建 base filter：非 admin 用户只能看到分配给自己的订单 + 尚未分配的订单（pending/estimated）
+    const buildQuery = (status: string) => {
+      let q = supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', status)
+
+      if (currentUser.role !== 'admin') {
+        // 分配给自己的，或尚未分配的（pending/estimated 且 studio_user_id 为 null）
+        q = q.or(`studio_user_id.eq.${currentUser.userId},and(studio_user_id.is.null,status.in.(pending,estimated))`)
+      }
+
+      return q
     }
+
+    // 并行查询每种状态的计数（head: true 仅返回 count，不传输数据）
+    const results = await Promise.all(
+      statuses.map(status => buildQuery(status))
+    )
 
     const counts = {
       pending: 0,
@@ -700,16 +925,46 @@ export async function getOrderStatusCounts(): Promise<{
       total: 0,
     }
 
-    data?.forEach((order: { status: string }) => {
-      if (order.status in counts) {
-        counts[order.status as keyof typeof counts]++
+    results.forEach((result, index) => {
+      if (result.error) {
+        console.error(`查询 ${statuses[index]} 计数失败:`, result.error.message)
+        return
       }
-      counts.total++
+      const count = result.count ?? 0
+      counts[statuses[index]] = count
+      counts.total += count
     })
 
     return { success: true, counts }
   } catch (error) {
     console.error('获取委托单状态计数异常:', error)
     return { success: false, error: '获取统计数据时发生未知错误' }
+  }
+}
+
+// ==================== 获取服务类型列表（公开，供客户端调用） ====================
+
+export async function getServiceTypes(): Promise<{
+  success: boolean
+  data?: Array<{ id: string; name: string; price_range: string | null }>
+  error?: string
+}> {
+  const supabase = await createClient()
+
+  try {
+    const { data, error } = await supabase
+      .from('service_types')
+      .select('id, name, price_range')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data: data || [] }
+  } catch (error) {
+    console.error('获取服务类型异常:', error)
+    return { success: false, error: '获取服务类型时发生未知错误' }
   }
 }

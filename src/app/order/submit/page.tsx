@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle, Upload, ArrowRight, ArrowLeft } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Button from "@/components/ui/Button";
 import StepIndicator from "./components/StepIndicator";
-import { createOrder } from "@/actions/order-actions";
+import { createOrder, getServiceTypes } from "@/actions/order-actions";
 
 const TOTAL_STEPS = 3;
 const STEP_LABELS = ["填写信息", "描述需求", "确认提交"];
@@ -20,13 +20,29 @@ export default function OrderSubmitPage() {
   const [orderNo, setOrderNo] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  // 服务类型列表
+  const [serviceTypes, setServiceTypes] = useState<Array<{ id: string; name: string; price_range: string | null }>>([]);
+
   // 表单数据
   const [formData, setFormData] = useState({
     customerName: "",
     customerPhone: "",
     customerEmail: "",
+    serviceTypeId: "",
     requirements: "",
   });
+
+  // 加载服务类型
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await getServiceTypes();
+      if (!cancelled && result.success && result.data) {
+        setServiceTypes(result.data);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -91,6 +107,7 @@ export default function OrderSubmitPage() {
 
     try {
       const result = await createOrder({
+        serviceTypeId: formData.serviceTypeId || undefined,
         customerName: formData.customerName.trim(),
         customerPhone: formData.customerPhone.trim(),
         customerEmail: formData.customerEmail.trim(),
@@ -225,6 +242,28 @@ export default function OrderSubmitPage() {
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition"
                 />
               </div>
+
+              {/* 服务类型选择 */}
+              {serviceTypes.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-lw-black mb-1.5">
+                    服务类型
+                  </label>
+                  <select
+                    value={formData.serviceTypeId}
+                    onChange={(e) => updateField("serviceTypeId", e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition bg-white"
+                  >
+                    <option value="">请选择服务类型（可选）</option>
+                    {serviceTypes.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.name}
+                        {st.price_range ? ` (${st.price_range})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 
@@ -288,6 +327,16 @@ export default function OrderSubmitPage() {
                     {formData.customerEmail || "-"}
                   </span>
                 </div>
+                {serviceTypes.length > 0 && (
+                  <div className="flex items-start gap-3 py-3 border-b border-gray-50">
+                    <span className="text-xs text-gray-400 w-20 flex-shrink-0">
+                      服务类型
+                    </span>
+                    <span className="text-sm text-lw-black">
+                      {serviceTypes.find((st) => st.id === formData.serviceTypeId)?.name || "未指定"}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-start gap-3 py-3">
                   <span className="text-xs text-gray-400 w-20 flex-shrink-0">
                     需求描述

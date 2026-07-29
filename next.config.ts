@@ -20,6 +20,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // TypeScript 检查在 CI 中单独执行（npx tsc --noEmit），
+  // 构建时跳过以避免 worker 内存溢出
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  // 限制 worker 数量，避免内存溢出
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+  },
 };
 
 export default nextConfig;

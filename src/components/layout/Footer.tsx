@@ -8,8 +8,7 @@ export default function Footer() {
 
           {/* 联系方式 */}
           <div className="flex flex-col items-center md:items-end gap-1 text-sm text-gray-500">
-            <span>邮箱：contact@longwoo.com</span>
-            <span>电话：400-000-0000</span>
+            <span>邮箱：hello@longwoo.studio</span>
           </div>
         </div>
 

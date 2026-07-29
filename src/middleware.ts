@@ -21,25 +21,29 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  // 使用 getUser() 而非 getSession()，确保 JWT 与 Supabase 服务器验证
+  // getSession() 仅从 cookie 读取，不验证有效性，可被伪造
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const protectedPaths = ['/studio', '/admin']
-  const isAdminPath = request.nextUrl.pathname.startsWith('/admin')
+  const protectedPaths = ['/studio', '/admin', '/profile']
+  const isAdminOnlyPath = request.nextUrl.pathname.startsWith('/admin') ||
+    request.nextUrl.pathname.startsWith('/studio')
 
-  if (!session && protectedPaths.some(p =>
+  if (!user && protectedPaths.some(p =>
     request.nextUrl.pathname.startsWith(p))) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (session && isAdminPath) {
+  // /admin 和 /studio 均要求管理员权限
+  if (user && isAdminOnlyPath) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
     if (profile?.role !== 'admin') {
       return NextResponse.redirect(
-        new URL('/studio/dashboard', request.url))
+        new URL('/profile', request.url))
     }
   }
 
@@ -47,5 +51,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/studio/:path*', '/admin/:path*']
+  matcher: ['/studio/:path*', '/admin/:path*', '/profile/:path*']
 }

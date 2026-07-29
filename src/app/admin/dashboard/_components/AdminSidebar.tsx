@@ -10,10 +10,11 @@ import {
   LogOut,
   Menu,
   X,
+  Inbox,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 
-export type AdminTab = "overview" | "orders" | "users" | "settings";
+export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "settings";
 
 interface NavItem {
   key: AdminTab;
@@ -23,6 +24,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { key: "all-orders", label: "全部订单", icon: Inbox },
   { key: "overview", label: "数据概览", icon: LayoutDashboard },
   { key: "orders", label: "委托管理", icon: ClipboardList },
   { key: "users", label: "用户管理", icon: Users, disabled: true },
@@ -47,6 +49,7 @@ export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
       router.push(`${pathname}?tab=${tab}`);
     }
   };
+  // all-orders 和其他 tab 一样通过 query 参数传递
 
   const handleLogout = async () => {
     setLoggingOut(true);

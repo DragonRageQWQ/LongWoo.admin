@@ -30,7 +30,13 @@ const statusOptions: Array<{ value: string; label: string }> = [
   { value: "rejected", label: "已拒单" },
 ];
 
-export default function OrderList() {
+export default function OrderList({
+  title = "委托管理",
+  description = "管理所有委托单，进行估价、接单、进度更新等操作",
+}: {
+  title?: string;
+  description?: string;
+}) {
   // 搜索与筛选状态
   const [searchKeyword, setSearchKeyword] = useState("");
   const [appliedKeyword, setAppliedKeyword] = useState("");
@@ -60,7 +66,7 @@ export default function OrderList() {
     setRefreshKey((k) => k + 1);
   };
 
-  // 数据获取：所有 setState 都在 await 之后，避免 effect 中同步 setState
+  // 数据获取：所有搜索/筛选均在服务端执行
   useEffect(() => {
     let cancelled = false;
 
@@ -68,6 +74,9 @@ export default function OrderList() {
       try {
         const result = await getOrders({
           status: statusFilter || undefined,
+          search: appliedKeyword || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
           offset: (currentPage - 1) * PAGE_SIZE,
           limit: PAGE_SIZE,
         });
@@ -81,32 +90,8 @@ export default function OrderList() {
           return;
         }
 
-        let data = result.data || [];
-
-        // 客户端二次过滤：按订单号或客户名称搜索
-        if (appliedKeyword.trim()) {
-          const keyword = appliedKeyword.trim().toLowerCase();
-          data = data.filter(
-            (order) =>
-              order.order_no.toLowerCase().includes(keyword) ||
-              order.customer_name.toLowerCase().includes(keyword)
-          );
-        }
-
-        // 客户端二次过滤：日期范围
-        if (startDate) {
-          const start = new Date(startDate);
-          start.setHours(0, 0, 0, 0);
-          data = data.filter((order) => new Date(order.created_at) >= start);
-        }
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          data = data.filter((order) => new Date(order.created_at) <= end);
-        }
-
-        setOrders(data);
-        setTotalCount(result.count ?? data.length);
+        setOrders(result.data || []);
+        setTotalCount(result.total ?? result.count ?? 0);
         setError(null);
       } catch (err) {
         if (cancelled) return;
@@ -240,9 +225,9 @@ export default function OrderList() {
     <div className="space-y-5">
       {/* 标题 */}
       <div>
-        <h1 className="text-xl font-bold text-lw-black">委托管理</h1>
+        <h1 className="text-xl font-bold text-lw-black">{title}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          管理所有委托单，进行估价、接单、进度更新等操作
+          {description}
         </p>
       </div>
 

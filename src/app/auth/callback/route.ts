@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { getOrCreateProfile } from '@/lib/profile'
 
 /**
  * OAuth 回调处理路由
@@ -73,28 +74,12 @@ export async function GET(request: NextRequest) {
     let role = 'studio'
 
     if (profileError || !profile) {
-      // profile 不存在，自动创建一条记录
-      const now = new Date().toISOString()
-      const newProfile = {
-        id: user.id,
-        email: user.email ?? '',
-        role: 'studio',
-        phone: user.phone ?? null,
-        display_name: '新用户',
-        avatar_url: user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null,
-        is_active: true,
-        created_at: now,
-        updated_at: now,
-      }
-
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert(newProfile)
-
-      if (insertError) {
-        console.error('创建 profile 失败:', insertError.message)
-        // 即使创建失败也允许登录，使用默认 role
-      }
+      // profile 不存在，使用公共工具函数自动创建
+      const createdProfile = await getOrCreateProfile(supabase, user.id, {
+        email: user.email,
+        avatarUrl: user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null,
+      })
+      role = createdProfile?.role ?? 'studio'
     } else {
       role = profile.role
     }
