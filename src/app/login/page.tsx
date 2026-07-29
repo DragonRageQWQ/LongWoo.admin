@@ -7,7 +7,6 @@ import { Loader2, Mail, ArrowLeft, Sparkles, Lock } from "lucide-react";
 import {
   sendEmailOtp,
   verifyEmailOtpAndLogin,
-  ensureProfileAfterLogin,
   signInWithQQ,
   isQQConfigured,
 } from "@/actions/auth-actions";
@@ -15,7 +14,6 @@ import {
   loginWithPassword,
   checkEmailHasPassword,
 } from "@/actions/profile-actions";
-import { createClient } from "@/lib/supabase/client";
 
 type LoginTab = "email" | "password" | "qq";
 
@@ -155,11 +153,8 @@ function LoginForm() {
   };
 
   // ==================== 验证邮箱验证码 ====================
-  // 流程：
-  // 1. Server Action 校验验证码，返回 tokenHash
-  // 2. 客户端用 tokenHash 调用 verifyOtp 建立会话
-  // 3. 从会话获取用户信息，调用 Server Action 创建 profile
-  // 4. 按角色跳转
+  // 全流程在服务端完成：验证码校验 + 建立会话 + 创建 profile
+  // 前端只需调用 Server Action，成功后按角色 redirect
   const handleVerifyEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -176,58 +171,14 @@ function LoginForm() {
 
     setEmailVerifying(true);
     try {
-      // 第1步：服务端校验验证码，获取 tokenHash
-      const verifyResult = await verifyEmailOtpAndLogin(email, emailCode);
+      const result = await verifyEmailOtpAndLogin(email, emailCode);
 
-      if (!verifyResult.success || !verifyResult.tokenHash) {
-        setError(verifyResult.error ?? "验证失败");
+      if (!result.success) {
+        setError(result.error ?? "验证失败");
         return;
       }
 
-      // 第2步：客户端用 tokenHash 建立会话
-      const supabase = createClient();
-      const { data: sessionData, error: sessionError } =
-        await supabase.auth.verifyOtp({
-          token_hash: verifyResult.tokenHash,
-          type: "magiclink",
-        });
-
-      if (sessionError) {
-        console.error("建立会话失败:", sessionError.message);
-        setError("登录失败：" + sessionError.message);
-        return;
-      }
-
-      // 第3步：从会话获取用户信息
-      const userId = sessionData?.user?.id;
-      const userEmail = sessionData?.user?.email ?? email;
-
-      if (!userId) {
-        // 兜底：从客户端 supabase 获取 session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user?.id) {
-          setError("登录成功但未获取到用户信息，请重试");
-          return;
-        }
-        const result = await ensureProfileAfterLogin({
-          userId: session.user.id,
-          email: session.user.email ?? email,
-        });
-        redirectByRole(result.success ? result.role : "user");
-        return;
-      }
-
-      // 第4步：创建/获取 profile，按角色跳转
-      const result = await ensureProfileAfterLogin({
-        userId,
-        email: userEmail,
-      });
-
-      if (result.success) {
-        redirectByRole(result.role);
-      } else {
-        redirectByRole("user");
-      }
+      redirectByRole(result.role);
     } catch {
       setError("登录时发生未知错误");
     } finally {

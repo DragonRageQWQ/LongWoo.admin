@@ -189,16 +189,22 @@ export async function sendEmailOtp(
   }
 }
 
-// ==================== 验证邮箱验证码 ====================
+// ==================== 验证邮箱验证码并登录 ====================
 //
-// 服务端校验验证码，返回 tokenHash 供客户端建立会话
+// 全流程在服务端完成：
+// 1. 校验验证码，获取 tokenHash
+// 2. 用服务端 SSR 客户端调用 verifyOtp 建立会话（自动设置 cookie）
+// 3. 创建/获取 profile
+// 4. 返回角色给前端，前端直接 redirect
+//
+// 不再让客户端调用 supabase.auth.verifyOtp，避免生产环境挂起问题
 
 export async function verifyEmailOtpAndLogin(
   email: string,
   code: string
 ): Promise<{
   success: boolean
-  tokenHash?: string
+  role?: string
   error?: string
 }> {
   if (!email || !code) {
@@ -210,15 +216,35 @@ export async function verifyEmailOtpAndLogin(
   }
 
   try {
+    // 第1步：校验验证码，获取 tokenHash
     const result = await verifyOtp(email, code)
 
-    if (!result.valid) {
+    if (!result.valid || !result.tokenHash) {
       return { success: false, error: '验证码无效或已过期，请重新获取' }
     }
 
-    return { success: true, tokenHash: result.tokenHash }
+    // 第2步：用服务端 SSR 客户端建立会话（自动设置 cookie）
+    const supabase = await createClient()
+    const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
+      token_hash: result.tokenHash,
+      type: 'magiclink',
+    })
+
+    if (sessionError || !sessionData?.user) {
+      console.error('服务端建立会话失败:', sessionError?.message)
+      return { success: false, error: '登录失败，请重新获取验证码' }
+    }
+
+    // 第3步：创建/获取 profile
+    const admin = createAdminClient()
+    const profile = await getOrCreateProfile(admin, sessionData.user.id, {
+      email: sessionData.user.email ?? email,
+    })
+
+    revalidatePath('/')
+    return { success: true, role: profile?.role ?? 'user' }
   } catch (error) {
-    console.error('验证码校验异常:', error)
+    console.error('验证码登录异常:', error)
     return { success: false, error: '验证时发生未知错误' }
   }
 }
