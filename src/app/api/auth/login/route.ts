@@ -16,28 +16,35 @@ function encodeSessionCookie(
   session: Record<string, unknown>,
   cookieName: string
 ): Array<{ name: string; value: string }> {
-  // 编码为 base64url
+  // @supabase/ssr 使用 "base64-" 前缀 + base64url 编码
+  // 参考 node_modules/@supabase/ssr/dist/main/cookies.js
   const jsonStr = JSON.stringify(session)
-  const encoded = Buffer.from(jsonStr)
+  const base64url = Buffer.from(jsonStr)
     .toString('base64')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '')
 
-  const MAX_COOKIE_SIZE = 3180
+  // 关键：添加 "base64-" 前缀，这是 @supabase/ssr 的编码格式
+  const encoded = `base64-${base64url}`
+
+  const MAX_CHUNK_SIZE = 3180
 
   // 不需要分片
-  if (encoded.length <= MAX_COOKIE_SIZE) {
+  if (encoded.length <= MAX_CHUNK_SIZE) {
     return [{ name: cookieName, value: encoded }]
   }
 
-  // 需要分片
+  // 需要分片（与 @supabase/ssr createChunks 逻辑一致）
   const chunks: Array<{ name: string; value: string }> = []
-  for (let i = 0; i * MAX_COOKIE_SIZE < encoded.length; i++) {
+  let remaining = encoded
+  while (remaining.length > 0) {
+    const chunk = remaining.slice(0, MAX_CHUNK_SIZE)
     chunks.push({
-      name: `${cookieName}.${i}`,
-      value: encoded.slice(i * MAX_COOKIE_SIZE, (i + 1) * MAX_COOKIE_SIZE),
+      name: `${cookieName}.${chunks.length}`,
+      value: chunk,
     })
+    remaining = remaining.slice(MAX_CHUNK_SIZE)
   }
   return chunks
 }
