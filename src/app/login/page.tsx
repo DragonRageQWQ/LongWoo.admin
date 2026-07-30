@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2, Mail, ArrowLeft, Sparkles, Lock } from "lucide-react";
 import {
   sendEmailOtp,
-  verifyEmailOtpAndLogin,
   signInWithQQ,
   isQQConfigured,
 } from "@/actions/auth-actions";
@@ -33,7 +32,6 @@ function QQIcon({ className = "" }: { className?: string }) {
 
 // ==================== 主组件 ====================
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<LoginTab>("email");
@@ -153,8 +151,9 @@ function LoginForm() {
   };
 
   // ==================== 验证邮箱验证码 ====================
-  // 全流程在服务端完成：验证码校验 + 建立会话 + 创建 profile
-  // 前端只需调用 Server Action，成功后按角色 redirect
+  // 通过 API Route Handler 完成：验证码校验 + 建立会话 + 创建 profile
+  // 使用 fetch 而非 Server Action，避免 Vercel 上 Server Action 被中止（ERR_ABORTED）
+  // API Route 通过标准 HTTP 响应设置 Set-Cookie，更可靠
   const handleVerifyEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -171,18 +170,24 @@ function LoginForm() {
 
     setEmailVerifying(true);
     try {
-      const result = await verifyEmailOtpAndLogin(email, emailCode);
-      console.log("[Login] Server Action 返回:", result);
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: emailCode }),
+      });
 
-      if (!result || !result.success) {
-        setError(result?.error ?? "验证失败");
+      const result = await response.json();
+      console.log("[Login] API 返回:", result, "HTTP状态:", response.status);
+
+      if (!response.ok || !result.success) {
+        setError(result.error ?? "验证失败");
         return;
       }
 
       redirectByRole(result.role);
     } catch (err) {
       console.error("[Login] 客户端异常:", err);
-      setError("登录时发生未知错误");
+      setError("登录时发生未知错误，请稍后重试");
     } finally {
       setEmailVerifying(false);
     }
