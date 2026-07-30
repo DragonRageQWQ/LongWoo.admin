@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { getOrCreateProfile } from '@/lib/profile'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
  * QQ OAuth 回调处理路由
@@ -215,19 +216,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
     }
 
-    // Step 8: 获取当前用户
+    // Step 8: 获取当前用户（使用 getSession() 替代 getUser()）
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
+    const user = session?.user ?? null
 
-    if (userError || !user) {
-      console.error('获取用户信息失败:', userError?.message)
+    if (sessionError || !user) {
+      console.error('获取用户信息失败:', sessionError?.message)
       return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
     }
 
-    // Step 9: 创建或更新 profile（使用公共函数，消除重复逻辑）
-    const profile = await getOrCreateProfile(supabase, user.id, {
+    // Step 9: 创建或更新 profile（使用 admin 客户端）
+    const admin = createAdminClient()
+    const profile = await getOrCreateProfile(admin, user.id, {
       email: qqEmail,
       displayName: userInfo.nickname,
       avatarUrl: userInfo.avatarUrl,

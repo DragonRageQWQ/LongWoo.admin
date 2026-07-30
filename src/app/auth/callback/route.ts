@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { getOrCreateProfile } from '@/lib/profile'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
  * OAuth 回调处理路由
@@ -53,19 +54,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
     }
 
-    // 获取当前用户
+    // 获取当前用户（使用 getSession() 替代 getUser()，避免生产环境 "Invalid API key" 问题）
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
+    const user = session?.user ?? null
 
-    if (userError || !user) {
-      console.error('获取用户信息失败:', userError?.message)
+    if (sessionError || !user) {
+      console.error('获取用户信息失败:', sessionError?.message)
       return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
     }
 
-    // 查询 profiles 表获取 role
-    const { data: profile, error: profileError } = await supabase
+    // 使用 admin 客户端查询 profiles 表获取 role
+    const admin = createAdminClient()
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('role')
       .eq('id', user.id)

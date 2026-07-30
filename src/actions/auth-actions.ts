@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getSessionUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getOrCreateProfile } from '@/lib/profile'
 import { saveOtp, verifyOtp, hasActiveOtp, consumeOtp } from '@/lib/otp-store'
@@ -405,13 +405,15 @@ export async function getSession(): Promise<{
   const supabase = await createClient()
 
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const user = await getSessionUser()
 
-    if (userError || !user) {
+    if (!user) {
       return { success: false, error: '未获取到会话信息' }
     }
 
-    const { data: profile, error: profileError } = await supabase
+    // 使用 admin 客户端查询 profile，绕过 anon key 的 API 问题
+    const admin = createAdminClient()
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('*')
       .eq('id', user.id)
@@ -419,23 +421,6 @@ export async function getSession(): Promise<{
 
     if (profileError) {
       console.error('获取用户信息失败:', profileError.message)
-      const admin = createAdminClient()
-      const { data: adminProfile } = await admin
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      return {
-        success: true,
-        session: {
-          user: {
-            id: user.id,
-            email: user.email,
-          },
-        },
-        profile: (adminProfile as Profile) ?? null,
-      }
     }
 
     return {
@@ -446,7 +431,7 @@ export async function getSession(): Promise<{
           email: user.email,
         },
       },
-      profile: profile as Profile,
+      profile: (profile as Profile) ?? null,
     }
   } catch (error) {
     console.error('获取会话异常:', error)

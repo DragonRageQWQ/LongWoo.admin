@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getSessionUser } from '@/lib/supabase/server'
 
 /**
  * POST /api/order/create
@@ -102,9 +102,7 @@ export async function POST(request: NextRequest) {
   // 客户可匿名下单：登录态仅用于关联 operation_logs，未登录不阻断下单流程
   let userId: string | null = null
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getSessionUser()
     userId = user?.id ?? null
   } catch {
     // 读取登录态失败时按匿名处理，不阻断下单

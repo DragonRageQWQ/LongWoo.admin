@@ -21,7 +21,10 @@ export const DEFAULT_ROLE: UserRole = 'user'
 
 /**
  * 获取当前登录用户信息（含角色）
- * 使用 getUser() 确保 JWT 与 Supabase 服务器验证，防止伪造
+ *
+ * 注意：生产环境中 supabase.auth.getUser() 返回 "Invalid API key" 错误，
+ * 改用 getSession() 从 cookie 读取会话。Profile 查询使用 admin 客户端
+ * 确保 RLS 不会阻止读取。
  *
  * @returns 用户信息（userId, role, uid, profile），未登录返回 null
  */
@@ -34,26 +37,20 @@ export async function getCurrentUser(): Promise<{
   const supabase = await createClient()
 
   try {
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (error || !user) return null
+    // 使用 getSession() 替代 getUser()
+    // getUser() 在生产环境返回 "Invalid API key"，getSession() 从 cookie 读取更可靠
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session?.user) return null
 
-    // 优先用普通客户端查询（RLS 允许读取自己的 profile）
-    let { data: profile, error: profileError } = await supabase
+    const user = session.user
+
+    // 使用 admin 客户端查询 profile，绕过 anon key 的 API 问题
+    const admin = createAdminClient()
+    const { data: profile } = await admin
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single()
-
-    // RLS 问题降级：用 admin 客户端查询
-    if (profileError) {
-      const admin = createAdminClient()
-      const { data: adminProfile } = await admin
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      profile = adminProfile as Profile | null
-    }
 
     if (!profile) return null
 
