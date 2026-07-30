@@ -1,5 +1,12 @@
 import type { Profile } from '@/types/database'
 
+// 使用宽松类型约束，兼容 server/admin/SSR 客户端的各类 PostgrestBuilder 返回值
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseLike = {
+  from: (table: string) => any
+  rpc: (fn: string) => any
+}
+
 /**
  * 获取或创建用户 Profile（公共工具函数）
  *
@@ -14,9 +21,8 @@ import type { Profile } from '@/types/database'
  * @param options  - 可选字段：email, phone, display_name, avatar_url
  * @returns Profile 记录，失败返回 null
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getOrCreateProfile(
-  supabase: any,
+  supabase: SupabaseLike,
   userId: string,
   options?: {
     email?: string | null
@@ -83,67 +89,8 @@ export async function getOrCreateProfile(
       return null
     }
 
-    // 如果数据库触发器未生成 uid（旧数据库未执行迁移），在应用层生成
-    let result = created as Profile
-
-    if (!result.uid) {
-      // 应用层生成 uid：确保大于 ZERO_USER_UID(10001)，避免与超级管理员冲突
-      // 使用数据库 RPC 原子递增，避免并发冲突
-      const { data: rpcUid, error: rpcError } = await supabase
-        .rpc('generate_uid')
-
-      if (!rpcError && rpcUid && rpcUid > 10001) {
-        const { data: updated } = await supabase
-          .from('profiles')
-          .update({ uid: rpcUid })
-          .eq('id', userId)
-          .select()
-          .single()
-
-        if (updated) {
-          result = updated as Profile
-        }
-      } else {
-        // RPC 不可用时降级：查询最大 uid + 1，确保不与零号用户冲突
-        const { data: maxRow } = await supabase
-          .from('profiles')
-          .select('uid')
-          .order('uid', { ascending: false })
-          .range(0, 0)
-          .single()
-
-        const maxUid = maxRow?.uid ?? 10001
-        const fallbackUid = Math.max(maxUid + 1, 10002)
-
-        const { data: updated } = await supabase
-          .from('profiles')
-          .update({ uid: fallbackUid })
-          .eq('id', userId)
-          .select()
-          .single()
-
-        if (updated) {
-          result = updated as Profile
-        }
-      }
-    }
-
-    // 如果 display_name 仍为空，设置为 "新朋友+uid"
-    if (!result.display_name || result.display_name === '新用户') {
-      const defaultName = `新朋友${result.uid ?? ''}`
-      const { data: updated } = await supabase
-        .from('profiles')
-        .update({ display_name: defaultName })
-        .eq('id', userId)
-        .select()
-        .single()
-
-      if (updated) {
-        result = updated as Profile
-      }
-    }
-
-    return result
+    // 直接返回 created 结果，uid 和 display_name 由数据库触发器处理
+    return created as Profile
   } catch (error) {
     console.error('获取/创建 profile 异常:', error)
     return null

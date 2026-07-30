@@ -3,62 +3,18 @@
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentUser, canUserAccessOrder } from '@/lib/auth'
-import { escapeHtml, escapePostgrestKeyword } from '@/lib/postgrest-utils'
-import { validateOrderInput, validateUrl } from '@/lib/order-utils'
+import { getCurrentUser, canUserAccessOrder, requireAdmin } from '@/lib/auth'
+import { escapeHtml, escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
+import { validateOrderInput, validateUrl, isValidUUID } from '@/lib/order-utils'
 import { maskPhone, maskEmail } from '@/lib/utils'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { validateCsrf } from '@/lib/csrf'
+import { RATE_LIMIT_ORDER_WINDOW, RATE_LIMIT_ORDER_MAX, MAX_PAGE_LIMIT, ESTIMATE_PRICE_MIN, ESTIMATE_PRICE_MAX, RATE_LIMIT_EMAIL_REPLY_MAX, RATE_LIMIT_EMAIL_REPLY_WINDOW } from '@/lib/constants'
 import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/database'
 
-// ==================== 订单查询速率限制（内存版） ====================
+// ==================== 订单查询速率限制（数据库版） ====================
 // 基于 IP + 手机号组合做限制，同一组合 1 分钟内最多查询 5 次
-
-interface RateLimitEntry {
-  count: number
-  resetAt: number
-}
-
-const queryRateLimitStore = new Map<string, RateLimitEntry>()
-
-// 速率限制窗口：1 分钟
-const RATE_LIMIT_WINDOW = 60 * 1000
-// 窗口内最大查询次数
-const RATE_LIMIT_MAX = 5
-
-// 定期清理过期项（每5分钟）
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now()
-    for (const [key, entry] of queryRateLimitStore.entries()) {
-      if (entry.resetAt < now) {
-        queryRateLimitStore.delete(key)
-      }
-    }
-  }, 5 * 60 * 1000)
-}
-
-/**
- * 检查速率限制是否通过
- * @returns true 表示允许查询，false 表示超限
- */
-function checkQueryRateLimit(key: string): boolean {
-  const now = Date.now()
-  const entry = queryRateLimitStore.get(key)
-
-  if (!entry || entry.resetAt < now) {
-    queryRateLimitStore.set(key, {
-      count: 1,
-      resetAt: now + RATE_LIMIT_WINDOW,
-    })
-    return true
-  }
-
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return false
-  }
-
-  entry.count++
-  return true
-}
+// 使用数据库表实现，兼容 Vercel Serverless 多实例环境
 
 // ==================== 创建委托单 ====================
 
@@ -75,10 +31,28 @@ export async function createOrder(formData: {
     fileType?: string
   }>
 }): Promise<{ success: boolean; orderNo?: string; error?: string }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
   // 输入验证
   const validationError = validateOrderInput(formData)
   if (validationError) {
     return { success: false, error: validationError }
+  }
+
+  // 速率限制：基于 IP，防止恶意刷单
+  const headersList = await headers()
+  const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const rateLimitResult = await checkRateLimit(
+    `createorder:${ip}`,
+    RATE_LIMIT_ORDER_MAX,
+    RATE_LIMIT_ORDER_WINDOW
+  )
+  if (!rateLimitResult.allowed) {
+    return { success: false, error: '提交过于频繁，请稍后再试' }
   }
 
   const supabase = await createClient()
@@ -194,7 +168,7 @@ export async function getOrders(filters: {
 
   try {
     const offset = filters.offset ?? 0
-    const limit = filters.limit ?? 20
+    const limit = Math.min(filters.limit ?? 20, MAX_PAGE_LIMIT)
 
     let query = supabase
       .from('orders')
@@ -208,7 +182,7 @@ export async function getOrders(filters: {
 
     // 关键词搜索：订单号、客户名、需求描述
     if (filters.search && filters.search.trim()) {
-      const keyword = escapePostgrestKeyword(filters.search.trim())
+      const keyword = escapeIlikeKeyword(escapePostgrestKeyword(filters.search.trim()))
       query = query.or(`order_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%,requirements.ilike.%${keyword}%`)
     }
 
@@ -253,6 +227,11 @@ export async function getOrderById(
   }
   error?: string
 }> {
+  // UUID 格式验证
+  if (!isValidUUID(id)) {
+    return { success: false, error: '无效的订单 ID' }
+  }
+
   // 鉴权：必须登录
   const currentUser = await getCurrentUser()
   if (!currentUser) {
@@ -269,10 +248,12 @@ export async function getOrderById(
 
   try {
     // 并行查询主表、附件、回复、操作日志
+    // 安全修复：仅查询必要的 profiles 字段（display_name, avatar_url），
+    // 避免泄露 email、has_password、role 等敏感信息
     const [orderResult, attachmentsResult, repliesResult, logsResult] = await Promise.all([
       supabase
         .from('orders')
-        .select('*, service_types(*), profiles(*)')
+        .select('*, service_types(*), profiles!studio_user_id(display_name, avatar_url)')
         .eq('id', id)
         .single(),
       supabase
@@ -282,7 +263,7 @@ export async function getOrderById(
         .order('created_at', { ascending: true }),
       supabase
         .from('order_replies')
-        .select('*, profiles(display_name, avatar_url)')
+        .select('*, profiles!sender_id(display_name, avatar_url)')
         .eq('order_id', id)
         .order('sent_at', { ascending: true }),
       supabase
@@ -303,10 +284,22 @@ export async function getOrderById(
     const replies = repliesResult.data
     const logs = logsResult.data
 
+    // 安全修复：对订单详情中的客户手机号和邮箱做脱敏处理
+    // 管理员可查看完整信息；普通用户仅能看到脱敏后的数据
+    const maskedOrder = {
+      ...order,
+      customer_phone: currentUser.role === 'admin'
+        ? order.customer_phone
+        : maskPhone(order.customer_phone),
+      customer_email: currentUser.role === 'admin'
+        ? order.customer_email
+        : maskEmail(order.customer_email),
+    }
+
     return {
       success: true,
       data: {
-        ...order,
+        ...maskedOrder,
         attachments: attachments || [],
         replies: (replies || []) as OrderReply[],
         logs: (logs || []) as OperationLog[],
@@ -325,26 +318,44 @@ export async function submitEstimate(
   price: number,
   notes: string
 ): Promise<{ success: boolean; error?: string }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // UUID 格式验证
+  if (!isValidUUID(orderId)) {
+    return { success: false, error: '无效的订单 ID' }
+  }
+
+  // 价格范围校验（H4）
+  if (!Number.isFinite(price) || price < ESTIMATE_PRICE_MIN || price > ESTIMATE_PRICE_MAX) {
+    return { success: false, error: `估价金额必须在 ${ESTIMATE_PRICE_MIN} - ${ESTIMATE_PRICE_MAX} RMB 之间` }
+  }
+
+  // notes 长度限制
+  const trimmedNotes = notes.trim()
+  if (trimmedNotes.length > 2000) {
+    return { success: false, error: '估价备注不能超过2000个字符' }
+  }
+
   const supabase = await createClient()
 
   try {
-    // 授权校验
-    const currentUser = await getCurrentUser()
-    if (!currentUser) {
-      return { success: false, error: '请先登录' }
+    // 授权校验：仅管理员可提交估价（C2）
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
     }
-
-    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
-    if (!hasAccess) {
-      return { success: false, error: '无权操作此委托单' }
-    }
+    const currentUser = adminCheck.user
 
     const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
       .update({
         status: 'estimated',
         estimated_price: price,
-        estimate_notes: notes,
+        estimate_notes: trimmedNotes,
       })
       .eq('id', orderId)
       .eq('status', 'pending')
@@ -362,7 +373,7 @@ export async function submitEstimate(
         order_id: orderId,
         user_id: currentUser.userId,
         action: 'submit_estimate',
-        details: { estimated_price: price, estimate_notes: notes },
+        details: { estimated_price: price, estimate_notes: trimmedNotes },
       })
 
     if (logError) {
@@ -382,24 +393,30 @@ export async function submitEstimate(
 // ==================== 接单 ====================
 
 export async function acceptOrder(
-  orderId: string,
-  studioUserId?: string
+  orderId: string
 ): Promise<{ success: boolean; error?: string }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // UUID 格式验证
+  if (!isValidUUID(orderId)) {
+    return { success: false, error: '无效的订单 ID' }
+  }
+
   const supabase = await createClient()
 
   try {
-    // 授权校验
-    const currentUser = await getCurrentUser()
-    if (!currentUser) {
-      return { success: false, error: '请先登录' }
+    // 授权校验：仅管理员可接单（C2）
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
     }
+    const currentUser = adminCheck.user
 
-    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
-    if (!hasAccess) {
-      return { success: false, error: '无权操作此委托单' }
-    }
-
-    // 使用当前登录用户 ID，忽略传入的 studioUserId（防止伪造）
+    // 使用当前登录用户 ID（防止伪造）
     const userId = currentUser.userId
 
     // 条件更新：仅当订单仍处于 pending/estimated 状态且尚未被接单时才更新
@@ -450,19 +467,26 @@ export async function rejectOrder(
   orderId: string,
   reason: string
 ): Promise<{ success: boolean; error?: string }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // UUID 格式验证
+  if (!isValidUUID(orderId)) {
+    return { success: false, error: '无效的订单 ID' }
+  }
+
   const supabase = await createClient()
 
   try {
-    // 授权校验
-    const currentUser = await getCurrentUser()
-    if (!currentUser) {
-      return { success: false, error: '请先登录' }
+    // 授权校验：仅管理员可拒单（C2）
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
     }
-
-    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
-    if (!hasAccess) {
-      return { success: false, error: '无权操作此委托单' }
-    }
+    const currentUser = adminCheck.user
 
     // 输入验证
     const trimmedReason = reason.trim()
@@ -519,6 +543,17 @@ export async function updateOrderStatus(
   newStatus: 'processing' | 'delivered' | 'completed',
   deliveryUrl?: string
 ): Promise<{ success: boolean; error?: string }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // UUID 格式验证
+  if (!isValidUUID(orderId)) {
+    return { success: false, error: '无效的订单 ID' }
+  }
+
   const supabase = await createClient()
 
   // 校验状态值
@@ -528,16 +563,12 @@ export async function updateOrderStatus(
   }
 
   try {
-    // 授权校验
-    const currentUser = await getCurrentUser()
-    if (!currentUser) {
-      return { success: false, error: '请先登录' }
+    // 授权校验：仅管理员可更新进度（C2）
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
     }
-
-    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
-    if (!hasAccess) {
-      return { success: false, error: '无权操作此委托单' }
-    }
+    const currentUser = adminCheck.user
 
     // 构建更新对象
     const updateData: Record<string, unknown> = { status: newStatus }
@@ -599,19 +630,26 @@ export async function replySite(
   orderId: string,
   content: string
 ): Promise<{ success: boolean; error?: string }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // UUID 格式验证
+  if (!isValidUUID(orderId)) {
+    return { success: false, error: '无效的订单 ID' }
+  }
+
   const supabase = await createClient()
 
   try {
-    // 授权校验
-    const currentUser = await getCurrentUser()
-    if (!currentUser) {
-      return { success: false, error: '请先登录' }
+    // 授权校验：仅管理员可站内回复（工作室为管理员专属）
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
     }
-
-    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
-    if (!hasAccess) {
-      return { success: false, error: '无权操作此委托单' }
-    }
+    const currentUser = adminCheck.user
 
     // 输入验证
     const trimmedContent = content.trim()
@@ -652,18 +690,37 @@ export async function replyEmail(
   orderId: string,
   content: string
 ): Promise<{ success: boolean; error?: string; emailSent?: boolean }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // UUID 格式验证
+  if (!isValidUUID(orderId)) {
+    return { success: false, error: '无效的订单 ID' }
+  }
+
   const supabase = await createClient()
 
   try {
-    // 授权校验
-    const currentUser = await getCurrentUser()
-    if (!currentUser) {
-      return { success: false, error: '请先登录' }
+    // 授权校验：仅管理员可邮件回复（工作室为管理员专属）
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
     }
+    const currentUser = adminCheck.user
 
-    const hasAccess = await canUserAccessOrder(orderId, currentUser.userId, currentUser.role)
-    if (!hasAccess) {
-      return { success: false, error: '无权操作此委托单' }
+    // 速率限制：防止邮件轰炸（H5）
+    const headersList = await headers()
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const replyRateLimit = await checkRateLimit(
+      `emailreply:${ip}`,
+      RATE_LIMIT_EMAIL_REPLY_MAX,
+      RATE_LIMIT_EMAIL_REPLY_WINDOW
+    )
+    if (!replyRateLimit.allowed) {
+      return { success: false, error: '操作过于频繁，请稍后再试' }
     }
 
     // 从订单记录中读取客户邮箱，而非信任客户端传入的邮箱地址
@@ -682,6 +739,15 @@ export async function replyEmail(
       return { success: false, error: '该委托单未关联客户邮箱' }
     }
 
+    // 输入验证：与 replySite 保持一致
+    const trimmedContent = content.trim()
+    if (!trimmedContent) {
+      return { success: false, error: '请输入回复内容' }
+    }
+    if (trimmedContent.length > 2000) {
+      return { success: false, error: '回复内容不能超过2000个字符' }
+    }
+
     let emailSent = false
 
     // 如果配置了 RESEND_API_KEY，则发送邮件
@@ -689,7 +755,7 @@ export async function replyEmail(
     if (resendApiKey) {
       try {
         // HTML 转义防止 XSS 注入
-        const safeContent = escapeHtml(content)
+        const safeContent = escapeHtml(trimmedContent)
         const safeContentHtml = safeContent.replace(/\n/g, '<br/>')
 
         const response = await fetch('https://api.resend.com/emails', {
@@ -758,7 +824,7 @@ export async function replyEmail(
       .insert({
         order_id: orderId,
         reply_type: 'email',
-        content,
+        content: trimmedContent,
         sender_id: currentUser.userId,
       })
 
@@ -790,12 +856,38 @@ export async function queryOrderByNo(
   }
   error?: string
 }> {
-  // 速率限制：基于 IP + 手机号组合，1分钟内最多查询5次
+  // CSRF 保护（H3）
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 输入验证（H3）
+  if (!orderNo || !orderNo.trim()) {
+    return { success: false, error: '请输入委托单号' }
+  }
+  if (!phone || !phone.trim()) {
+    return { success: false, error: '请输入手机号' }
+  }
+  // 手机号格式验证
+  if (!/^1[3-9]\d{9}$/.test(phone.trim())) {
+    return { success: false, error: '请输入有效的手机号' }
+  }
+  // 订单号长度和格式验证（防止注入）
+  const trimmedOrderNo = orderNo.trim()
+  if (trimmedOrderNo.length > 50) {
+    return { success: false, error: '委托单号格式不正确' }
+  }
+
+  // 速率限制：基于 IP + 手机号组合，1分钟内最多查询5次（数据库版）
   const headersList = await headers()
   const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
-  const rateLimitKey = `${ip}:${phone}`
-
-  if (!checkQueryRateLimit(rateLimitKey)) {
+  const rateLimitResult = await checkRateLimit(
+    `query:${ip}:${phone.trim()}`,
+    5,
+    RATE_LIMIT_ORDER_WINDOW
+  )
+  if (!rateLimitResult.allowed) {
     return { success: false, error: '查询过于频繁，请稍后再试' }
   }
 
@@ -805,8 +897,8 @@ export async function queryOrderByNo(
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('*, service_types(*)')
-      .eq('order_no', orderNo)
-      .eq('customer_phone', phone)
+      .eq('order_no', trimmedOrderNo)
+      .eq('customer_phone', phone.trim())
       .single()
 
     if (orderError || !order) {
@@ -866,7 +958,7 @@ export async function getStudioOrders(filters: {
 
   try {
     const offset = filters.offset ?? 0
-    const limit = filters.limit ?? 20
+    const limit = Math.min(filters.limit ?? 20, MAX_PAGE_LIMIT)
 
     let query = supabase
       .from('orders')
@@ -887,7 +979,7 @@ export async function getStudioOrders(filters: {
 
     // 关键词搜索：订单号、客户名、需求描述
     if (filters.search && filters.search.trim()) {
-      const keyword = escapePostgrestKeyword(filters.search.trim())
+      const keyword = escapeIlikeKeyword(escapePostgrestKeyword(filters.search.trim()))
       query = query.or(`order_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%,requirements.ilike.%${keyword}%`)
     }
 

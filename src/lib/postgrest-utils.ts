@@ -27,6 +27,28 @@ export function escapePostgrestKeyword(keyword: string): string {
 }
 
 /**
+ * 转义 ilike 搜索关键词中的通配符
+ *
+ * PostgREST 的 ilike 过滤器使用 `%` 和 `_` 作为通配符，
+ * 用户输入这些字符会改变匹配范围（如 `%` 匹配所有内容）。
+ *
+ * 安全修复：在 ilike 查询中使用此函数替代 escapePostgrestKeyword，
+ * 或在 escapePostgrestKeyword 之后调用。
+ *
+ * @example
+ * // 不安全：用户输入 "%" 会匹配所有记录
+ * query.ilike(`%${keyword}%`)
+ * // 安全：通配符被转义为字面量
+ * query.ilike(`%${escapeIlikeKeyword(keyword)}%`)
+ */
+export function escapeIlikeKeyword(keyword: string): string {
+  return keyword
+    .replace(/\\/g, '\\\\')
+    .replace(/%/g, '\\%')
+    .replace(/_/g, '\\_')
+}
+
+/**
  * HTML 转义，防止 XSS 注入
  * 在将用户输入插入 HTML 邮件模板前调用
  */

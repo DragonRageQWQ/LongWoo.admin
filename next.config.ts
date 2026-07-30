@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
   },
   // 安全响应头
   async headers() {
+    // 生产环境移除 'unsafe-eval'，降低 XSS 注入风险
+    const scriptSrc = process.env.NODE_ENV === 'production'
+      ? "script-src 'self' 'unsafe-inline'"
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+
     return [
       {
         source: '/(.*)',
@@ -42,11 +47,12 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              scriptSrc,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+              "connect-src 'self' https://longwoo.supabase.co wss://longwoo.supabase.co",
+              "object-src 'none'",
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",

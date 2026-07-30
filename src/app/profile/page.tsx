@@ -48,6 +48,7 @@ export default function ProfilePage() {
 
   // 密码管理状态
   const [editingPassword, setEditingPassword] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -184,6 +185,7 @@ export default function ProfilePage() {
 
   // ==================== 修改密码 ====================
   const handleStartEditPassword = () => {
+    setOldPassword("");
     setPasswordInput("");
     setPasswordConfirm("");
     setPasswordError(null);
@@ -195,6 +197,7 @@ export default function ProfilePage() {
     setEditingPassword(false);
     setPasswordError(null);
     setPasswordSuccess(null);
+    setOldPassword("");
     setPasswordInput("");
     setPasswordConfirm("");
   };
@@ -203,6 +206,11 @@ export default function ProfilePage() {
     setPasswordError(null);
     setPasswordSuccess(null);
 
+    // C4: 如果用户已有密码，必须输入当前密码
+    if (profile?.has_password && !oldPassword) {
+      setPasswordError("请输入当前密码");
+      return;
+    }
     if (!passwordInput) {
       setPasswordError("请输入新密码");
       return;
@@ -227,12 +235,16 @@ export default function ProfilePage() {
 
     setPasswordLoading(true);
     try {
-      const result = await updatePassword(passwordInput);
+      const result = await updatePassword(
+        passwordInput,
+        profile?.has_password ? oldPassword : undefined
+      );
       if (result.success) {
         setProfile((prev) =>
           prev ? { ...prev, has_password: true } : prev
         );
         setEditingPassword(false);
+        setOldPassword("");
         setPasswordInput("");
         setPasswordConfirm("");
         setPasswordSuccess("密码设置成功");
@@ -582,6 +594,27 @@ export default function ProfilePage() {
           {/* 内联密码表单 */}
           {editingPassword && (
             <div className="mt-4 pt-4 border-t border-gray-50 space-y-3">
+              {/* C4: 已有密码时需输入当前密码 */}
+              {profile?.has_password && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    当前密码
+                  </label>
+                  <input
+                    type="password"
+                    value={oldPassword}
+                    onChange={(e) => setOldPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") handleCancelEditPassword();
+                    }}
+                    maxLength={64}
+                    autoFocus
+                    disabled={passwordLoading}
+                    placeholder="请输入当前密码"
+                    className="w-full px-3 py-2 text-sm text-lw-black bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors disabled:opacity-60"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
                   {profile?.has_password ? "新密码" : "设置密码"}
@@ -594,7 +627,7 @@ export default function ProfilePage() {
                     if (e.key === "Escape") handleCancelEditPassword();
                   }}
                   maxLength={64}
-                  autoFocus
+                  autoFocus={!profile?.has_password}
                   disabled={passwordLoading}
                   placeholder="至少6位密码"
                   className="w-full px-3 py-2 text-sm text-lw-black bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors disabled:opacity-60"

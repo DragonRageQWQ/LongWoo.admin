@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getSessionUser } from '@/lib/supabase/server'
+import { validateApiCsrf } from '@/lib/api-csrf'
 
 /**
  * POST /api/order/create
@@ -25,24 +26,10 @@ import { createClient, getSessionUser } from '@/lib/supabase/server'
  *   失败 { success: false, error: string }
  */
 export async function POST(request: NextRequest) {
-  // CSRF 保护：校验 Origin 头，确保请求来自本站
-  const origin = request.headers.get('origin')
-  const host = request.headers.get('host')
-  if (origin && host) {
-    try {
-      const originHost = new URL(origin).host
-      if (originHost !== host) {
-        return NextResponse.json(
-          { success: false, error: '跨站请求被拒绝' },
-          { status: 403 }
-        )
-      }
-    } catch {
-      return NextResponse.json(
-        { success: false, error: '无效的请求来源' },
-        { status: 403 }
-      )
-    }
+  // CSRF 保护：校验 Origin/Referer 头，确保请求来自本站
+  const csrfError = validateApiCsrf(request)
+  if (csrfError) {
+    return csrfError
   }
 
   // 仅接受 JSON

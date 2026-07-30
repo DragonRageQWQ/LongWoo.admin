@@ -69,6 +69,12 @@ function LoginForm() {
       setError("QQ登录尚未配置，请在环境变量中填写 QQ_CLIENT_ID 和 QQ_CLIENT_SECRET");
     }
 
+    // Session 过期提示
+    const expired = searchParams.get("expired");
+    if (expired === "1") {
+      setInfo("登录状态已过期，请重新登录");
+    }
+
     isQQConfigured().then(setQqAvailable).catch(() => setQqAvailable(false));
   }, [searchParams]);
 

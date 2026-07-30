@@ -195,10 +195,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 6: 生成 magic link 用于建立会话
+    // 安全修复：必须设置 send_email: false，否则 Supabase 会尝试向虚拟邮箱发送邮件
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: 'magiclink',
       email: qqEmail,
-    })
+      options: {
+        send_email: false,
+      } as Record<string, unknown>,
+    } as Parameters<typeof adminClient.auth.admin.generateLink>[0])
 
     if (linkError || !linkData?.properties?.hashed_token) {
       console.error('生成 magic link 失败:', linkError?.message)

@@ -27,7 +27,11 @@ export async function GET() {
         uid: profile.uid,
       } : null,
     })
-  } catch {
+  } catch (error) {
+    console.error(
+      '[Session Check] 异常:',
+      error instanceof Error ? error.message : String(error)
+    )
     return NextResponse.json({ loggedIn: false })
   }
 }

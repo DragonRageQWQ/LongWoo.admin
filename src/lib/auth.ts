@@ -9,12 +9,19 @@
  * 零号用户 (uid=10001) 是超级管理员，可授予/撤销其他用户的管理员权限
  */
 
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import {
+  readSessionCookieValue,
+  getSessionFromCookieValue,
+  verifyAccessToken,
+} from '@/lib/supabase/cookie-utils'
+import { ZERO_USER_UID as CONST_ZERO_USER_UID } from '@/lib/constants'
 import type { UserRole, Profile } from '@/types/database'
 
 /** 零号用户 UID — 超级管理员，唯一可授予/撤销管理员权限的用户 */
-export const ZERO_USER_UID = 10001
+export const ZERO_USER_UID = CONST_ZERO_USER_UID
 
 /** 默认角色 — 新注册用户自动获得此角色 */
 export const DEFAULT_ROLE: UserRole = 'user'
@@ -22,40 +29,41 @@ export const DEFAULT_ROLE: UserRole = 'user'
 /**
  * 获取当前登录用户信息（含角色）
  *
- * 注意：生产环境中 supabase.auth.getUser() 返回 "Invalid API key" 错误，
- * 改用 getSession() 从 cookie 读取会话。Profile 查询使用 admin 客户端
- * 确保 RLS 不会阻止读取。
+ * 安全修复：
+ *   不再直接信任 cookie 中的 userId，而是通过 Supabase API 验证 access_token。
+ *   使用 React cache() 在同一请求内复用结果，避免重复查询。
  *
  * @returns 用户信息（userId, role, uid, profile），未登录返回 null
  */
-export async function getCurrentUser(): Promise<{
+export const getCurrentUser = cache(async (): Promise<{
   userId: string
   role: UserRole
   uid: number | null
   profile: Profile | null
-} | null> {
-  const supabase = await createClient()
-
+} | null> => {
   try {
-    // 使用 getSession() 替代 getUser()
-    // getUser() 在生产环境返回 "Invalid API key"，getSession() 从 cookie 读取更可靠
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !session?.user) return null
+    const supabase = await createClient()
 
-    const user = session.user
+    // Step 1: 从 cookie 读取 session
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user?.id || !session.access_token) return null
 
-    // 使用 admin 客户端查询 profile，绕过 anon key 的 API 问题
+    // Step 2: 通过 API 验证 token 有效性
+    const verifiedUserId = await verifyAccessToken(session.access_token)
+    if (!verifiedUserId || verifiedUserId !== session.user.id) return null
+
+    // Step 3: 使用 admin 客户端查询 profile
     const admin = createAdminClient()
     const { data: profile } = await admin
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', verifiedUserId)
       .single()
 
     if (!profile) return null
 
     return {
-      userId: user.id,
+      userId: verifiedUserId,
       role: (profile.role as UserRole) ?? DEFAULT_ROLE,
       uid: profile.uid,
       profile: profile as Profile,
@@ -63,7 +71,7 @@ export async function getCurrentUser(): Promise<{
   } catch {
     return null
   }
-}
+})
 
 /**
  * 要求用户已登录，否则返回错误对象

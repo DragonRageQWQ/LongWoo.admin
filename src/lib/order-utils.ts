@@ -47,3 +47,14 @@ export function validateUrl(url: string): boolean {
     return false
   }
 }
+
+/**
+ * 验证 UUID 格式（防止通过 orderId 参数进行 SQL 注入）
+ *
+ * Supabase 使用 UUID 主键，接受非 UUID 格式的参数可能导致意外行为。
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function isValidUUID(id: string): boolean {
+  return UUID_REGEX.test(id)
+}

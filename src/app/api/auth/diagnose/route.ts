@@ -7,8 +7,18 @@ import { createServerClient } from '@supabase/ssr'
  *
  * 用于诊断为什么 Supabase SSR 客户端无法从 cookie 中读取 session。
  * 输出详细的 cookie 信息、解码结果、getUser() 调用结果。
+ *
+ * 安全：仅在非生产环境可用，生产环境直接返回 404。
  */
 export async function GET(request: Request) {
+  // ===== 生产环境守卫 =====
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Not available in production' },
+      { status: 404 }
+    )
+  }
+
   const debug: Record<string, unknown> = {}
 
   // ===== 1. 原始 Cookie 头 =====

@@ -4,66 +4,59 @@ import { revalidatePath } from 'next/cache'
 import { createClient, getSessionUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { headers } from 'next/headers'
+import { checkRateLimit, peekRateLimit } from '@/lib/rate-limit'
+import { validateCsrf } from '@/lib/csrf'
+import { validateFileMagicNumber } from '@/lib/file-validation'
+import { RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS, AVATAR_MAX_SIZE, AVATAR_ALLOWED_MIME_TYPES, RATE_LIMIT_AVATAR_WINDOW, RATE_LIMIT_AVATAR_MAX, RATE_LIMIT_PASSWORD_WINDOW, RATE_LIMIT_PASSWORD_MAX, RATE_LIMIT_CHECK_EMAIL_WINDOW, RATE_LIMIT_CHECK_EMAIL_MAX } from '@/lib/constants'
 
 // ==================== 密码登录失败次数限制 ====================
-// 防止暴力破解：同一邮箱 + IP 组合，5次失败后锁定15分钟
-
-interface LoginFailEntry {
-  count: number
-  lockedUntil: number
-}
-
-const loginFailStore = new Map<string, LoginFailEntry>()
-const LOGIN_MAX_FAILS = 5
-const LOGIN_LOCK_DURATION = 15 * 60 * 1000  // 15分钟
-
-// 定期清理过期项（每5分钟）
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now()
-    for (const [key, entry] of loginFailStore.entries()) {
-      if (entry.lockedUntil < now && entry.count === 0) {
-        loginFailStore.delete(key)
-      }
-    }
-  }, 5 * 60 * 1000)
-}
+// 防止暴力破解：同一邮箱 + IP 组合，超过最大失败次数后锁定指定时长
+// 基于 rate_limits 数据库表实现，记录自然过期，无需内存清理
 
 /**
  * 检查密码登录是否被锁定
+ * C5 修复：使用 peekRateLimit 仅查询不递增，避免双重计数
  * @returns 锁定剩余秒数，0表示未锁定
  */
-function checkLoginLock(email: string, ip: string): number {
-  const key = `${email.toLowerCase()}:${ip}`
-  const entry = loginFailStore.get(key)
-  if (!entry) return 0
-  if (entry.lockedUntil < Date.now()) return 0
-  return Math.ceil((entry.lockedUntil - Date.now()) / 1000)
+async function checkLoginLock(email: string, ip: string): Promise<number> {
+  const key = `loginfail:${email.toLowerCase()}:${ip}`
+  // 使用 peekRateLimit 仅查询当前失败次数，不递增计数器
+  const result = await peekRateLimit(key, RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS)
+  if (!result.allowed) {
+    return Math.max(0, Math.ceil((result.resetAt - Date.now()) / 1000))
+  }
+  return 0
 }
 
 /**
  * 记录密码登录失败
+ * @returns 是否已锁定、剩余尝试次数
  */
-function recordLoginFail(email: string, ip: string): boolean {
-  const key = `${email.toLowerCase()}:${ip}`
-  const entry = loginFailStore.get(key) ?? { count: 0, lockedUntil: 0 }
-  entry.count++
-
-  if (entry.count >= LOGIN_MAX_FAILS) {
-    entry.lockedUntil = Date.now() + LOGIN_LOCK_DURATION
-    loginFailStore.set(key, entry)
-    return true  // 已锁定
+async function recordLoginFail(
+  email: string,
+  ip: string
+): Promise<{ locked: boolean; remaining: number }> {
+  const key = `loginfail:${email.toLowerCase()}:${ip}`
+  const result = await checkRateLimit(key, RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS)
+  return {
+    locked: !result.allowed,
+    remaining: result.remaining,
   }
-
-  loginFailStore.set(key, entry)
-  return false
 }
 
 /**
  * 清除密码登录失败记录（登录成功时调用）
+ * 安全修复：登录成功后主动删除该邮箱+IP的失败记录，
+ * 防止历史失败记录导致正常用户被误锁定
  */
-function clearLoginFails(email: string, ip: string): void {
-  loginFailStore.delete(`${email.toLowerCase()}:${ip}`)
+async function clearLoginFails(email: string, ip: string): Promise<void> {
+  try {
+    const admin = createAdminClient()
+    const key = `loginfail:${email.toLowerCase()}:${ip}`
+    await admin.from('rate_limits').delete().eq('key', key)
+  } catch {
+    // 清除失败不影响登录流程
+  }
 }
 
 // ==================== 修改昵称 ====================
@@ -72,6 +65,12 @@ export async function updateDisplayName(
   displayName: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // CSRF 保护
+    const csrfError = await validateCsrf()
+    if (csrfError) {
+      return { success: false, error: csrfError }
+    }
+
     const user = await getSessionUser()
     if (!user) {
       return { success: false, error: '未登录' }
@@ -111,9 +110,27 @@ export async function updateAvatar(
   file: File
 ): Promise<{ success: boolean; avatarUrl?: string; error?: string }> {
   try {
+    // CSRF 保护
+    const csrfError = await validateCsrf()
+    if (csrfError) {
+      return { success: false, error: csrfError }
+    }
+
     const user = await getSessionUser()
     if (!user) {
       return { success: false, error: '未登录' }
+    }
+
+    // 速率限制：防止头像上传滥用（H5）
+    const headersList = await headers()
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const avatarRateLimit = await checkRateLimit(
+      `avatar:${ip}`,
+      RATE_LIMIT_AVATAR_MAX,
+      RATE_LIMIT_AVATAR_WINDOW
+    )
+    if (!avatarRateLimit.allowed) {
+      return { success: false, error: '操作过于频繁，请稍后再试' }
     }
 
     // 验证文件
@@ -121,15 +138,20 @@ export async function updateAvatar(
       return { success: false, error: '请选择图片' }
     }
 
-    // 限制 2MB
-    if (file.size > 2 * 1024 * 1024) {
+    // 限制文件大小
+    if (file.size > AVATAR_MAX_SIZE) {
       return { success: false, error: '图片大小不能超过 2MB' }
     }
 
-    // 验证文件类型
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
+    // 验证文件类型（客户端声明的 MIME）
+    if (!AVATAR_ALLOWED_MIME_TYPES.includes(file.type as typeof AVATAR_ALLOWED_MIME_TYPES[number])) {
       return { success: false, error: '仅支持 JPG、PNG、GIF、WebP 格式' }
+    }
+
+    // 安全加固：通过魔数验证文件实际类型，防止伪造 MIME 类型上传恶意文件
+    const isMagicNumberValid = await validateFileMagicNumber(file, AVATAR_ALLOWED_MIME_TYPES)
+    if (!isMagicNumberValid) {
+      return { success: false, error: '文件内容与声明类型不符，请上传有效的图片文件' }
     }
 
     const admin = createAdminClient()
@@ -222,12 +244,31 @@ export async function updateAvatar(
 // ==================== 设置/修改密码 ====================
 
 export async function updatePassword(
-  newPassword: string
+  newPassword: string,
+  currentPassword?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // CSRF 保护
+    const csrfError = await validateCsrf()
+    if (csrfError) {
+      return { success: false, error: csrfError }
+    }
+
     const user = await getSessionUser()
     if (!user) {
       return { success: false, error: '未登录' }
+    }
+
+    // 速率限制：防止密码暴力修改（H5）
+    const headersList = await headers()
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const pwdRateLimit = await checkRateLimit(
+      `pwdchange:${ip}`,
+      RATE_LIMIT_PASSWORD_MAX,
+      RATE_LIMIT_PASSWORD_WINDOW
+    )
+    if (!pwdRateLimit.allowed) {
+      return { success: false, error: '操作过于频繁，请稍后再试' }
     }
 
     if (!newPassword || newPassword.length < 6) {
@@ -243,8 +284,36 @@ export async function updatePassword(
       return { success: false, error: '密码必须包含字母和数字' }
     }
 
-    // 使用 admin 客户端设置密码（Supabase Auth）
     const admin = createAdminClient()
+
+    // C4 安全修复：如果用户已设置密码，必须验证旧密码
+    // 先查询用户是否已有密码
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('has_password')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.has_password) {
+      // 已有密码，必须验证旧密码
+      if (!currentPassword) {
+        return { success: false, error: '请输入当前密码' }
+      }
+
+      // 使用 Supabase Auth 验证旧密码
+      const { createClient } = await import('@/lib/supabase/server')
+      const supabase = await createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email!,
+        password: currentPassword,
+      })
+
+      if (signInError) {
+        return { success: false, error: '当前密码不正确' }
+      }
+    }
+
+    // 使用 admin 客户端设置密码（Supabase Auth）
     const { error: updateError } = await admin.auth.admin.updateUserById(
       user.id,
       { password: newPassword }
@@ -283,6 +352,12 @@ export async function loginWithPassword(
   email: string,
   password: string
 ): Promise<{ success: boolean; error?: string; role?: string }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
   const supabase = await createClient()
 
   try {
@@ -295,7 +370,7 @@ export async function loginWithPassword(
     const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
 
     // 检查是否被锁定
-    const lockRemaining = checkLoginLock(email, ip)
+    const lockRemaining = await checkLoginLock(email, ip)
     if (lockRemaining > 0) {
       const minutes = Math.ceil(lockRemaining / 60)
       return {
@@ -311,14 +386,13 @@ export async function loginWithPassword(
 
     if (error) {
       // 记录登录失败
-      const locked = recordLoginFail(email, ip)
+      const { locked, remaining } = await recordLoginFail(email, ip)
       if (locked) {
         return {
           success: false,
           error: '密码错误次数过多，账户已锁定15分钟',
         }
       }
-      const remaining = LOGIN_MAX_FAILS - (loginFailStore.get(`${email.toLowerCase()}:${ip}`)?.count ?? 0)
       return {
         success: false,
         error: remaining > 0
@@ -328,7 +402,7 @@ export async function loginWithPassword(
     }
 
     // 登录成功，清除失败记录
-    clearLoginFails(email, ip)
+    await clearLoginFails(email, ip)
 
     // 使用 admin 客户端获取角色（避免 RLS 问题）
     const admin = createAdminClient()
@@ -355,6 +429,19 @@ export async function checkEmailHasPassword(
 ): Promise<{ canUsePassword: boolean }> {
   try {
     if (!email) return { canUsePassword: false }
+
+    // M2 安全修复：添加速率限制，防止通过暴力查询枚举用户
+    const headersList = await headers()
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const checkRateLimitResult = await checkRateLimit(
+      `checkemail:${ip}`,
+      RATE_LIMIT_CHECK_EMAIL_MAX,
+      RATE_LIMIT_CHECK_EMAIL_WINDOW
+    )
+    if (!checkRateLimitResult.allowed) {
+      // 速率限制触发时统一返回 false，不泄露信息
+      return { canUsePassword: false }
+    }
 
     const admin = createAdminClient()
 

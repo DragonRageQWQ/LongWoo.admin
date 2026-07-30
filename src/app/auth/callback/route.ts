@@ -8,9 +8,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
  *
  * 处理 QQ 和微信 OAuth 登录回调：
  * 1. 从 URL 获取 code
- * 2. 使用 supabase.auth.exchangeCodeForSession(code) 交换 session
- * 3. 成功后根据 role 重定向到 /admin/dashboard（管理员）或 /profile（普通用户）
- * 4. 失败重定向到 /login?error=oauth_failed
+ * 2. 校验 state 参数（CSRF 防护，与 QQ 回调一致）
+ * 3. 使用 supabase.auth.exchangeCodeForSession(code) 交换 session
+ * 4. 成功后根据 role 重定向到 /admin/dashboard（管理员）或 /profile（普通用户）
+ * 5. 失败重定向到 /login?error=oauth_failed
  *
  * 注意：在 Next.js App Router 中，route.ts 和 page.tsx 不能同时存在于同一目录。
  * OAuth 回调使用 route.ts 进行服务端处理，速度最快，无需额外加载页。
@@ -18,11 +19,25 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const state = requestUrl.searchParams.get('state')
   const origin = requestUrl.origin
 
   // 没有 code 参数，直接重定向到登录页
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+    const resp = NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+    // 安全修复：即使验证失败也清除 state cookie，防止重放攻击
+    resp.cookies.delete('oauth_state')
+    return resp
+  }
+
+  // ===== state 参数校验（CSRF 防护，与 QQ 回调一致） =====
+  const storedState = request.cookies.get('oauth_state')?.value
+  if (!state || !storedState || state !== storedState) {
+    console.error('OAuth 回调验证失败: state 不匹配或缺少参数')
+    const resp = NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+    // 安全修复：验证失败时也清除 state cookie，防止重放
+    resp.cookies.delete('oauth_state')
+    return resp
   }
 
   // 创建 Supabase 服务端客户端（在 route handler 中需要手动处理 cookies）
@@ -77,8 +92,10 @@ export async function GET(request: NextRequest) {
     let role = 'user'
 
     if (profileError || !profile) {
-      // profile 不存在，使用公共工具函数自动创建
-      const createdProfile = await getOrCreateProfile(supabase, user.id, {
+      // profile 不存在，使用 admin 客户端创建（绕过 RLS）
+      // 与 QQ 回调保持一致，统一使用 admin 客户端避免 RLS 同步问题
+      const adminForProfile = createAdminClient()
+      const createdProfile = await getOrCreateProfile(adminForProfile, user.id, {
         email: user.email,
         avatarUrl: user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null,
       })
@@ -102,6 +119,9 @@ export async function GET(request: NextRequest) {
         ...cookie,
       })
     })
+
+    // 清除 oauth_state cookie（CSRF 一次性使用）
+    finalResponse.cookies.delete('oauth_state')
 
     return finalResponse
   } catch (error) {

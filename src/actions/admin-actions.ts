@@ -3,7 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireZeroUser, requireAdmin, ZERO_USER_UID } from '@/lib/auth'
-import { escapePostgrestKeyword } from '@/lib/postgrest-utils'
+import { validateCsrf } from '@/lib/csrf'
+import { MAX_PAGE_LIMIT } from '@/lib/constants'
+import { escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
 import type { Profile, UserRole } from '@/types/database'
 
 // ==================== 零号用户专属操作 ====================
@@ -31,6 +33,12 @@ interface AdminActionResult {
  * @param targetUid 目标用户 UID
  */
 export async function grantAdminRole(targetUid: number): Promise<AdminActionResult> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
   // 鉴权：仅零号用户可操作
   const authResult = await requireZeroUser()
   if (!authResult.success) {
@@ -106,6 +114,12 @@ export async function grantAdminRole(targetUid: number): Promise<AdminActionResu
  * @param targetUid 目标用户 UID
  */
 export async function revokeAdminRole(targetUid: number): Promise<AdminActionResult> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
   // 鉴权：仅零号用户可操作
   const authResult = await requireZeroUser()
   if (!authResult.success) {
@@ -199,7 +213,7 @@ export async function listAllUsers(options?: {
 
   const admin = createAdminClient()
   const offset = options?.offset ?? 0
-  const limit = options?.limit ?? 20
+  const limit = Math.min(options?.limit ?? 20, MAX_PAGE_LIMIT)
 
   try {
     let query = admin
@@ -213,9 +227,9 @@ export async function listAllUsers(options?: {
       query = query.eq('role', options.roleFilter)
     }
 
-    // 关键词搜索（转义防止 PostgREST 注入）
+    // 关键词搜索（转义防止 PostgREST 注入 + ilike 通配符注入）
     if (options?.search && options.search.trim()) {
-      const keyword = escapePostgrestKeyword(options.search.trim())
+      const keyword = escapeIlikeKeyword(escapePostgrestKeyword(options.search.trim()))
       query = query.or(`email.ilike.%${keyword}%,display_name.ilike.%${keyword}%`)
     }
 
@@ -267,7 +281,7 @@ export async function getAdminAuditLog(options?: {
 
   const admin = createAdminClient()
   const offset = options?.offset ?? 0
-  const limit = options?.limit ?? 20
+  const limit = Math.min(options?.limit ?? 20, MAX_PAGE_LIMIT)
 
   try {
     const { data, error, count } = await admin
