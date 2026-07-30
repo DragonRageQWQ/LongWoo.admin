@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyOtp, consumeOtp } from '@/lib/otp-store'
 import { getOrCreateProfile } from '@/lib/profile'
+import { cookies } from 'next/headers'
 
 // Vercel Hobby 计划默认超时 10 秒，认证流程含 5+ API 调用需要更长时间
 export const maxDuration = 60
@@ -9,17 +11,8 @@ export const maxDuration = 60
 /**
  * 邮箱验证码登录 API Route Handler
  *
- * 为什么用 API Route 而非 Server Action：
- * 1. Server Action 在 Vercel 上可能被中止（net::ERR_ABORTED），尤其是涉及多步 API 调用时
- * 2. API Route 通过标准 HTTP 响应设置 Set-Cookie 头，更可靠
- * 3. 不受 RSC payload 编码影响
- *
- * 认证流程：
- * 1. 校验验证码（不消费，失败可重试）
- * 2. admin.generateLink 获取 magic link token_hash（send_email: false）
- * 3. HTTP POST 到 /auth/v1/verify 交换 session token
- * 4. 并行：消费验证码 + 创建/获取 profile
- * 5. 在 NextResponse 上直接设置 Set-Cookie（base64url 编码 + 分片）
+ * 使用 @supabase/ssr 的 createServerClient + setSession 自动处理 cookie
+ * 确保 cookie 格式与中间件读取方式完全一致
  */
 export async function POST(request: Request) {
   const startTime = Date.now()
@@ -173,81 +166,56 @@ export async function POST(request: Request) {
         'ms'
     )
 
-    // ===== 第5步：创建最终 response 并设置 session cookie =====
-    // 关键：先完成所有逻辑确定 role，再创建唯一的 response 对象设置 cookie
-    // 这样 Set-Cookie 头和 JSON body 在同一个 HTTP 响应中返回
-    console.log('[Login API] 第5步：设置 session cookie...')
+    // ===== 第5步：使用 @supabase/ssr 的 setSession 设置 cookie =====
+    // 这是关键改动：使用 @supabase/ssr 的 createServerClient + setSession
+    // 让库自动处理 cookie 的编码、命名和分片，确保与中间件完全一致
+    console.log('[Login API] 第5步：使用 setSession 设置 cookie...')
 
-    // expires_at 兜底：某些 Supabase 版本 /auth/v1/verify 响应不含 expires_at
+    // expires_at 兜底
     const expiresAt =
       sessionData.expires_at ??
       Math.floor(Date.now() / 1000) + (sessionData.expires_in ?? 3600)
 
-    const tokenData = JSON.stringify({
+    const session = {
       access_token: sessionData.access_token,
       refresh_token: sessionData.refresh_token,
       expires_at: expiresAt,
       expires_in: sessionData.expires_in ?? 3600,
       token_type: sessionData.token_type ?? 'bearer',
       user: sessionData.user,
-    })
-
-    // base64url 编码（@supabase/ssr 的 cookieEncoding 默认值）
-    const encoded =
-      'base64-' + Buffer.from(tokenData, 'utf-8').toString('base64url')
-
-    const projectRef =
-      supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] ?? ''
-    const cookieName = `sb-${projectRef}-auth-token`
-
-    // @supabase/ssr DEFAULT_COOKIE_OPTIONS
-    const cookieOptions = {
-      path: '/',
-      sameSite: 'lax' as const,
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 400 * 24 * 60 * 60, // 400 天
     }
 
-    const MAX_CHUNK_SIZE = 3180
-
-    // 创建最终 response（包含正确的 role）
+    // 创建 response 对象
     const response = NextResponse.json({ success: true, role })
 
-    // 清除旧 cookie（避免残留脏数据）
-    response.cookies.delete(cookieName)
-    for (let i = 0; i < 10; i++) {
-      response.cookies.delete(`${cookieName}.${i}`)
-    }
+    // 使用 @supabase/ssr 创建服务端客户端
+    // 通过 response.cookies 让 setSession 自动写入 Set-Cookie 头
+    const cookieStore = await cookies()
+    const supabaseServer = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
+        },
+      },
+    })
 
-    // 设置新 session cookie
-    if (encoded.length <= MAX_CHUNK_SIZE) {
-      response.cookies.set(cookieName, encoded, cookieOptions)
-      console.log(
-        '[Login API] Cookie 已设置（单 cookie）:',
-        cookieName,
-        '长度:',
-        encoded.length
-      )
-    } else {
-      const chunkCount = Math.ceil(encoded.length / MAX_CHUNK_SIZE)
-      for (let i = 0; i < chunkCount; i++) {
-        const chunk = encoded.slice(
-          i * MAX_CHUNK_SIZE,
-          (i + 1) * MAX_CHUNK_SIZE
-        )
-        response.cookies.set(`${cookieName}.${i}`, chunk, cookieOptions)
-      }
-      console.log(
-        '[Login API] Cookie 已设置（分片）:',
-        cookieName,
-        '分片数:',
-        chunkCount,
-        '总长度:',
-        encoded.length
+    // setSession 会触发 onAuthStateChange，自动调用 setAll 写入 cookie
+    const { error: sessionError } = await supabaseServer.auth.setSession(session)
+
+    if (sessionError) {
+      console.error('[Login API] setSession 失败:', sessionError.message)
+      return NextResponse.json(
+        { success: false, error: '会话设置失败，请稍后重试' },
+        { status: 500 }
       )
     }
 
+    console.log('[Login API] setSession 完成，cookie 已写入 response')
     console.log('[Login API] ===== 登录成功 =====', {
       email,
       role,
