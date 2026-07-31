@@ -168,19 +168,30 @@ export function getSessionFromCookieValue(cookieValue: string | null): SupabaseS
  * 使用直接 fetch 调用 /auth/v1/user，显式设置 apikey 头，
  * 避免 @supabase/ssr 在 Edge Runtime 中的 "Invalid API key" 问题。
  *
- * 这是安全修复的核心：不再信任 cookie 内容，而是通过服务端验证 JWT。
+ * 安全修复的核心：不再信任 cookie 内容，而是通过服务端验证 JWT。
+ *
+ * Key 选择策略：
+ *   优先使用 service_role key（服务端专用，不受 anon key 截断问题影响），
+ *   如果不可用则降级使用 anon key。
+ *   这是纯服务端调用（middleware + route handlers），使用 service_role key 是安全的。
  *
  * @returns 验证通过返回 userId，否则返回 null
  */
 export async function verifyAccessToken(accessToken: string): Promise<string | null> {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    if (!supabaseUrl || !anonKey) return null
+
+    if (!supabaseUrl) return null
+
+    // 优先使用 service_role key（更可靠，不受 anon key 截断影响）
+    const apiKey = serviceRoleKey || anonKey
+    if (!apiKey) return null
 
     const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: {
-        apikey: anonKey,
+        apikey: apiKey,
         Authorization: `Bearer ${accessToken}`,
       },
     })
