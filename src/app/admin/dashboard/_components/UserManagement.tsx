@@ -151,6 +151,7 @@ export default function UserManagement() {
   // 权限校验完成后拉取用户列表，并在搜索/筛选/分页变化时重新拉取
   useEffect(() => {
     if (!permissionChecked) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers();
   }, [fetchUsers, permissionChecked]);
 

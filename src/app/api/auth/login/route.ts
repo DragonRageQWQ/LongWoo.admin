@@ -9,7 +9,7 @@ import {
 } from '@/lib/supabase/cookie-utils'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateApiCsrf } from '@/lib/api-csrf'
-import { RATE_LIMIT_OTP_WINDOW, RATE_LIMIT_OTP_MAX } from '@/lib/constants'
+import { RATE_LIMIT_OTP_WINDOW } from '@/lib/constants'
 
 // Vercel Hobby 计划默认超时 10 秒，认证流程含 5+ API 调用需要更长时间
 export const maxDuration = 60

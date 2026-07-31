@@ -63,6 +63,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     mountedRef.current = true;
     // 如果已有缓存数据，直接使用，不再重复请求
     if (cachedProfile !== null || !cachedLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }

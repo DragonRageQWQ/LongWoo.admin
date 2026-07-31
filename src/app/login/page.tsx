@@ -64,6 +64,7 @@ function LoginForm() {
   useEffect(() => {
     const errParam = searchParams.get("error");
     if (errParam === "oauth_failed") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError("第三方登录失败，请重试或选择其他登录方式");
     } else if (errParam === "qq_not_configured") {
       setError("QQ登录尚未配置，请在环境变量中填写 QQ_CLIENT_ID 和 QQ_CLIENT_SECRET");

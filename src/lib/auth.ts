@@ -13,8 +13,6 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-  readSessionCookieValue,
-  getSessionFromCookieValue,
   verifyAccessToken,
 } from '@/lib/supabase/cookie-utils'
 import { ZERO_USER_UID as CONST_ZERO_USER_UID } from '@/lib/constants'

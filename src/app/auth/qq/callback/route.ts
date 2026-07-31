@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
   const redirectUri = `${siteUrl}/auth/qq/callback`
 
   // 准备 response 对象（用于后续设置 cookie）
-  let response = NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+  const response = NextResponse.redirect(`${origin}/login?error=oauth_failed`)
 
   // 创建 SSR 客户端（用于最终建立会话）
   const supabase = createServerClient(

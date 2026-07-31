@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   }
 
   // 创建 Supabase 服务端客户端（在 route handler 中需要手动处理 cookies）
-  let response = NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+  const response = NextResponse.redirect(`${origin}/login?error=oauth_failed`)
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -1,11 +1,12 @@
 import type { Profile } from '@/types/database'
 
 // 使用宽松类型约束，兼容 server/admin/SSR 客户端的各类 PostgrestBuilder 返回值
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type SupabaseLike = {
   from: (table: string) => any
   rpc: (fn: string) => any
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * 获取或创建用户 Profile（公共工具函数）
