@@ -11,6 +11,8 @@ import {
   Menu,
   X,
   Inbox,
+  Home,
+  Briefcase,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 
@@ -49,7 +51,16 @@ export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
       router.push(`${pathname}?tab=${tab}`);
     }
   };
-  // all-orders 和其他 tab 一样通过 query 参数传递
+
+  const handleGoHome = () => {
+    setMobileOpen(false);
+    router.push("/");
+  };
+
+  const handleGoStudio = () => {
+    setMobileOpen(false);
+    router.push("/studio/dashboard");
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -97,16 +108,32 @@ export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
         })}
       </nav>
 
-      {/* 底部退出登录 */}
-      <div className="px-3 py-4 border-t border-gray-100">
+      {/* 底部导航与退出 */}
+      <div className="px-3 py-4 border-t border-gray-100 space-y-1">
         <button
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={handleGoHome}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
         >
-          <LogOut className="w-4 h-4 flex-shrink-0" />
-          <span>{loggingOut ? "正在退出..." : "退出登录"}</span>
+          <Home className="w-4 h-4 flex-shrink-0" />
+          <span>回到首页</span>
         </button>
+        <button
+          onClick={handleGoStudio}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+        >
+          <Briefcase className="w-4 h-4 flex-shrink-0" />
+          <span>进入工作台</span>
+        </button>
+        <div className="pt-1 border-t border-gray-100">
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            <span>{loggingOut ? "正在退出..." : "退出登录"}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

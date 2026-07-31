@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   User,
@@ -18,6 +19,8 @@ import {
   ChevronRight,
   Settings,
   Ban,
+  Home,
+  LayoutDashboard,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 import {
@@ -46,11 +49,14 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
 ];
 
 export default function StudioDashboardPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("pending");
   const [loggingOut, setLoggingOut] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const [counts, setCounts] = useState<Record<TabKey, number>>({
     pending: 0,
     estimated: 0,
@@ -74,6 +80,29 @@ export default function StudioDashboardPage() {
 
   // 竞态保护：每次 loadData 递增 requestId，仅最新请求的结果会被应用
   const requestIdRef = useRef(0);
+
+  // 获取当前用户角色（用于判断是否显示"进入管理后台"按钮）
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/session-check");
+        const data = await res.json();
+        if (data.loggedIn && data.profile?.role === "admin") {
+          setIsAdmin(true);
+        }
+      } catch {
+        // 忽略错误，默认不显示管理员入口
+      }
+    })();
+  }, []);
+
+  const handleGoHome = () => {
+    router.push("/");
+  };
+
+  const handleGoAdmin = () => {
+    router.push("/admin/dashboard");
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -133,6 +162,7 @@ export default function StudioDashboardPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, searchQuery, currentPage]);
@@ -193,8 +223,24 @@ export default function StudioDashboardPage() {
               <p className="text-sm text-gray-400">LongWoo 工作室</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">欢迎回来！</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="hidden sm:inline text-sm text-gray-500">欢迎回来！</span>
+            <button
+              onClick={handleGoHome}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline">回到首页</span>
+            </button>
+            {isAdmin && (
+              <button
+                onClick={handleGoAdmin}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-lw-accent hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">进入管理后台</span>
+              </button>
+            )}
             <button
               onClick={handleLogout}
               disabled={loggingOut}
