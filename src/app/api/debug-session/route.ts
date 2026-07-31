@@ -182,8 +182,9 @@ export async function GET(request: Request) {
   // ===== Step 5: 环境信息 =====
   const envInfo = {
     nodeEnv: process.env.NODE_ENV,
-    supabaseUrl: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'MISSING',
-    supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING',
+    supabaseUrl: supabaseUrl || 'MISSING',
+    supabaseAnonKey: supabaseAnonKey || 'MISSING',
+    supabaseAnonKeyLength: supabaseAnonKey?.length ?? 0,
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING',
     debugAuth: process.env.DEBUG_AUTH,
   }
