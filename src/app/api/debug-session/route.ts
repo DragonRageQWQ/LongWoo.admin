@@ -112,11 +112,12 @@ export async function GET(request: Request) {
     }
   }
 
-  // ===== Step 4: Token 验证 =====
+  // ===== Step 4: Token 验证（详细版） =====
   let tokenVerification: Record<string, unknown> = {}
   const tokenToVerify = customSession?.access_token ?? null
 
   if (tokenToVerify) {
+    // 4a: 使用 verifyAccessToken 函数
     try {
       const verifiedUserId = await verifyAccessToken(tokenToVerify)
       tokenVerification = {
@@ -130,6 +131,45 @@ export async function GET(request: Request) {
         tokenSource: 'customCookie',
         verified: false,
         error: err instanceof Error ? err.message : String(err),
+      }
+    }
+
+    // 4b: 直接 fetch 调用 Supabase API，获取详细错误信息
+    try {
+      const directResp = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        headers: {
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${tokenToVerify}`,
+        },
+      })
+
+      const directBody = await directResp.text()
+
+      tokenVerification = {
+        ...tokenVerification,
+        directFetch: {
+          url: `${supabaseUrl}/auth/v1/user`,
+          status: directResp.status,
+          statusText: directResp.statusText,
+          ok: directResp.ok,
+          bodyPreview: directBody.substring(0, 300),
+          bodyLength: directBody.length,
+          responseHeaders: {
+            'content-type': directResp.headers.get('content-type'),
+            'www-authenticate': directResp.headers.get('www-authenticate'),
+          },
+        }
+      }
+    } catch (err) {
+      tokenVerification = {
+        ...tokenVerification,
+        directFetch: {
+          error: err instanceof Error ? {
+            message: err.message,
+            name: err.name,
+            stack: err.stack?.substring(0, 200),
+          } : String(err),
+        }
       }
     }
   } else {
