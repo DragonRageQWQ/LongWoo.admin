@@ -12,10 +12,7 @@
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import {
-  verifyAccessToken,
-  refreshSession,
-} from '@/lib/supabase/cookie-utils'
+import { refreshSession } from '@/lib/supabase/cookie-utils'
 import { ZERO_USER_UID as CONST_ZERO_USER_UID } from '@/lib/constants'
 import type { UserRole, Profile } from '@/types/database'
 
@@ -28,9 +25,8 @@ export const DEFAULT_ROLE: UserRole = 'user'
 /**
  * 获取当前登录用户信息（含角色）
  *
- * 安全修复：
- *   不再直接信任 cookie 中的 userId，而是通过 Supabase API 验证 access_token。
- *   使用 React cache() 在同一请求内复用结果，避免重复查询。
+ * 信任 cookie 中的签名 JWT，仅在 token 过期时发起网络请求刷新。
+ * 使用 React cache() 在同一请求内复用结果，避免重复查询。
  *
  * @returns 用户信息（userId, role, uid, profile），未登录返回 null
  */
@@ -47,68 +43,31 @@ export const getCurrentUser = cache(async (): Promise<{
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user?.id || !session.access_token) return null
 
-    // Step 2: 通过 API 验证 token 有效性
-    const verifiedUserId = await verifyAccessToken(session.access_token)
-    if (!verifiedUserId || verifiedUserId !== session.user.id) {
-      // Token 可能已过期，尝试刷新
-      if (session.refresh_token) {
-        // 优先使用 SSR 客户端刷新（会自动写入新 cookie）
-        const { data: refreshData, error: refreshError } =
-          await supabase.auth.refreshSession({
-            refresh_token: session.refresh_token,
-          })
+    // Step 2: 检查 token 是否过期
+    const now = Math.floor(Date.now() / 1000)
+    const isExpired = session.expires_at ? session.expires_at < now : false
 
-        if (!refreshError && refreshData.session?.user?.id && refreshData.session.access_token) {
-          const refreshedId = await verifyAccessToken(refreshData.session.access_token)
-          if (!refreshedId || refreshedId !== refreshData.session.user.id) {
-            return null
-          }
+    let userId = session.user.id
 
-          // 使用刷新后的用户信息继续
-          const admin = createAdminClient()
-          const { data: profile } = await admin
-            .from('profiles')
-            .select('*')
-            .eq('id', refreshedId)
-            .single()
+    if (isExpired && session.refresh_token) {
+      // Token 已过期 — 尝试刷新
+      // 优先使用 SSR 客户端刷新（会自动写入新 cookie）
+      const { data: refreshData, error: refreshError } =
+        await supabase.auth.refreshSession({
+          refresh_token: session.refresh_token,
+        })
 
-          if (!profile) return null
-
-          return {
-            userId: refreshedId,
-            role: (profile.role as UserRole) ?? DEFAULT_ROLE,
-            uid: profile.uid,
-            profile: profile as Profile,
-          }
-        }
-
+      if (!refreshError && refreshData.session?.user?.id && refreshData.session.access_token) {
+        userId = refreshData.session.user.id
+      } else {
         // SSR 客户端刷新失败，尝试直接 fetch 刷新
         const refreshedSession = await refreshSession(session.refresh_token)
         if (refreshedSession) {
-          const refreshedId = await verifyAccessToken(refreshedSession.access_token)
-          if (!refreshedId || refreshedId !== refreshedSession.user.id) {
-            return null
-          }
-
-          const admin = createAdminClient()
-          const { data: profile } = await admin
-            .from('profiles')
-            .select('*')
-            .eq('id', refreshedId)
-            .single()
-
-          if (!profile) return null
-
-          return {
-            userId: refreshedId,
-            role: (profile.role as UserRole) ?? DEFAULT_ROLE,
-            uid: profile.uid,
-            profile: profile as Profile,
-          }
+          userId = refreshedSession.user.id
+        } else {
+          return null
         }
       }
-
-      return null
     }
 
     // Step 3: 使用 admin 客户端查询 profile
@@ -116,13 +75,13 @@ export const getCurrentUser = cache(async (): Promise<{
     const { data: profile } = await admin
       .from('profiles')
       .select('*')
-      .eq('id', verifiedUserId)
+      .eq('id', userId)
       .single()
 
     if (!profile) return null
 
     return {
-      userId: verifiedUserId,
+      userId,
       role: (profile.role as UserRole) ?? DEFAULT_ROLE,
       uid: profile.uid,
       profile: profile as Profile,

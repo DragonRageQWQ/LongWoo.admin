@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getSupabaseCookieName, SECURE_COOKIE_OPTIONS } from '@/lib/supabase/cookie-utils'
 import { validateApiCsrf } from '@/lib/api-csrf'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * 从请求的 Cookie 头中解析出所有 cookie 名称
  */

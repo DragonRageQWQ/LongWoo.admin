@@ -170,7 +170,7 @@
       <footer class="site-footer">
         <p class="footer-contact">联系邮箱：hello@longwoo.studio</p>
         <p class="footer-copyright">&copy; 2026 LongWoo Studio. All rights reserved.</p>
-        <p class="footer-version">Web Test Version: v1.0.8(731)</p>
+        <p class="footer-version">Web Test Version: v1.0.8(731) - build:E789</p>
       </footer>
 
     </main>
@@ -697,7 +697,7 @@
         const logoutBtn = wrapper.querySelector('.logout-btn');
         logoutBtn.addEventListener('click', async function() {
           try {
-            await fetch('/api/auth/logout', { method: 'POST' });
+            await fetch('/api/authentication/logout', { method: 'POST' });
           } catch(e) {}
           window.location.href = '/login';
         });

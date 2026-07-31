@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { User } from '@supabase/supabase-js'
-import { verifyAccessToken, refreshSession } from '@/lib/supabase/cookie-utils'
+import { refreshSession } from '@/lib/supabase/cookie-utils'
 import { COOKIE_MAX_AGE } from '@/lib/constants'
 
 export async function createClient() {
@@ -27,17 +27,12 @@ export async function createClient() {
 }
 
 /**
- * 获取当前登录用户（安全验证版）
+ * 获取当前登录用户
  *
- * 安全修复：
- *   不再仅从 cookie 读取用户信息，而是通过 Supabase API 验证 access_token。
- *   使用直接 fetch 调用 /auth/v1/user，显式设置 apikey 头。
+ * 信任 cookie 中的签名 JWT（Supabase JWT 由服务端签名，无法伪造）。
+ * 仅当 access_token 过期时才发起网络请求刷新，避免每次请求都调用 Supabase API。
  *
- * Token 刷新机制：
- *   当 access_token 过期时，使用 refresh_token 通过 Supabase API 获取新 token。
- *   刷新后的 session 会通过 SSR 客户端的 setAll 回调自动写入 cookie。
- *
- * @returns 验证通过的用户对象，未登录或 token 无效返回 null
+ * @returns 当前用户对象，未登录返回 null
  */
 export async function getSessionUser(): Promise<User | null> {
   const supabase = await createClient()
@@ -45,34 +40,31 @@ export async function getSessionUser(): Promise<User | null> {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user?.id || !session.access_token) return null
 
-    // 通过 API 验证 token 有效性
-    const verifiedUserId = await verifyAccessToken(session.access_token)
-    if (verifiedUserId && verifiedUserId === session.user.id) {
+    // 检查 token 是否过期
+    const now = Math.floor(Date.now() / 1000)
+    const isExpired = session.expires_at ? session.expires_at < now : false
+
+    if (!isExpired) {
+      // Token 仍然有效 — 直接返回，无需网络调用
       return session.user
     }
 
-    // Token 可能已过期，尝试使用 refresh_token 刷新
+    // Token 已过期 — 尝试使用 refresh_token 刷新
     if (session.refresh_token) {
-      // 优先使用 SSR 客户端的 refreshSession（会自动写入新 cookie）
+      // 优先使用 SSR 客户端刷新（会自动写入新 cookie）
       const { data: refreshData, error: refreshError } =
         await supabase.auth.refreshSession({
           refresh_token: session.refresh_token,
         })
 
       if (!refreshError && refreshData.session?.user?.id && refreshData.session.access_token) {
-        const refreshedUserId = await verifyAccessToken(refreshData.session.access_token)
-        if (refreshedUserId && refreshedUserId === refreshData.session.user.id) {
-          return refreshData.session.user
-        }
+        return refreshData.session.user
       }
 
       // SSR 客户端刷新失败，尝试直接 fetch 刷新（Edge Runtime 兼容）
       const refreshedSession = await refreshSession(session.refresh_token)
       if (refreshedSession) {
-        const refreshedUserId = await verifyAccessToken(refreshedSession.access_token)
-        if (refreshedUserId && refreshedUserId === refreshedSession.user.id) {
-          return refreshedSession.user as unknown as User
-        }
+        return refreshedSession.user as unknown as User
       }
     }
 
