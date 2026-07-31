@@ -5,6 +5,10 @@ import {
   readSessionCookieValue,
   getSessionFromCookieValue,
   verifyAccessToken,
+  refreshSession,
+  encodeSessionCookie,
+  getSupabaseCookieName,
+  SECURE_COOKIE_OPTIONS,
 } from '@/lib/supabase/cookie-utils'
 
 /**
@@ -21,6 +25,10 @@ import {
  *   不再信任 cookie 中的 userId，而是通过 Supabase API 验证 access_token。
  *   使用直接 fetch 调用 /auth/v1/user，显式设置 apikey 头，
  *   解决 Edge Runtime 中 SDK 的 "Invalid API key" 问题。
+ *
+ * Token 刷新机制：
+ *   当 access_token 过期时，使用 refresh_token 获取新的 access_token，
+ *   并将刷新后的 session 写入 response cookie，实现无感续期。
  */
 export async function middleware(request: NextRequest) {
   // ===== 调试端点：仅开发环境可用 =====
@@ -70,16 +78,52 @@ export async function middleware(request: NextRequest) {
 
   if (session?.user?.id && session.access_token) {
     // Step 2: 通过 Supabase API 验证 token（安全核心）
-    // 使用直接 fetch 避免 Edge Runtime SDK 问题
     userId = await verifyAccessToken(session.access_token)
+
+    // Step 3: 如果 token 验证失败，尝试使用 refresh_token 刷新
+    if (!userId && session.refresh_token) {
+      const refreshedSession = await refreshSession(session.refresh_token)
+      if (refreshedSession) {
+        const refreshedUserId = await verifyAccessToken(refreshedSession.access_token)
+        if (refreshedUserId && refreshedUserId === refreshedSession.user.id) {
+          userId = refreshedUserId
+
+          // 将刷新后的 session 写入 response cookie（无感续期）
+          const cookieName = getSupabaseCookieName()
+          const cookieParts = encodeSessionCookie(refreshedSession)
+          cookieParts.forEach(({ name, value }) => {
+            response.cookies.set(name, value, SECURE_COOKIE_OPTIONS)
+          })
+          // 如果有分片，清除主 cookie 避免读取冲突
+          if (cookieParts.length > 1) {
+            response.cookies.set(cookieName, '', {
+              ...SECURE_COOKIE_OPTIONS,
+              maxAge: 0,
+            })
+          }
+        }
+      }
+    }
   }
 
-  // 备选：使用 SSR 客户端的 getSession（仅用于 token 刷新场景）
+  // 备选：使用 SSR 客户端的 getSession（处理 cookie 格式差异 + token 刷新）
   if (!userId) {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user?.id && session.access_token) {
-        userId = await verifyAccessToken(session.access_token)
+      const { data: { session: ssrSession } } = await supabase.auth.getSession()
+      if (ssrSession?.user?.id && ssrSession.access_token) {
+        userId = await verifyAccessToken(ssrSession.access_token)
+
+        // SSR 客户端读取到 session 但 token 验证失败，尝试刷新
+        if (!userId && ssrSession.refresh_token) {
+          const { data: refreshData, error: refreshError } =
+            await supabase.auth.refreshSession({
+              refresh_token: ssrSession.refresh_token,
+            })
+
+          if (!refreshError && refreshData.session?.access_token) {
+            userId = await verifyAccessToken(refreshData.session.access_token)
+          }
+        }
       }
     } catch {
       // 静默失败
@@ -88,7 +132,6 @@ export async function middleware(request: NextRequest) {
 
   // 未登录用户访问受保护路径 → 重定向到登录页
   if (!userId && protectedPaths.some(p => pathname.startsWith(p))) {
-    // 如果 cookie 存在但 session 已过期，添加 expired 参数提示用户
     const hasExpiredSession = cookieValue !== null && session === null
     const loginUrl = new URL('/login', request.url)
     if (hasExpiredSession) {
@@ -111,27 +154,41 @@ export async function middleware(request: NextRequest) {
 }
 
 /**
- * 使用 service role key 检查用户角色
+ * 检查用户角色是否为管理员
+ *
+ * 依次尝试 service_role key 和 anon key，
+ * 确保即使其中一个 key 无效也能正常工作。
  */
 async function checkAdminRole(userId: string): Promise<boolean> {
-  try {
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    const admin = createClient(supabaseUrl, serviceKey!, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    })
+  // 依次尝试可用的 key
+  const keysToTry = [serviceKey, anonKey].filter(
+    (k): k is string => typeof k === 'string' && k.length > 0
+  )
 
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single()
+  for (const key of keysToTry) {
+    try {
+      const admin = createClient(supabaseUrl, key, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      })
 
-    return profile?.role === 'admin'
-  } catch {
-    return false
+      const { data: profile } = await admin
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single()
+
+      if (profile?.role === 'admin') return true
+      if (profile) return false // 查到 profile 但不是 admin
+    } catch {
+      // 当前 key 失败，尝试下一个
+    }
   }
+
+  return false
 }
 
 /**

@@ -171,8 +171,8 @@ export function getSessionFromCookieValue(cookieValue: string | null): SupabaseS
  * 安全修复的核心：不再信任 cookie 内容，而是通过服务端验证 JWT。
  *
  * Key 选择策略：
- *   优先使用 service_role key（服务端专用，不受 anon key 截断问题影响），
- *   如果不可用则降级使用 anon key。
+ *   依次尝试 service_role key 和 anon key。
+ *   如果 service_role key 无效或被截断，会自动降级到 anon key。
  *   这是纯服务端调用（middleware + route handlers），使用 service_role key 是安全的。
  *
  * @returns 验证通过返回 userId，否则返回 null
@@ -185,21 +185,88 @@ export async function verifyAccessToken(accessToken: string): Promise<string | n
 
     if (!supabaseUrl) return null
 
-    // 优先使用 service_role key（更可靠，不受 anon key 截断影响）
-    const apiKey = serviceRoleKey || anonKey
-    if (!apiKey) return null
+    // 依次尝试可用的 key：service_role 优先，anon 兜底
+    const keysToTry = [serviceRoleKey, anonKey].filter(
+      (k): k is string => typeof k === 'string' && k.length > 0
+    )
+    if (keysToTry.length === 0) return null
 
-    const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    for (const apiKey of keysToTry) {
+      try {
+        const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
+          headers: {
+            apikey: apiKey,
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+
+        if (resp.ok) {
+          const userData = await resp.json()
+          return userData?.id ?? null
+        }
+
+        // 401 = token 无效或过期（换 key 也一样，直接返回 null）
+        if (resp.status === 401) return null
+        // 其他错误码（403/500 等）可能是 key 本身有问题，尝试下一个 key
+      } catch {
+        // 网络错误，尝试下一个 key
+      }
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 使用 refresh_token 刷新 session，返回新的 access_token
+ *
+ * 在 access_token 过期时调用，通过 Supabase API 获取新的 token。
+ * 仅在服务端使用（middleware + route handlers）。
+ *
+ * @returns 刷新成功返回新的 session 对象，失败返回 null
+ */
+export async function refreshSession(
+  refreshToken: string
+): Promise<{
+  access_token: string
+  refresh_token: string
+  expires_at: number
+  expires_in?: number
+  token_type?: string
+  user: { id: string; email?: string; [key: string]: unknown }
+} | null> {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !anonKey) return null
+
+    const resp = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
       headers: {
-        apikey: apiKey,
-        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        apikey: anonKey,
       },
+      body: JSON.stringify({ refresh_token: refreshToken }),
     })
 
     if (!resp.ok) return null
 
-    const userData = await resp.json()
-    return userData?.id ?? null
+    const data = await resp.json()
+    if (!data.access_token || !data.refresh_token || !data.user?.id) {
+      return null
+    }
+
+    return {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: data.expires_at ?? Math.floor(Date.now() / 1000) + (data.expires_in ?? 3600),
+      expires_in: data.expires_in ?? 3600,
+      token_type: data.token_type ?? 'bearer',
+      user: data.user,
+    }
   } catch {
     return null
   }

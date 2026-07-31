@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   verifyAccessToken,
+  refreshSession,
 } from '@/lib/supabase/cookie-utils'
 import { ZERO_USER_UID as CONST_ZERO_USER_UID } from '@/lib/constants'
 import type { UserRole, Profile } from '@/types/database'
@@ -48,7 +49,67 @@ export const getCurrentUser = cache(async (): Promise<{
 
     // Step 2: 通过 API 验证 token 有效性
     const verifiedUserId = await verifyAccessToken(session.access_token)
-    if (!verifiedUserId || verifiedUserId !== session.user.id) return null
+    if (!verifiedUserId || verifiedUserId !== session.user.id) {
+      // Token 可能已过期，尝试刷新
+      if (session.refresh_token) {
+        // 优先使用 SSR 客户端刷新（会自动写入新 cookie）
+        const { data: refreshData, error: refreshError } =
+          await supabase.auth.refreshSession({
+            refresh_token: session.refresh_token,
+          })
+
+        if (!refreshError && refreshData.session?.user?.id && refreshData.session.access_token) {
+          const refreshedId = await verifyAccessToken(refreshData.session.access_token)
+          if (!refreshedId || refreshedId !== refreshData.session.user.id) {
+            return null
+          }
+
+          // 使用刷新后的用户信息继续
+          const admin = createAdminClient()
+          const { data: profile } = await admin
+            .from('profiles')
+            .select('*')
+            .eq('id', refreshedId)
+            .single()
+
+          if (!profile) return null
+
+          return {
+            userId: refreshedId,
+            role: (profile.role as UserRole) ?? DEFAULT_ROLE,
+            uid: profile.uid,
+            profile: profile as Profile,
+          }
+        }
+
+        // SSR 客户端刷新失败，尝试直接 fetch 刷新
+        const refreshedSession = await refreshSession(session.refresh_token)
+        if (refreshedSession) {
+          const refreshedId = await verifyAccessToken(refreshedSession.access_token)
+          if (!refreshedId || refreshedId !== refreshedSession.user.id) {
+            return null
+          }
+
+          const admin = createAdminClient()
+          const { data: profile } = await admin
+            .from('profiles')
+            .select('*')
+            .eq('id', refreshedId)
+            .single()
+
+          if (!profile) return null
+
+          return {
+            userId: refreshedId,
+            role: (profile.role as UserRole) ?? DEFAULT_ROLE,
+            uid: profile.uid,
+            profile: profile as Profile,
+          }
+        }
+      }
+
+      return null
+    }
 
     // Step 3: 使用 admin 客户端查询 profile
     const admin = createAdminClient()
