@@ -7,6 +7,7 @@ import { headers } from 'next/headers'
 import { checkRateLimit, peekRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
 import { validateFileMagicNumber } from '@/lib/file-validation'
+import { getOrCreateProfile } from '@/lib/profile'
 import { RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS, AVATAR_MAX_SIZE, AVATAR_ALLOWED_MIME_TYPES, RATE_LIMIT_AVATAR_WINDOW, RATE_LIMIT_AVATAR_MAX, RATE_LIMIT_PASSWORD_WINDOW, RATE_LIMIT_PASSWORD_MAX, RATE_LIMIT_CHECK_EMAIL_WINDOW, RATE_LIMIT_CHECK_EMAIL_MAX } from '@/lib/constants'
 
 // ==================== 密码登录失败次数限制 ====================
@@ -68,17 +69,13 @@ export async function updateDisplayName(
     // CSRF 保护
     const csrfError = await validateCsrf()
     if (csrfError) {
-      console.log('[updateDisplayName] CSRF failed:', csrfError)
       return { success: false, error: csrfError, debug: `CSRF:${csrfError}` }
     }
 
     const user = await getSessionUser()
     if (!user) {
-      console.log('[updateDisplayName] No session user')
       return { success: false, error: '未登录', debug: 'NoUser' }
     }
-
-    console.log('[updateDisplayName] User ID:', user.id, 'Email:', user.email)
 
     const name = displayName.trim()
     if (!name || name.length > 20) {
@@ -88,21 +85,10 @@ export async function updateDisplayName(
     // 使用 admin 客户端更新，绕过 RLS 限制
     const admin = createAdminClient()
 
-    // 先查询确认 profile 存在
-    const { data: existingProfile, error: queryError } = await admin
-      .from('profiles')
-      .select('id, display_name')
-      .eq('id', user.id)
-      .single()
+    // 确保 profile 存在（防止登录时未自动创建的情况）
+    await getOrCreateProfile(admin, user.id, { email: user.email })
 
-    if (queryError) {
-      console.error('[updateDisplayName] Profile query failed:', queryError.message)
-      return { success: false, error: '更新失败，请稍后重试', debug: `QueryError:${queryError.message}` }
-    }
-
-    console.log('[updateDisplayName] Existing profile:', existingProfile?.id, existingProfile?.display_name)
-
-    const { error: updateError, count } = await admin
+    const { error: updateError } = await admin
       .from('profiles')
       .update({
         display_name: name,
@@ -115,10 +101,8 @@ export async function updateDisplayName(
       return { success: false, error: '更新失败，请稍后重试', debug: `UpdateError:${updateError.message}` }
     }
 
-    console.log('[updateDisplayName] Update success, count:', count)
-
     revalidatePath('/profile')
-    return { success: true, debug: `OK:uid=${user.id}` }
+    return { success: true }
   } catch (error) {
     console.error('[updateDisplayName] Exception:', error)
     return { success: false, error: '操作时发生未知错误', debug: `Exception:${String(error)}` }
@@ -176,6 +160,9 @@ export async function updateAvatar(
     }
 
     const admin = createAdminClient()
+
+    // 确保 profile 存在（防止登录时未自动创建的情况）
+    await getOrCreateProfile(admin, user.id, { email: user.email })
 
     // 查询旧头像 URL，用于后续清理旧文件
     const { data: oldProfile } = await admin
@@ -307,6 +294,9 @@ export async function updatePassword(
 
     const admin = createAdminClient()
 
+    // 确保 profile 存在（防止登录时未自动创建的情况）
+    await getOrCreateProfile(admin, user.id, { email: user.email })
+
     // C4 安全修复：如果用户已设置密码，必须验证旧密码
     // 先查询用户是否已有密码
     const { data: profile } = await admin
@@ -425,13 +415,11 @@ export async function loginWithPassword(
     // 登录成功，清除失败记录
     await clearLoginFails(email, ip)
 
-    // 使用 admin 客户端获取角色（避免 RLS 问题）
+    // 使用 admin 客户端确保 profile 存在并获取角色（避免 RLS 问题）
     const admin = createAdminClient()
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .single()
+    const profile = await getOrCreateProfile(admin, data.user.id, {
+      email: data.user.email ?? email,
+    })
 
     revalidatePath('/')
     return { success: true, role: profile?.role ?? 'user' }

@@ -134,7 +134,6 @@ export default function ProfilePage() {
     setNameError(null);
     try {
       const result = await updateDisplayName(trimmed);
-      console.log("[Profile] updateDisplayName result:", result);
       if (result.success) {
         setProfile((prev) =>
           prev ? { ...prev, display_name: trimmed } : prev
@@ -143,13 +142,10 @@ export default function ProfilePage() {
         setNameInput("");
       } else {
         setNameError(result.error ?? "更新失败");
-        if (result.debug) {
-          setNameError((result.error ?? "更新失败") + ` [${result.debug}]`);
-        }
       }
     } catch (e) {
       console.error("[Profile] updateDisplayName exception:", e);
-      setNameError("操作时发生未知错误: " + String(e));
+      setNameError("操作时发生未知错误，请稍后重试");
     } finally {
       setNameLoading(false);
     }
