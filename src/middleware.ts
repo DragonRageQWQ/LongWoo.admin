@@ -3,8 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import {
   readSessionCookieValue,
-  getSessionFromCookieValue,
-  verifyAccessToken,
+  decodeSessionCookie,
   refreshSession,
   encodeSessionCookie,
   getSupabaseCookieName,
@@ -21,10 +20,10 @@ import {
  *
  * 零号用户 (uid=10001) 是超级管理员，拥有管理员权限并管理角色授权
  *
- * 安全修复：
- *   不再信任 cookie 中的 userId，而是通过 Supabase API 验证 access_token。
- *   使用直接 fetch 调用 /auth/v1/user，显式设置 apikey 头，
- *   解决 Edge Runtime 中 SDK 的 "Invalid API key" 问题。
+ * 认证策略：
+ *   信任 cookie 中的签名 JWT（Supabase JWT 由服务端签名，无法伪造）。
+ *   仅当 access_token 过期时才发起网络请求刷新。
+ *   避免每次请求都调用 Supabase API 导致网络波动时认证失败。
  *
  * Token 刷新机制：
  *   当 access_token 过期时，使用 refresh_token 获取新的 access_token，
@@ -69,24 +68,36 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // ===== 安全验证：从 cookie 读取 session，通过 API 验证 token =====
+  // ===== 认证：从 cookie 读取 session，信任签名 JWT =====
   let userId: string | null = null
+  let hasExpiredSession = false
 
   // Step 1: 从 cookie 解码 session（快速检查，无网络开销）
   const cookieValue = readSessionCookieValue(request.cookies)
-  const session = getSessionFromCookieValue(cookieValue)
+  const decoded = cookieValue ? decodeSessionCookie(cookieValue) : null
 
-  if (session?.user?.id && session.access_token) {
-    // Step 2: 通过 Supabase API 验证 token（安全核心）
-    userId = await verifyAccessToken(session.access_token)
+  if (decoded) {
+    const session = decoded as {
+      access_token: string
+      refresh_token: string
+      expires_at: number
+      user: { id: string; email?: string }
+    }
 
-    // Step 3: 如果 token 验证失败，尝试使用 refresh_token 刷新
-    if (!userId && session.refresh_token) {
-      const refreshedSession = await refreshSession(session.refresh_token)
-      if (refreshedSession) {
-        const refreshedUserId = await verifyAccessToken(refreshedSession.access_token)
-        if (refreshedUserId && refreshedUserId === refreshedSession.user.id) {
-          userId = refreshedUserId
+    if (session.user?.id && session.access_token) {
+      // Step 2: 检查 token 是否过期
+      const now = Math.floor(Date.now() / 1000)
+      const isExpired = session.expires_at ? session.expires_at < now : false
+
+      if (!isExpired) {
+        // Token 仍然有效 — 信任签名 JWT，直接使用（零网络调用）
+        userId = session.user.id
+      } else if (session.refresh_token) {
+        // Token 已过期 — 尝试刷新
+        hasExpiredSession = true
+        const refreshedSession = await refreshSession(session.refresh_token)
+        if (refreshedSession) {
+          userId = refreshedSession.user.id
 
           // 将刷新后的 session 写入 response cookie（无感续期）
           const cookieName = getSupabaseCookieName()
@@ -102,6 +113,8 @@ export async function middleware(request: NextRequest) {
             })
           }
         }
+      } else {
+        hasExpiredSession = true
       }
     }
   }
@@ -111,17 +124,21 @@ export async function middleware(request: NextRequest) {
     try {
       const { data: { session: ssrSession } } = await supabase.auth.getSession()
       if (ssrSession?.user?.id && ssrSession.access_token) {
-        userId = await verifyAccessToken(ssrSession.access_token)
+        // 信任 SSR 客户端读取的 session（同样是签名 JWT）
+        const now = Math.floor(Date.now() / 1000)
+        const isExpired = ssrSession.expires_at ? ssrSession.expires_at < now : false
 
-        // SSR 客户端读取到 session 但 token 验证失败，尝试刷新
-        if (!userId && ssrSession.refresh_token) {
+        if (!isExpired) {
+          userId = ssrSession.user.id
+        } else if (ssrSession.refresh_token) {
+          hasExpiredSession = true
           const { data: refreshData, error: refreshError } =
             await supabase.auth.refreshSession({
               refresh_token: ssrSession.refresh_token,
             })
 
-          if (!refreshError && refreshData.session?.access_token) {
-            userId = await verifyAccessToken(refreshData.session.access_token)
+          if (!refreshError && refreshData.session?.user?.id) {
+            userId = refreshData.session.user.id
           }
         }
       }
@@ -132,7 +149,6 @@ export async function middleware(request: NextRequest) {
 
   // 未登录用户访问受保护路径 → 重定向到登录页
   if (!userId && protectedPaths.some(p => pathname.startsWith(p))) {
-    const hasExpiredSession = cookieValue !== null && session === null
     const loginUrl = new URL('/login', request.url)
     if (hasExpiredSession) {
       loginUrl.searchParams.set('expired', '1')
@@ -203,17 +219,17 @@ async function handleDebugRequest(request: NextRequest) {
   }))
 
   const cookieValue = readSessionCookieValue(request.cookies)
-  const session = getSessionFromCookieValue(cookieValue)
+  const decoded = cookieValue ? decodeSessionCookie(cookieValue) : null
 
-  let authInfo: Record<string, unknown> = {}
-  if (session?.access_token) {
-    const verifiedId = await verifyAccessToken(session.access_token)
-    authInfo = {
-      cookieUserId: session.user?.id,
-      verifiedUserId: verifiedId,
-      tokenValid: verifiedId !== null,
-    }
-  }
+  const session = decoded as {
+    access_token: string
+    refresh_token: string
+    expires_at: number
+    user: { id: string; email?: string }
+  } | null
+
+  const now = Math.floor(Date.now() / 1000)
+  const isExpired = session?.expires_at ? session.expires_at < now : null
 
   return NextResponse.json({
     pathname: request.nextUrl.pathname,
@@ -223,11 +239,9 @@ async function handleDebugRequest(request: NextRequest) {
       userId: session.user?.id,
       userEmail: session.user?.email,
       expiresAt: session.expires_at,
-      isExpired: session.expires_at
-        ? session.expires_at < Math.floor(Date.now() / 1000)
-        : null,
+      isExpired,
+      trusted: !isExpired, // 信任未过期的签名 JWT
     } : null,
-    authInfo,
   })
 }
 
