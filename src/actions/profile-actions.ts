@@ -63,27 +63,46 @@ async function clearLoginFails(email: string, ip: string): Promise<void> {
 
 export async function updateDisplayName(
   displayName: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; debug?: string }> {
   try {
     // CSRF 保护
     const csrfError = await validateCsrf()
     if (csrfError) {
-      return { success: false, error: csrfError }
+      console.log('[updateDisplayName] CSRF failed:', csrfError)
+      return { success: false, error: csrfError, debug: `CSRF:${csrfError}` }
     }
 
     const user = await getSessionUser()
     if (!user) {
-      return { success: false, error: '未登录' }
+      console.log('[updateDisplayName] No session user')
+      return { success: false, error: '未登录', debug: 'NoUser' }
     }
+
+    console.log('[updateDisplayName] User ID:', user.id, 'Email:', user.email)
 
     const name = displayName.trim()
     if (!name || name.length > 20) {
-      return { success: false, error: '昵称长度需在1-20个字符之间' }
+      return { success: false, error: '昵称长度需在1-20个字符之间', debug: 'InvalidName' }
     }
 
     // 使用 admin 客户端更新，绕过 RLS 限制
     const admin = createAdminClient()
-    const { error } = await admin
+
+    // 先查询确认 profile 存在
+    const { data: existingProfile, error: queryError } = await admin
+      .from('profiles')
+      .select('id, display_name')
+      .eq('id', user.id)
+      .single()
+
+    if (queryError) {
+      console.error('[updateDisplayName] Profile query failed:', queryError.message)
+      return { success: false, error: '更新失败，请稍后重试', debug: `QueryError:${queryError.message}` }
+    }
+
+    console.log('[updateDisplayName] Existing profile:', existingProfile?.id, existingProfile?.display_name)
+
+    const { error: updateError, count } = await admin
       .from('profiles')
       .update({
         display_name: name,
@@ -91,16 +110,18 @@ export async function updateDisplayName(
       })
       .eq('id', user.id)
 
-    if (error) {
-      console.error('更新昵称失败:', error.message)
-      return { success: false, error: '更新失败，请稍后重试' }
+    if (updateError) {
+      console.error('[updateDisplayName] Update failed:', updateError.message)
+      return { success: false, error: '更新失败，请稍后重试', debug: `UpdateError:${updateError.message}` }
     }
 
+    console.log('[updateDisplayName] Update success, count:', count)
+
     revalidatePath('/profile')
-    return { success: true }
+    return { success: true, debug: `OK:uid=${user.id}` }
   } catch (error) {
-    console.error('更新昵称异常:', error)
-    return { success: false, error: '操作时发生未知错误' }
+    console.error('[updateDisplayName] Exception:', error)
+    return { success: false, error: '操作时发生未知错误', debug: `Exception:${String(error)}` }
   }
 }
 
