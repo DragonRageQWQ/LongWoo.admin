@@ -201,10 +201,14 @@ export async function getOrders(filters: {
       return { success: false, error: '查询失败，请稍后重试' }
     }
 
-    // 对 customer_phone 做脱敏处理
+    // 对 customer_phone 和 customer_email 做脱敏处理
+    // 安全修复：非管理员用户不应看到其他客户的完整邮箱地址
     const maskedData = (data || []).map(order => ({
       ...order,
       customer_phone: maskPhone(order.customer_phone),
+      customer_email: currentUser.role === 'admin'
+        ? order.customer_email
+        : maskEmail(order.customer_email),
     })) as Order[]
 
     return { success: true, data: maskedData, count: count ?? 0, total: count ?? 0 }
@@ -990,10 +994,14 @@ export async function getStudioOrders(filters: {
       return { success: false, error: '查询失败，请稍后重试' }
     }
 
-    // 对 customer_phone 做脱敏处理
+    // 对 customer_phone 和 customer_email 做脱敏处理
+    // 安全修复：非管理员用户不应看到其他客户的完整邮箱地址
     const maskedData = (data || []).map(order => ({
       ...order,
       customer_phone: maskPhone(order.customer_phone),
+      customer_email: currentUser.role === 'admin'
+        ? order.customer_email
+        : maskEmail(order.customer_email),
     })) as Order[]
 
     return { success: true, data: maskedData, count: count ?? 0, total: count ?? 0 }
