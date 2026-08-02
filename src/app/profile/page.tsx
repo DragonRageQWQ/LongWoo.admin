@@ -17,6 +17,8 @@ import {
   Lock,
   X,
   Upload,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -482,6 +484,32 @@ export default function ProfilePage() {
               </div>
               <p className="text-sm font-medium text-lw-black">购买自设兽装</p>
               <p className="text-xs text-gray-400 mt-0.5">开始定制您的专属兽装</p>
+              <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-lw-accent mt-2 transition-colors" />
+            </Link>
+
+            {/* 龙灵工坊 - AI 角色扮演对话 */}
+            <Link
+              href="/ai/characters"
+              className="bg-white rounded-xl shadow-sm border border-gray-50 p-4 hover:border-lw-accent hover:shadow-md transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center mb-3">
+                <Sparkles className="w-5 h-5 text-indigo-600" />
+              </div>
+              <p className="text-sm font-medium text-lw-black">龙灵工坊</p>
+              <p className="text-xs text-gray-400 mt-0.5">创建 AI 角色自由对话</p>
+              <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-lw-accent mt-2 transition-colors" />
+            </Link>
+
+            {/* AI 助手 - 兽装咨询问答 */}
+            <Link
+              href="/ai-chat.html"
+              className="bg-white rounded-xl shadow-sm border border-gray-50 p-4 hover:border-lw-accent hover:shadow-md transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-cyan-50 flex items-center justify-center mb-3">
+                <Bot className="w-5 h-5 text-cyan-600" />
+              </div>
+              <p className="text-sm font-medium text-lw-black">AI 助手</p>
+              <p className="text-xs text-gray-400 mt-0.5">兽装定制相关问题咨询</p>
               <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-lw-accent mt-2 transition-colors" />
             </Link>
 

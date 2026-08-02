@@ -60,7 +60,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // 受保护路径：需要登录才能访问
-  const protectedPaths = ['/studio', '/admin', '/profile']
+  const protectedPaths = ['/studio', '/admin', '/profile', '/ai']
   // 仅管理员可访问的路径
   const adminOnlyPaths = ['/admin', '/studio']
 
@@ -243,6 +243,6 @@ async function handleDebugRequest(request: NextRequest) {
 }
 
 export const config = {
-  // 匹配 /admin/*, /studio/*, /profile（含子路径和根路径）
-  matcher: ['/studio/:path*', '/admin/:path*', '/profile/:path*', '/profile']
+  // 匹配 /admin/*, /studio/*, /profile, /ai/*（含子路径和根路径）
+  matcher: ['/studio/:path*', '/admin/:path*', '/profile/:path*', '/profile', '/ai/:path*']
 }

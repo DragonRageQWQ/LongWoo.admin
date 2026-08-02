@@ -90,3 +90,36 @@ export type CaseItem = {
   sort_order: number
   created_at: string
 }
+
+// ===== 龙灵工坊：AI 角色扮演对话 =====
+
+/**
+ * AI 角色（用户的 OC，按账号保存）
+ * name           - AI 角色昵称（AI 的名字）
+ * avatar_url     - AI 头像
+ * persona        - 人设（角色性格、背景、说话风格）
+ * greeting       - 开场白（进入对话时的问候语）
+ * user_nickname  - 称呼（AI 对用户的称呼，如"主人""朋友"）
+ */
+export type AiCharacter = {
+  id: string
+  user_id: string
+  name: string
+  avatar_url: string | null
+  persona: string | null
+  greeting: string | null
+  user_nickname: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** AI 对话消息 */
+export type AiChatMessage = {
+  id: string
+  character_id: string
+  user_id: string
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
