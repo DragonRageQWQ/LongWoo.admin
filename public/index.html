@@ -6,7 +6,9 @@
     <title>LongWoo Studio - 专业兽装定制工作室</title>
     <meta name="description" content="LongWoo龙坞专业兽装定制工作室，提供高品质全装定制与预设兽装销售服务。">
     <meta name="robots" content="index, follow">
-    <link rel="stylesheet" href="/css/tailwind-static.css">
+    <!-- 预连接 Supabase API -->
+    <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
+    <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
@@ -22,7 +24,10 @@
 
       <!-- 2. Hero Banner -->
       <section class="hero-banner">
-        <img src="assets/image_0_yi19x4.jpg" alt="LongWoo Studio Banner" fetchpriority="high" width="480" height="270" />
+        <picture>
+          <source srcset="assets/image_0_yi19x4.webp" type="image/webp">
+          <img src="assets/image_0_yi19x4.jpg" alt="LongWoo Studio Banner" fetchpriority="high" decoding="async" width="480" height="270" />
+        </picture>
         <div class="hero-overlay">
           <h1 class="hero-title">LongWoo Studio</h1>
           <p class="hero-subtitle">专业兽装定制工作室</p>
@@ -41,7 +46,10 @@
       <section class="studio-intro">
         <h2 class="section-title">工作室简介</h2>
         <div class="intro-image">
-          <img src="assets/image_1_5nmrru.jpg" alt="LongWoo 工作室" loading="lazy" width="480" height="320" />
+          <picture>
+            <source srcset="assets/image_1_5nmrru.webp" type="image/webp">
+            <img src="assets/image_1_5nmrru.jpg" alt="LongWoo 工作室" loading="lazy" decoding="async" width="480" height="320" />
+          </picture>
         </div>
         <p class="intro-text">
           LongWoo 工作室是一家专注于高品质兽装定制与销售的专业工作室。我们致力于为每一位客户提供独一无二的兽装作品。
@@ -124,7 +132,10 @@
         <div class="showcase-scroll">
 
           <div class="product-card">
-            <img src="assets/image_2_wv337u.jpg" alt="兽装作品 - 板栗" loading="lazy" width="280" height="280" />
+            <picture>
+              <source srcset="assets/image_2_wv337u.webp" type="image/webp">
+              <img src="assets/image_2_wv337u.jpg" alt="兽装作品 - 板栗" loading="lazy" decoding="async" width="280" height="280" />
+            </picture>
             <div class="product-card-body">
               <h3 class="product-card-title">板栗</h3>
               <p class="product-card-desc">全装定制案例</p>
@@ -132,7 +143,10 @@
           </div>
 
           <div class="product-card">
-            <img src="assets/image_3_wv337u.jpg" alt="兽装作品 - 灰崎" loading="lazy" width="280" height="280" />
+            <picture>
+              <source srcset="assets/image_3_wv337u.webp" type="image/webp">
+              <img src="assets/image_3_wv337u.jpg" alt="兽装作品 - 灰崎" loading="lazy" decoding="async" width="280" height="280" />
+            </picture>
             <div class="product-card-body">
               <h3 class="product-card-title">灰崎</h3>
               <p class="product-card-desc">全装定制案例</p>
@@ -140,7 +154,10 @@
           </div>
 
           <div class="product-card">
-            <img src="assets/image_4_wv337u.jpg" alt="兽装作品 - 热点" loading="lazy" width="280" height="280" />
+            <picture>
+              <source srcset="assets/image_4_wv337u.webp" type="image/webp">
+              <img src="assets/image_4_wv337u.jpg" alt="兽装作品 - 热点" loading="lazy" decoding="async" width="280" height="280" />
+            </picture>
             <div class="product-card-body">
               <h3 class="product-card-title">热点</h3>
               <p class="product-card-desc">全装定制案例</p>
@@ -148,7 +165,10 @@
           </div>
 
           <div class="product-card">
-            <img src="assets/image_5_8ofe40.jpg" alt="兽装作品 - 山桐" loading="lazy" width="280" height="280" />
+            <picture>
+              <source srcset="assets/image_5_8ofe40.webp" type="image/webp">
+              <img src="assets/image_5_8ofe40.jpg" alt="兽装作品 - 山桐" loading="lazy" decoding="async" width="280" height="280" />
+            </picture>
             <div class="product-card-body">
               <h3 class="product-card-title">山桐</h3>
               <p class="product-card-desc">全装定制案例</p>
@@ -156,7 +176,10 @@
           </div>
 
           <div class="product-card">
-            <img src="assets/image_6_wv337u.jpg" alt="兽装作品 - 渔弎" loading="lazy" width="280" height="280" />
+            <picture>
+              <source srcset="assets/image_6_wv337u.webp" type="image/webp">
+              <img src="assets/image_6_wv337u.jpg" alt="兽装作品 - 渔弎" loading="lazy" decoding="async" width="280" height="280" />
+            </picture>
             <div class="product-card-body">
               <h3 class="product-card-title">渔弎</h3>
               <p class="product-card-desc">全装定制案例</p>
@@ -578,64 +601,7 @@
       margin: 4px 0 0;
     }
 
-    /* Bottom Navigation */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: var(--content-max-width);
-      height: var(--bottom-nav-height);
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-top: 1px solid var(--color-border-light);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      padding: 0 var(--space-xs);
-      box-sizing: border-box;
-    }
-
-    .nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      text-decoration: none;
-      cursor: pointer;
-      padding: var(--space-xs);
-      min-width: 60px;
-    }
-
-    .nav-item-icon {
-      width: 22px;
-      height: 22px;
-    }
-
-    .nav-item-icon svg {
-      width: 100%;
-      height: 100%;
-    }
-
-    .nav-item-label {
-      font-size: var(--font-size-xs);
-      color: var(--color-primary-light);
-      white-space: nowrap;
-      line-height: 1.2;
-    }
-
-    .nav-item.active .nav-item-label {
-      color: var(--color-primary);
-      font-weight: 600;
-    }
-
-    .nav-item.active .nav-item-icon svg {
-      stroke: var(--color-primary);
-    }
+    /* Bottom Navigation - 公共规则已抽取至 theme.css */
 
     /* Divider */
     .section-divider {
@@ -709,5 +675,6 @@
   }
 })();
 </script>
+<script src="/js/common.js" defer></script>
 </body>
 </html>

@@ -3,11 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { getSessionUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { headers } from 'next/headers'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
 import { validateFileMagicNumber } from '@/lib/file-validation'
 import { getOrCreateProfile } from '@/lib/profile'
+import { getClientIp } from '@/lib/server-utils'
 import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_MIME_TYPES, RATE_LIMIT_AVATAR_WINDOW, RATE_LIMIT_AVATAR_MAX, RATE_LIMIT_PASSWORD_WINDOW, RATE_LIMIT_PASSWORD_MAX, RATE_LIMIT_CHECK_EMAIL_WINDOW, RATE_LIMIT_CHECK_EMAIL_MAX } from '@/lib/constants'
 
 // ==================== 修改昵称 ====================
@@ -80,8 +80,7 @@ export async function updateAvatar(
     }
 
     // 速率限制：防止头像上传滥用（H5）
-    const headersList = await headers()
-    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const ip = await getClientIp()
     const avatarRateLimit = await checkRateLimit(
       `avatar:${ip}`,
       RATE_LIMIT_AVATAR_MAX,
@@ -224,8 +223,7 @@ export async function updatePassword(
     }
 
     // 速率限制：防止密码暴力修改（H5）
-    const headersList = await headers()
-    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const ip = await getClientIp()
     const pwdRateLimit = await checkRateLimit(
       `pwdchange:${ip}`,
       RATE_LIMIT_PASSWORD_MAX,
@@ -327,8 +325,7 @@ export async function checkEmailHasPassword(
     if (!email) return { canUsePassword: false }
 
     // M2 安全修复：添加速率限制，防止通过暴力查询枚举用户
-    const headersList = await headers()
-    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const ip = await getClientIp()
     const checkRateLimitResult = await checkRateLimit(
       `checkemail:${ip}`,
       RATE_LIMIT_CHECK_EMAIL_MAX,

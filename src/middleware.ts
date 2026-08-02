@@ -1,5 +1,4 @@
 import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import {
   readSessionCookieValue,
@@ -7,10 +6,11 @@ import {
   verifyAccessToken,
   refreshSession,
   encodeSessionCookie,
-  getSupabaseCookieName,
   getSessionCookieNames,
   SECURE_COOKIE_OPTIONS,
+  clearAllSessionCookies,
 } from '@/lib/supabase/cookie-utils'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
  * 中间件：三级权限路由保护
@@ -23,6 +23,8 @@ import {
  * 零号用户 (uid=10001) 是超级管理员，拥有管理员权限并管理角色授权
  *
  * 认证策略：Cookie 外层 JSON 不可信，身份必须通过 Supabase 验证 access token。
+ * 优化：当 cookie 中的 session 尚未过期时，直接信任其 user.id，跳过网络验证，
+ *      显著减少中间件的网络往返开销。
  *
  * Token 刷新机制：
  *   当 access_token 过期时，使用 refresh_token 获取新的 access_token，
@@ -70,12 +72,15 @@ export async function middleware(request: NextRequest) {
   // ===== 认证：从 cookie 读取 session，并通过 Supabase 验证 access token =====
   let userId: string | null = null
   let hasExpiredSession = false
+  // 标记 cookie 是否解码成功，用于决定是否走 SSR 备选流程
+  let cookieDecoded = false
 
   // Step 1: 从 cookie 解码 session（快速检查，无网络开销）
   const cookieValue = readSessionCookieValue(request.cookies)
   const decoded = cookieValue ? decodeSessionCookie(cookieValue) : null
 
   if (decoded) {
+    cookieDecoded = true
     const session = decoded as {
       access_token: string
       refresh_token: string
@@ -84,39 +89,44 @@ export async function middleware(request: NextRequest) {
     }
 
     if (session.user?.id && session.access_token) {
-      userId = await verifyAccessToken(session.access_token)
-      if (userId !== session.user.id) userId = null
+      // Step 1.5: 本地 JWT 过期检查（减少网络调用）
+      // 如果 token 尚未过期（含 60 秒缓冲），直接信任 cookie 中的 user.id，
+      // 跳过 verifyAccessToken 的网络验证。
+      const now = Math.floor(Date.now() / 1000)
+      if (session.expires_at && session.expires_at > now + 60) {
+        // token 还有效（60秒缓冲），跳过网络验证
+        userId = session.user.id
+      } else {
+        // token 已过期或即将过期，走网络验证 + 刷新流程
+        userId = await verifyAccessToken(session.access_token)
+        if (userId !== session.user.id) userId = null
 
-      if (!userId && session.refresh_token) {
-        hasExpiredSession = true
-        const refreshedSession = await refreshSession(session.refresh_token)
-        if (refreshedSession) {
-          const refreshedUserId = await verifyAccessToken(refreshedSession.access_token)
-          if (refreshedUserId === refreshedSession.user.id) userId = refreshedUserId
+        if (!userId && session.refresh_token) {
+          hasExpiredSession = true
+          const refreshedSession = await refreshSession(session.refresh_token)
+          if (refreshedSession) {
+            const refreshedUserId = await verifyAccessToken(refreshedSession.access_token)
+            if (refreshedUserId === refreshedSession.user.id) userId = refreshedUserId
 
-          if (userId) {
-            const cookieName = getSupabaseCookieName()
-            getSessionCookieNames(request.cookies.getAll()).forEach(name =>
-              response.cookies.set(name, '', { ...SECURE_COOKIE_OPTIONS, maxAge: 0 }))
-            for (let index = 0; index < 8; index += 1) {
-              response.cookies.set(`${cookieName}.${index}`, '', {
-                ...SECURE_COOKIE_OPTIONS,
-                maxAge: 0,
-              })
+            if (userId) {
+              // 使用统一的 cookie 清理函数清除旧 session cookie（含分片），
+              // 再写入刷新后的新 session
+              clearAllSessionCookies(response, getSessionCookieNames(request.cookies.getAll()))
+              encodeSessionCookie(refreshedSession).forEach(({ name, value }) =>
+                response.cookies.set(name, value, SECURE_COOKIE_OPTIONS))
             }
-            response.cookies.set(cookieName, '', { ...SECURE_COOKIE_OPTIONS, maxAge: 0 })
-            encodeSessionCookie(refreshedSession).forEach(({ name, value }) =>
-              response.cookies.set(name, value, SECURE_COOKIE_OPTIONS))
           }
+        } else if (!userId) {
+          hasExpiredSession = true
         }
-      } else if (!userId) {
-        hasExpiredSession = true
       }
     }
   }
 
   // 备选：使用 SSR 客户端的 getSession（处理 cookie 格式差异 + token 刷新）
-  if (!userId) {
+  // 优化：仅在 cookie 解码完全失败时才走 SSR 流程，
+  //      避免与主流程重复执行（主流程已覆盖 cookie 解码成功的场景）。
+  if (!userId && !cookieDecoded) {
     try {
       const { data: { session: ssrSession } } = await supabase.auth.getSession()
       if (ssrSession?.user?.id && ssrSession.access_token) {
@@ -168,33 +178,29 @@ export async function middleware(request: NextRequest) {
 /**
  * 检查用户角色是否为管理员
  *
- * 依次尝试 service_role key 和 anon key，
- * 确保即使其中一个 key 无效也能正常工作。
+ * 复用 admin 客户端单例（createAdminClient），避免每次请求都创建新的 SupabaseClient。
+ * 使用 service_role key 绕过 RLS 读取 profiles 表。
  */
 async function getProfileAccess(
   userId: string
 ): Promise<{ isAdmin: boolean; isActive: boolean } | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!serviceKey) return null
   try {
-      const admin = createClient(supabaseUrl, serviceKey, {
-        auth: { autoRefreshToken: false, persistSession: false }
-      })
+    // 复用 admin 客户端单例
+    const admin = createAdminClient()
 
-      const { data: profile } = await admin
-        .from('profiles')
-        .select('role, is_active')
-        .eq('id', userId)
-        .single()
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role, is_active')
+      .eq('id', userId)
+      .single()
 
-      if (!profile) return null
-      return {
-        isAdmin: profile.role === 'admin',
-        isActive: profile.is_active === true,
-      }
-    } catch {
-      return null
+    if (!profile) return null
+    return {
+      isAdmin: profile.role === 'admin',
+      isActive: profile.is_active === true,
+    }
+  } catch {
+    return null
   }
 }
 

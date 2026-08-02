@@ -6,7 +6,9 @@
     <title>购买自设兽装 - 第2步选配内容 | LongWoo 工作室</title>
     <meta name="description" content="LongWoo兽装定制第二步 - 选择附加配件和定制选项。">
     <meta name="robots" content="index, follow">
-    <link rel="stylesheet" href="/css/tailwind-static.css">
+    <!-- 预连接 Supabase API -->
+    <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
+    <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
@@ -77,7 +79,7 @@
           </svg>
         </div>
         <div class="locked-image-preview" id="lockedImagePreview" style="display:none;">
-          <img id="lockedImage" alt="设定图预览" loading="lazy" width="480" height="300">
+          <img id="lockedImage" alt="设定图预览" loading="lazy" decoding="async" width="480" height="300">
         </div>
         <span class="locked-text" id="lockedText">上传完成</span>
         <span class="locked-filename" id="lockedFileName" style="display:none;"></span>
@@ -789,5 +791,6 @@
       } catch (err) {}
     })();
   </script>
+<script src="/js/common.js" defer></script>
 </body>
 </html>

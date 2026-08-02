@@ -1,7 +1,6 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser, canUserAccessOrder, requireAdmin } from '@/lib/auth'
 import { escapeHtml, escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
@@ -9,6 +8,7 @@ import { validateOrderInput, validateUrl, isValidUUID } from '@/lib/order-utils'
 import { maskPhone, maskEmail } from '@/lib/utils'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
+import { getClientIp, logOperation, sendEmail } from '@/lib/server-utils'
 import { RATE_LIMIT_ORDER_WINDOW, RATE_LIMIT_ORDER_MAX, MAX_PAGE_LIMIT, ESTIMATE_PRICE_MIN, ESTIMATE_PRICE_MAX, RATE_LIMIT_EMAIL_REPLY_MAX, RATE_LIMIT_EMAIL_REPLY_WINDOW } from '@/lib/constants'
 import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/database'
 
@@ -44,8 +44,7 @@ export async function createOrder(formData: {
   }
 
   // 速率限制：基于 IP，防止恶意刷单
-  const headersList = await headers()
-  const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const ip = await getClientIp()
   const rateLimitResult = await checkRateLimit(
     `createorder:${ip}`,
     RATE_LIMIT_ORDER_MAX,
@@ -111,22 +110,13 @@ export async function createOrder(formData: {
       }
     }
 
-    // 记录 operation_logs
-    // 使用当前登录用户 ID；若未登录则尝试插入 null（依赖数据库字段是否允许 NULL）
-    const { error: logError } = await supabase
-      .from('operation_logs')
-      .insert({
-        order_id: order.id,
-        user_id: currentUser?.userId ?? null,
-        action: 'create_order',
-        details: {
-          customer_name: formData.customerName,
-          customer_email: formData.customerEmail,
-        },
+    // 记录 operation_logs（使用统一的日志记录函数）
+    // 仅在用户已登录时记录；未登录时 RLS 也会阻止写入，行为一致
+    if (currentUser?.userId) {
+      await logOperation(currentUser.userId, 'create_order', 'order', order.id, {
+        customer_name: formData.customerName,
+        customer_email: formData.customerEmail,
       })
-
-    if (logError) {
-      console.error('记录操作日志失败:', logError.message)
     }
 
     revalidatePath('/order/submit')
@@ -137,6 +127,63 @@ export async function createOrder(formData: {
     console.error('创建委托单异常:', error)
     return { success: false, error: '创建委托单时发生未知错误' }
   }
+}
+
+/**
+ * 构建订单查询的公共逻辑
+ * 抽取自 getOrders 和 getStudioOrders 的重复代码
+ *
+ * 包含：基础查询（select/order/range）、状态筛选、非管理员可见性过滤、
+ * 关键词搜索、日期范围筛选。各筛选条件为可选，按需应用。
+ *
+ * @returns 构建好的查询（尚未执行，调用方通过 await 执行）
+ */
+function buildOrderQuery(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  params: {
+    offset: number
+    limit: number
+    status?: string
+    search?: string
+    startDate?: string
+    endDate?: string
+    isAdmin: boolean
+    userId?: string
+  }
+) {
+  let query = supabase
+    .from('orders')
+    .select('*, service_types(*)', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(params.offset, params.offset + params.limit - 1)
+
+  // 状态筛选
+  if (params.status) {
+    query = query.eq('status', params.status)
+  }
+
+  // 非 admin 用户只能看到：
+  // 1. 分配给自己的订单（studio_user_id = 当前用户）
+  // 2. 尚未分配的订单（pending/estimated 状态，studio_user_id 为 null）
+  if (!params.isAdmin && params.userId) {
+    query = query.or(`studio_user_id.eq.${params.userId},and(studio_user_id.is.null,status.in.(pending,estimated))`)
+  }
+
+  // 关键词搜索：订单号、客户名、需求描述
+  if (params.search && params.search.trim()) {
+    const keyword = escapeIlikeKeyword(escapePostgrestKeyword(params.search.trim()))
+    query = query.or(`order_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%,requirements.ilike.%${keyword}%`)
+  }
+
+  // 日期范围筛选（仅 getOrders 使用，服务端）
+  if (params.startDate) {
+    query = query.gte('created_at', `${params.startDate}T00:00:00.000Z`)
+  }
+  if (params.endDate) {
+    query = query.lte('created_at', `${params.endDate}T23:59:59.999Z`)
+  }
+
+  return query
 }
 
 // ==================== 查询委托单列表（Admin，带搜索、日期筛选、分页） ====================
@@ -170,29 +217,17 @@ export async function getOrders(filters: {
     const offset = filters.offset ?? 0
     const limit = Math.min(filters.limit ?? 20, MAX_PAGE_LIMIT)
 
-    let query = supabase
-      .from('orders')
-      .select('*, service_types(*)', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
-
-    if (filters.status) {
-      query = query.eq('status', filters.status)
-    }
-
-    // 关键词搜索：订单号、客户名、需求描述
-    if (filters.search && filters.search.trim()) {
-      const keyword = escapeIlikeKeyword(escapePostgrestKeyword(filters.search.trim()))
-      query = query.or(`order_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%,requirements.ilike.%${keyword}%`)
-    }
-
-    // 日期范围筛选（服务端）
-    if (filters.startDate) {
-      query = query.gte('created_at', `${filters.startDate}T00:00:00.000Z`)
-    }
-    if (filters.endDate) {
-      query = query.lte('created_at', `${filters.endDate}T23:59:59.999Z`)
-    }
+    // 使用公共查询构建函数（admin 可见全部订单，无需可见性过滤）
+    const query = buildOrderQuery(supabase, {
+      offset,
+      limit,
+      status: filters.status,
+      search: filters.search,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      isAdmin: true,
+      userId: currentUser.userId,
+    })
 
     const { data, error, count } = await query
 
@@ -370,19 +405,11 @@ export async function submitEstimate(
       return { success: false, error: '该委托单状态已变更，请刷新后重试' }
     }
 
-    // 记录 operation_logs
-    const { error: logError } = await supabase
-      .from('operation_logs')
-      .insert({
-        order_id: orderId,
-        user_id: currentUser.userId,
-        action: 'submit_estimate',
-        details: { estimated_price: price, estimate_notes: trimmedNotes },
-      })
-
-    if (logError) {
-      console.error('记录操作日志失败:', logError.message)
-    }
+    // 记录 operation_logs（使用统一的日志记录函数）
+    await logOperation(currentUser.userId, 'submit_estimate', 'order', orderId, {
+      estimated_price: price,
+      estimate_notes: trimmedNotes,
+    })
 
     revalidatePath('/admin/dashboard')
     revalidatePath(`/studio/dashboard`)
@@ -441,19 +468,8 @@ export async function acceptOrder(
       return { success: false, error: '该委托单已被接单或状态已变更，请刷新后重试' }
     }
 
-    // 记录 operation_logs
-    const { error: logError } = await supabase
-      .from('operation_logs')
-      .insert({
-        order_id: orderId,
-        user_id: userId,
-        action: 'accept_order',
-        details: {},
-      })
-
-    if (logError) {
-      console.error('记录操作日志失败:', logError.message)
-    }
+    // 记录 operation_logs（使用统一的日志记录函数）
+    await logOperation(userId, 'accept_order', 'order', orderId)
 
     revalidatePath('/studio/dashboard')
     revalidatePath('/admin/dashboard')
@@ -516,19 +532,10 @@ export async function rejectOrder(
       return { success: false, error: '该委托单状态已变更，请刷新后重试' }
     }
 
-    // 记录 operation_logs
-    const { error: logError } = await supabase
-      .from('operation_logs')
-      .insert({
-        order_id: orderId,
-        user_id: currentUser.userId,
-        action: 'reject_order',
-        details: { reason },
-      })
-
-    if (logError) {
-      console.error('记录操作日志失败:', logError.message)
-    }
+    // 记录 operation_logs（使用统一的日志记录函数）
+    await logOperation(currentUser.userId, 'reject_order', 'order', orderId, {
+      reason,
+    })
 
     revalidatePath('/studio/dashboard')
     revalidatePath('/admin/dashboard')
@@ -604,19 +611,11 @@ export async function updateOrderStatus(
       return { success: false, error: '该委托单状态不允许此操作，请刷新后重试' }
     }
 
-    // 记录 operation_logs
-    const { error: logError } = await supabase
-      .from('operation_logs')
-      .insert({
-        order_id: orderId,
-        user_id: currentUser.userId,
-        action: 'update_status',
-        details: { new_status: newStatus, delivery_url: deliveryUrl || null },
-      })
-
-    if (logError) {
-      console.error('记录操作日志失败:', logError.message)
-    }
+    // 记录 operation_logs（使用统一的日志记录函数）
+    await logOperation(currentUser.userId, 'update_status', 'order', orderId, {
+      new_status: newStatus,
+      delivery_url: deliveryUrl || null,
+    })
 
     revalidatePath('/studio/dashboard')
     revalidatePath('/admin/dashboard')
@@ -716,8 +715,7 @@ export async function replyEmail(
     const currentUser = adminCheck.user
 
     // 速率限制：防止邮件轰炸（H5）
-    const headersList = await headers()
-    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const ip = await getClientIp()
     const replyRateLimit = await checkRateLimit(
       `emailreply:${ip}`,
       RATE_LIMIT_EMAIL_REPLY_MAX,
@@ -754,25 +752,14 @@ export async function replyEmail(
 
     let emailSent = false
 
-    // 如果配置了 RESEND_API_KEY，则发送邮件
-    const resendApiKey = process.env.RESEND_API_KEY
-    if (resendApiKey) {
-      try {
-        // HTML 转义防止 XSS 注入
-        const safeContent = escapeHtml(trimmedContent)
-        const safeContentHtml = safeContent.replace(/\n/g, '<br/>')
+    // 使用统一的邮件发送函数发送回复通知邮件
+    // 仅在配置了 RESEND_API_KEY 时发送，行为与原实现一致
+    if (process.env.RESEND_API_KEY) {
+      // HTML 转义防止 XSS 注入
+      const safeContent = escapeHtml(trimmedContent)
+      const safeContentHtml = safeContent.replace(/\n/g, '<br/>')
 
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: process.env.RESEND_FROM_EMAIL || 'noreply@longwoo.studio',
-            to: toEmail,
-            subject: '【LongWoo 龙坞】委托单回复通知',
-            html: `
+      emailSent = await sendEmail(toEmail, '【LongWoo 龙坞】委托单回复通知', `
               <!DOCTYPE html>
               <html lang="zh-CN">
               <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -808,17 +795,9 @@ export async function replyEmail(
                 </table>
               </body>
               </html>
-            `,
-          }),
-        })
-
-        emailSent = response.ok
-        if (!emailSent) {
-          console.error('邮件发送失败:', await response.text())
-        }
-      } catch (emailError) {
-        console.error('邮件发送异常:', emailError)
-        emailSent = false
+            `)
+      if (!emailSent) {
+        console.error('邮件发送失败')
       }
     }
 
@@ -884,8 +863,7 @@ export async function queryOrderByNo(
   }
 
   // 速率限制：基于 IP + 手机号组合，1分钟内最多查询5次（数据库版）
-  const headersList = await headers()
-  const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const ip = await getClientIp()
   const rateLimitResult = await checkRateLimit(
     `query:${ip}:${phone.trim()}`,
     5,
@@ -964,28 +942,16 @@ export async function getStudioOrders(filters: {
     const offset = filters.offset ?? 0
     const limit = Math.min(filters.limit ?? 20, MAX_PAGE_LIMIT)
 
-    let query = supabase
-      .from('orders')
-      .select('*, service_types(*)', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
-
-    if (filters.status) {
-      query = query.eq('status', filters.status)
-    }
-
-    // 非 admin 用户只能看到：
-    // 1. 分配给自己的订单（studio_user_id = 当前用户）
-    // 2. 尚未分配的订单（pending/estimated 状态，studio_user_id 为 null）
-    if (currentUser.role !== 'admin') {
-      query = query.or(`studio_user_id.eq.${currentUser.userId},and(studio_user_id.is.null,status.in.(pending,estimated))`)
-    }
-
-    // 关键词搜索：订单号、客户名、需求描述
-    if (filters.search && filters.search.trim()) {
-      const keyword = escapeIlikeKeyword(escapePostgrestKeyword(filters.search.trim()))
-      query = query.or(`order_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%,requirements.ilike.%${keyword}%`)
-    }
+    // 使用公共查询构建函数
+    // 非 admin 用户仅可见分配给自己或尚未分配的订单（可见性过滤由 buildOrderQuery 处理）
+    const query = buildOrderQuery(supabase, {
+      offset,
+      limit,
+      status: filters.status,
+      search: filters.search,
+      isAdmin: currentUser.role === 'admin',
+      userId: currentUser.userId,
+    })
 
     const { data, error, count } = await query
 

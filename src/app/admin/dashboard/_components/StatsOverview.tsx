@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ClipboardPlus,
   Clock,
@@ -66,9 +67,12 @@ async function fetchStats() {
   sevenDaysAgo.setHours(0, 0, 0, 0);
   const sevenDaysAgoISO = sevenDaysAgo.toISOString();
 
-  // 并行查询各项统计数据 + 7天趋势
-  const [todayResult, pendingResult, acceptedResult, completedResult, recentOrdersResult] =
+  // 使用 RPC 函数获取各状态订单数量（替代多次并行 count 查询）
+  // 同时并行查询今日新增数量和7天趋势数据
+  const admin = createAdminClient();
+  const [statusCountsResult, todayResult, recentOrdersResult] =
     await Promise.all([
+      admin.rpc("get_order_status_counts"),
       supabase
         .from("orders")
         .select("id", { count: "exact", head: true })
@@ -76,22 +80,20 @@ async function fetchStats() {
         .lt("created_at", todayEndISO),
       supabase
         .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending"),
-      supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "accepted"),
-      supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "completed"),
-      supabase
-        .from("orders")
         .select("created_at")
         .gte("created_at", sevenDaysAgoISO)
         .order("created_at", { ascending: true }),
     ]);
+
+  // 解析 RPC 返回的状态计数，构建状态 → 数量映射
+  const statusCounts = new Map<string, number>();
+  if (statusCountsResult.data) {
+    statusCountsResult.data.forEach(
+      (row: { status: string; count: number }) => {
+        statusCounts.set(row.status, row.count);
+      }
+    );
+  }
 
   const recentOrders = recentOrdersResult.data;
 
@@ -128,21 +130,21 @@ async function fetchStats() {
     },
     {
       label: "待估价委托",
-      value: pendingResult.count ?? 0,
+      value: statusCounts.get("pending") ?? 0,
       icon: Clock,
       iconBg: "bg-yellow-50",
       iconColor: "text-yellow-600",
     },
     {
       label: "已接单委托",
-      value: acceptedResult.count ?? 0,
+      value: statusCounts.get("accepted") ?? 0,
       icon: PackageCheck,
       iconBg: "bg-green-50",
       iconColor: "text-green-600",
     },
     {
       label: "已完成委托",
-      value: completedResult.count ?? 0,
+      value: statusCounts.get("completed") ?? 0,
       icon: CircleCheck,
       iconBg: "bg-gray-100",
       iconColor: "text-gray-600",

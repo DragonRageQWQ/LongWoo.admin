@@ -6,7 +6,9 @@
     <title>购买自设兽装 - 等待估价 | LongWoo 工作室</title>
     <meta name="description" content="LongWoo兽装定制 - 提交委托等待估价确认。">
     <meta name="robots" content="index, follow">
-    <link rel="stylesheet" href="/css/tailwind-static.css">
+    <!-- 预连接 Supabase API -->
+    <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
+    <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
@@ -93,7 +95,7 @@
           <span class="locked-text">设定图</span>
         </div>
         <div class="locked-image-fill" id="lockedImageFill" style="display:none;">
-          <img id="lockedImage" alt="设定图预览" loading="lazy" width="480" height="300">
+          <img id="lockedImage" alt="设定图预览" loading="lazy" decoding="async" width="480" height="300">
         </div>
       </div>
     </div>
@@ -819,5 +821,6 @@
       } catch (err) {}
     })();
   </script>
+<script src="/js/common.js" defer></script>
 </body>
 </html>

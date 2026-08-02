@@ -8,12 +8,13 @@ import { saveOtp } from '@/lib/otp-store'
 import { loginOtpEmailTemplate } from '@/lib/email-templates'
 import type { Profile } from '@/types/database'
 import { randomInt } from 'crypto'
-import { headers, cookies } from 'next/headers'
+import { cookies } from 'next/headers'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
 import { getSupabaseCookieName } from '@/lib/supabase/cookie-utils'
 import { getOrCreateProfile } from '@/lib/profile'
-import { RATE_LIMIT_OTP_WINDOW, RATE_LIMIT_OTP_MAX, DEFAULT_FROM_EMAIL } from '@/lib/constants'
+import { getClientIp, sendEmail } from '@/lib/server-utils'
+import { RATE_LIMIT_OTP_WINDOW, RATE_LIMIT_OTP_MAX } from '@/lib/constants'
 
 // ==================== 发送邮箱验证码 ====================
 
@@ -30,8 +31,7 @@ export async function sendEmailOtp(
     return { success: false, error: '请输入有效的邮箱地址' }
   }
 
-  const headersList = await headers()
-  const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const ip = await getClientIp()
 
   // 基于 IP 的速率限制
   const ipRateLimit = await checkRateLimit(`ip:${ip}`, RATE_LIMIT_OTP_MAX, RATE_LIMIT_OTP_WINDOW)
@@ -61,28 +61,15 @@ export async function sendEmailOtp(
     // 存入数据库（10分钟有效）
     await saveOtp(email, otpCode)
 
-    // 发送验证码邮件
-    const resendApiKey = process.env.RESEND_API_KEY
-    const fromEmail = process.env.RESEND_FROM_EMAIL || DEFAULT_FROM_EMAIL
-
-    if (resendApiKey) {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: fromEmail,
-          to: email,
-          subject: '【LongWoo 龙坞】登录验证码',
-          html: loginOtpEmailTemplate(otpCode),
-        }),
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Resend 发送失败:', errorText)
+    // 发送验证码邮件（使用统一的邮件发送函数）
+    if (process.env.RESEND_API_KEY) {
+      const sent = await sendEmail(
+        email,
+        '【LongWoo 龙坞】登录验证码',
+        loginOtpEmailTemplate(otpCode)
+      )
+      if (!sent) {
+        console.error('Resend 发送失败')
         return { success: false, error: '验证码邮件发送失败，请稍后重试或联系客服' }
       }
     } else {

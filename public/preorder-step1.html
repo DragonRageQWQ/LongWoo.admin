@@ -6,7 +6,9 @@
     <title>购买预设兽装 - 第1步选择设定 | LongWoo 工作室</title>
     <meta name="description" content="LongWoo预设兽装掉落 - 浏览现货预设兽装，先到先得。">
     <meta name="robots" content="index, follow">
-    <link rel="stylesheet" href="/css/tailwind-static.css">
+    <!-- 预连接 Supabase API -->
+    <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
+    <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
@@ -52,7 +54,10 @@
 
     <!-- Product 1: 百丈冰 -->
     <div class="product-card">
-      <img class="product-card-image" src="assets/image_7_yi19x4.jpg" alt="百丈冰" loading="lazy" width="280" height="280">
+      <picture>
+        <source srcset="assets/image_7_yi19x4.webp" type="image/webp">
+        <img class="product-card-image" src="assets/image_7_yi19x4.jpg" alt="百丈冰" loading="lazy" decoding="async" width="280" height="280">
+      </picture>
       <div class="product-card-body">
         <div class="product-card-price">RMB 35,000 / 百丈冰</div>
         <div class="product-card-info">含 双视图/标准全装/定制外衣/定制道具</div>
@@ -67,7 +72,10 @@
 
     <!-- Product 2: 千钧破 -->
     <div class="product-card">
-      <img class="product-card-image" src="assets/image_8_yi19x4.jpg" alt="千钧破" loading="lazy" width="280" height="280">
+      <picture>
+        <source srcset="assets/image_8_yi19x4.webp" type="image/webp">
+        <img class="product-card-image" src="assets/image_8_yi19x4.jpg" alt="千钧破" loading="lazy" decoding="async" width="280" height="280">
+      </picture>
       <div class="product-card-body">
         <div class="product-card-price">RMB 32,000 / 千钧破</div>
         <div class="product-card-info">含 双视图/标准全装/定制外衣/定制道具</div>
@@ -81,7 +89,10 @@
 
     <!-- Product 3: 万里凝 -->
     <div class="product-card">
-      <img class="product-card-image" src="assets/image_9_yi19x4.jpg" alt="万里凝" loading="lazy" width="280" height="280">
+      <picture>
+        <source srcset="assets/image_9_yi19x4.webp" type="image/webp">
+        <img class="product-card-image" src="assets/image_9_yi19x4.jpg" alt="万里凝" loading="lazy" decoding="async" width="280" height="280">
+      </picture>
       <div class="product-card-body">
         <div class="product-card-price">RMB 32,000 / 万里凝</div>
         <div class="product-card-info">含 双视图/标准全装/定制外衣/定制道具</div>
@@ -395,66 +406,8 @@
       height: calc(var(--bottom-nav-height) + var(--space-lg));
     }
 
-    /* Bottom Navigation */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: var(--content-max-width);
-      height: var(--bottom-nav-height);
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-top: 1px solid var(--color-border-light);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      padding: 0 var(--space-xs);
-      box-sizing: border-box;
-    }
-
-    .nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      text-decoration: none;
-      cursor: pointer;
-      padding: var(--space-xs);
-      min-width: 60px;
-      border: none;
-      background: none;
-    }
-
-    .nav-item-icon {
-      width: 22px;
-      height: 22px;
-    }
-
-    .nav-item-icon svg {
-      width: 100%;
-      height: 100%;
-    }
-
-    .nav-item-label {
-      font-size: var(--font-size-xs);
-      color: var(--color-primary-light);
-      white-space: nowrap;
-      line-height: 1.2;
-    }
-
-    .nav-item.active .nav-item-label {
-      color: var(--color-primary);
-      font-weight: 600;
-    }
-
-    .nav-item.active .nav-item-icon svg {
-      stroke: var(--color-primary);
-    }
+    /* Bottom Navigation - 公共规则已抽取至 theme.css */
   </style>
+<script src="/js/common.js" defer></script>
 </body>
 </html>

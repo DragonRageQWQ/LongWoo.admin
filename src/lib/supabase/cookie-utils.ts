@@ -5,6 +5,7 @@
  * 所有 cookie 操作统一通过此模块完成。
  */
 
+import { NextResponse } from 'next/server'
 import { COOKIE_MAX_CHUNK_SIZE, COOKIE_BASE64_PREFIX, COOKIE_MAX_AGE } from '@/lib/constants'
 
 /**
@@ -274,4 +275,43 @@ export async function getVerifiedUserId(cookieValue: string | null): Promise<str
 
   // 通过 API 验证 token
   return verifyAccessToken(session.access_token)
+}
+
+/**
+ * 统一的 Session Cookie 清理函数
+ *
+ * 清除所有 Supabase session 相关的 cookie（主 cookie + 分片 cookie）
+ * 适用于 NextResponse（middleware/route handler）和 Response（API route）
+ *
+ * @param response    - 响应对象（NextResponse 或 Response）
+ * @param cookieNames - 当前请求中携带的 cookie 名称列表
+ */
+export function clearAllSessionCookies(
+  response: NextResponse | Response,
+  cookieNames: string[]
+): void {
+  const cookieName = getSupabaseCookieName()
+  // 清除所有已知的 session cookie
+  cookieNames.forEach(name => {
+    if (name === cookieName || name.startsWith(`${cookieName}.`)) {
+      // NextResponse 和 Response 的 cookie API 不同，需要兼容
+      if (response instanceof NextResponse) {
+        response.cookies.set(name, '', { ...SECURE_COOKIE_OPTIONS, maxAge: 0 })
+      } else {
+        response.headers.append(
+          'Set-Cookie',
+          `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`
+        )
+      }
+    }
+  })
+  // 也清除可能遗漏的主 cookie 及分片 cookie（兜底）
+  for (let i = 0; i < 8; i++) {
+    if (response instanceof NextResponse) {
+      response.cookies.set(`${cookieName}.${i}`, '', { ...SECURE_COOKIE_OPTIONS, maxAge: 0 })
+    }
+  }
+  if (response instanceof NextResponse) {
+    response.cookies.set(cookieName, '', { ...SECURE_COOKIE_OPTIONS, maxAge: 0 })
+  }
 }

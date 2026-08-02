@@ -116,3 +116,71 @@
 /* ===== 3. Utility: Hide Scrollbar ===== */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ===== 4. 公共底部导航栏（从 index/ai-chat/preorder-step1 中抽取） ===== */
+/* 以下规则在 index.html、ai-chat.html、preorder-step1.html 中完全重复，统一提取到此处 */
+
+/* 底部导航容器 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--content-max-width);
+  height: var(--bottom-nav-height);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--color-border-light);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 var(--space-xs);
+  box-sizing: border-box;
+}
+
+/* 导航项（兼容 <a> 和 <button> 元素） */
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-decoration: none;
+  cursor: pointer;
+  padding: var(--space-xs);
+  min-width: 60px;
+  border: none;
+  background: none;
+}
+
+/* 导航项图标 */
+.nav-item-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.nav-item-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* 导航项文字标签 */
+.nav-item-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary-light);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+/* 导航项激活状态 */
+.nav-item.active .nav-item-label {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.nav-item.active .nav-item-icon svg {
+  stroke: var(--color-primary);
+}

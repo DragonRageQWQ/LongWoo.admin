@@ -6,7 +6,9 @@
     <title>购买自设兽装 - 第1步上传设定图 | LongWoo 工作室</title>
     <meta name="description" content="LongWoo兽装定制第一步 - 浏览并选择您的兽装定制选项，开始专属定制之旅。">
     <meta name="robots" content="index, follow">
-    <link rel="stylesheet" href="/css/tailwind-static.css">
+    <!-- 预连接 Supabase API -->
+    <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
+    <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
@@ -76,7 +78,7 @@
           <p class="upload-hint">支持 JPG / PNG / WEBP</p>
         </div>
         <div class="upload-preview" id="uploadPreview" style="display:none;">
-          <img id="previewImage" alt="设定图预览" loading="lazy" width="480" height="300">
+          <img id="previewImage" alt="设定图预览" loading="lazy" decoding="async" width="480" height="300">
           <button class="preview-remove" id="removeFile" aria-label="移除文件" type="button">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -680,5 +682,6 @@
       });
     })();
   </script>
+<script src="/js/common.js" defer></script>
 </body>
 </html>

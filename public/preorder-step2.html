@@ -6,7 +6,9 @@
     <title>购买预设兽装(掉落) - 第2步填写联系信息 | LongWoo 工作室</title>
     <meta name="description" content="LongWoo预设兽装购买 - 确认订单信息。">
     <meta name="robots" content="index, follow">
-    <link rel="stylesheet" href="/css/tailwind-static.css">
+    <!-- 预连接 Supabase API -->
+    <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
+    <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
@@ -65,7 +67,10 @@
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
         </div>
-        <img class="product-thumbnail" src="assets/image_7_yi19x4.jpg" alt="百丈冰预设兽装" loading="lazy" width="480" height="300">
+        <picture>
+          <source srcset="assets/image_7_yi19x4.webp" type="image/webp">
+          <img class="product-thumbnail" src="assets/image_7_yi19x4.jpg" alt="百丈冰预设兽装" loading="lazy" decoding="async" width="480" height="300">
+        </picture>
         <div class="product-info">
           <div class="product-name">RMB 35,000 / 百丈冰</div>
         </div>
@@ -710,5 +715,6 @@
       height: calc(var(--bottom-nav-height) + var(--space-lg));
     }
   </style>
+<script src="/js/common.js" defer></script>
 </body>
 </html>
