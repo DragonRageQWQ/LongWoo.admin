@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getOrCreateProfile } from '@/lib/profile'
+
+export const dynamic = 'force-dynamic'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,11 +17,21 @@ export async function GET() {
 
     // 使用 admin 客户端查询 profile，绕过 anon key 的 API 问题
     const admin = createAdminClient()
-    const { data: profile } = await admin
+    const { data: existingProfile, error: profileError } = await admin
       .from('profiles')
-      .select('display_name, avatar_url, role, uid')
+      .select('*')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
+
+    if (profileError) throw new Error(profileError.message)
+    const profile = existingProfile ?? await getOrCreateProfile(admin, user.id, {
+      email: user.email,
+    })
+    if (!profile.is_active) {
+      return NextResponse.json({ loggedIn: false }, {
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
 
     return NextResponse.json({
       loggedIn: true,
@@ -28,7 +41,7 @@ export async function GET() {
         role: profile.role,
         uid: profile.uid,
       } : null,
-    })
+    }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     console.error(
       '[Session Check] 异常:',

@@ -39,19 +39,10 @@ DROP POLICY IF EXISTS "users_update_own_profile" ON profiles;
 CREATE POLICY "users_update_own_profile" ON profiles
   FOR UPDATE
   USING (auth.uid() = id)
-  WITH CHECK (
-    auth.uid() = id
-    -- 不允许通过普通客户端修改 role 字段
-    AND NEW.role = OLD.role
-    -- 不允许通过普通客户端修改 uid 字段
-    AND NEW.uid = OLD.uid
-    -- 不允许通过普通客户端修改 is_active 字段
-    AND NEW.is_active = OLD.is_active
-  );
+  WITH CHECK (auth.uid() = id);
 
 -- ==================== 3. 补充：确保 email 字段也不可被普通用户修改 ====================
--- 已在上面的 WITH CHECK 中通过 NEW.role = OLD.role 等条件限制
--- email 字段修改需要通过 admin 客户端
+-- 敏感字段不可变性由后续 prevent_sensitive_field_modification 触发器保证。
 
 -- ==================== 4. 注释说明 ====================
 COMMENT ON FUNCTION generate_uid() IS '原子递增生成 UID，确保大于零号用户(10001)，避免并发冲突';

@@ -10,9 +10,8 @@
  */
 
 import { cache } from 'react'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getSessionUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { refreshSession } from '@/lib/supabase/cookie-utils'
 import { ZERO_USER_UID as CONST_ZERO_USER_UID } from '@/lib/constants'
 import type { UserRole, Profile } from '@/types/database'
 
@@ -25,7 +24,7 @@ export const DEFAULT_ROLE: UserRole = 'user'
 /**
  * 获取当前登录用户信息（含角色）
  *
- * 信任 cookie 中的签名 JWT，仅在 token 过期时发起网络请求刷新。
+ * 通过 getSessionUser 验证 access token，不信任 Cookie 中的 userId。
  * 使用 React cache() 在同一请求内复用结果，避免重复查询。
  *
  * @returns 用户信息（userId, role, uid, profile），未登录返回 null
@@ -37,51 +36,20 @@ export const getCurrentUser = cache(async (): Promise<{
   profile: Profile | null
 } | null> => {
   try {
-    const supabase = await createClient()
+    const verifiedUser = await getSessionUser()
+    if (!verifiedUser) return null
 
-    // Step 1: 从 cookie 读取 session
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user?.id || !session.access_token) return null
-
-    // Step 2: 检查 token 是否过期
-    const now = Math.floor(Date.now() / 1000)
-    const isExpired = session.expires_at ? session.expires_at < now : false
-
-    let userId = session.user.id
-
-    if (isExpired && session.refresh_token) {
-      // Token 已过期 — 尝试刷新
-      // 优先使用 SSR 客户端刷新（会自动写入新 cookie）
-      const { data: refreshData, error: refreshError } =
-        await supabase.auth.refreshSession({
-          refresh_token: session.refresh_token,
-        })
-
-      if (!refreshError && refreshData.session?.user?.id && refreshData.session.access_token) {
-        userId = refreshData.session.user.id
-      } else {
-        // SSR 客户端刷新失败，尝试直接 fetch 刷新
-        const refreshedSession = await refreshSession(session.refresh_token)
-        if (refreshedSession) {
-          userId = refreshedSession.user.id
-        } else {
-          return null
-        }
-      }
-    }
-
-    // Step 3: 使用 admin 客户端查询 profile
     const admin = createAdminClient()
-    const { data: profile } = await admin
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', verifiedUser.id)
       .single()
 
-    if (!profile) return null
+    if (profileError || !profile || profile.is_active !== true) return null
 
     return {
-      userId,
+      userId: verifiedUser.id,
       role: (profile.role as UserRole) ?? DEFAULT_ROLE,
       uid: profile.uid,
       profile: profile as Profile,
@@ -136,7 +104,7 @@ export async function requireZeroUser(): Promise<
   if (!user) {
     return { success: false, error: '请先登录' }
   }
-  if (user.uid !== ZERO_USER_UID) {
+  if (user.uid !== ZERO_USER_UID || user.role !== 'admin' || user.profile?.is_active !== true) {
     return { success: false, error: '无权操作，仅超级管理员可执行此操作' }
   }
   return { success: true, user }

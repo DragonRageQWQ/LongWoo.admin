@@ -66,20 +66,7 @@ export default function ProfilePage() {
         if (result.success && result.profile) {
           setProfile(result.profile);
         } else if (result.success && result.session) {
-          // 有 session 但无 profile，创建一个临时对象
-          setProfile({
-            id: result.session.user.id,
-            uid: null,
-            email: result.session.user.email ?? "",
-            role: "user",
-            display_name: "新用户",
-            phone: null,
-            avatar_url: null,
-            is_active: true,
-            has_password: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
+          setError("用户资料初始化失败，请退出后重新登录");
         } else {
           router.push("/login");
           return;
@@ -96,6 +83,14 @@ export default function ProfilePage() {
       mounted = false;
     };
   }, [router]);
+
+  const refreshProfile = async () => {
+    const refreshed = await getSession();
+    if (!refreshed.success || !refreshed.profile) {
+      throw new Error(refreshed.error ?? "刷新用户资料失败");
+    }
+    setProfile(refreshed.profile);
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -135,9 +130,7 @@ export default function ProfilePage() {
     try {
       const result = await updateDisplayName(trimmed);
       if (result.success) {
-        setProfile((prev) =>
-          prev ? { ...prev, display_name: trimmed } : prev
-        );
+        await refreshProfile();
         setEditingName(false);
         setNameInput("");
       } else {
@@ -171,9 +164,7 @@ export default function ProfilePage() {
     try {
       const result = await updateAvatar(file);
       if (result.success && result.avatarUrl) {
-        setProfile((prev) =>
-          prev ? { ...prev, avatar_url: result.avatarUrl! } : prev
-        );
+        await refreshProfile();
       } else {
         setAvatarError(result.error ?? "头像上传失败");
       }
@@ -241,9 +232,7 @@ export default function ProfilePage() {
         profile?.has_password ? oldPassword : undefined
       );
       if (result.success) {
-        setProfile((prev) =>
-          prev ? { ...prev, has_password: true } : prev
-        );
+        await refreshProfile();
         setEditingPassword(false);
         setOldPassword("");
         setPasswordInput("");

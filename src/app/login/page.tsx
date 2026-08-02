@@ -10,7 +10,6 @@ import {
   isQQConfigured,
 } from "@/actions/auth-actions";
 import {
-  loginWithPassword,
   checkEmailHasPassword,
 } from "@/actions/profile-actions";
 
@@ -241,7 +240,7 @@ function LoginForm() {
   };
 
   // ==================== 密码登录 ====================
-  // 调用 loginWithPassword Server Action，成功后按角色跳转
+  // 密码登录与验证码登录统一走 Route Handler，确保 Set-Cookie 可靠持久化。
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -262,10 +261,14 @@ function LoginForm() {
 
     setPasswordLoading(true);
     try {
-      const result = await loginWithPassword(passwordEmail, password);
-      console.log("[Login] 密码登录 Server Action 返回:", result);
+      const response = await fetch("/api/authentication/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: passwordEmail, password }),
+      });
+      const result = await response.json();
 
-      if (!result || !result.success) {
+      if (!response.ok || !result?.success) {
         setError(result?.error ?? "登录失败，请检查邮箱和密码");
         return;
       }

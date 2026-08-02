@@ -4,6 +4,7 @@ import { verifyOtp, consumeOtp } from '@/lib/otp-store'
 import { getOrCreateProfile } from '@/lib/profile'
 import {
   encodeSessionCookie,
+  getSessionCookieNames,
   getSupabaseCookieName,
   SECURE_COOKIE_OPTIONS,
 } from '@/lib/supabase/cookie-utils'
@@ -47,16 +48,105 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { email, code } = body as { email?: string; code?: string }
+    const { email, code, password } = body as {
+      email?: string
+      code?: string
+      password?: string
+    }
 
-    if (!email || !code) {
+    if (!email || (!code && !password)) {
       return NextResponse.json(
-        { success: false, error: '请输入邮箱和验证码' },
+        { success: false, error: '请输入完整登录信息' },
         { status: 400 }
       )
     }
 
-    if (code.length !== 6) {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return NextResponse.json(
+        { success: false, error: '请输入有效的邮箱地址' },
+        { status: 400 }
+      )
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+    // 密码登录也走 Route Handler，确保 Set-Cookie 在标准 HTTP 响应中可靠持久化。
+    if (password) {
+      if (password.length < 6 || password.length > 64) {
+        return NextResponse.json(
+          { success: false, error: '邮箱或密码错误' },
+          { status: 400 }
+        )
+      }
+
+      const [ipLimit, emailLimit] = await Promise.all([
+        checkRateLimit(`passwordlogin:ip:${ip}`, 10, RATE_LIMIT_OTP_WINDOW),
+        checkRateLimit(`passwordlogin:email:${normalizedEmail}`, 5, RATE_LIMIT_OTP_WINDOW),
+      ])
+      if (!ipLimit.allowed || !emailLimit.allowed) {
+        return NextResponse.json(
+          { success: false, error: '登录尝试过于频繁，请稍后再试' },
+          { status: 429 }
+        )
+      }
+
+      const passwordResponse = await fetch(
+        `${supabaseUrl}/auth/v1/token?grant_type=password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: supabaseAnonKey,
+          },
+          body: JSON.stringify({ email: normalizedEmail, password }),
+          cache: 'no-store',
+        }
+      )
+
+      if (!passwordResponse.ok) {
+        return NextResponse.json(
+          { success: false, error: '邮箱或密码错误' },
+          { status: 401 }
+        )
+      }
+
+      const passwordSession = await passwordResponse.json()
+      if (!passwordSession.access_token || !passwordSession.refresh_token || !passwordSession.user?.id) {
+        return NextResponse.json(
+          { success: false, error: '登录会话创建失败，请稍后重试' },
+          { status: 500 }
+        )
+      }
+
+      const admin = createAdminClient()
+      const passwordProfile = await getOrCreateProfile(admin, passwordSession.user.id, {
+        email: passwordSession.user.email ?? normalizedEmail,
+        hasPassword: true,
+      })
+      if (!passwordProfile.is_active) {
+        return NextResponse.json(
+          { success: false, error: '账户已停用，请联系管理员' },
+          { status: 403 }
+        )
+      }
+
+      const passwordExpiresAt = passwordSession.expires_at
+        ?? Math.floor(Date.now() / 1000) + (passwordSession.expires_in ?? 3600)
+      const response = NextResponse.json({ success: true, role: passwordProfile.role })
+      setSessionCookies(request, response, {
+        access_token: passwordSession.access_token,
+        refresh_token: passwordSession.refresh_token,
+        expires_at: passwordExpiresAt,
+        expires_in: passwordSession.expires_in ?? 3600,
+        token_type: passwordSession.token_type ?? 'bearer',
+        user: passwordSession.user,
+      })
+      return response
+    }
+
+    if (!code || code.length !== 6) {
       return NextResponse.json(
         { success: false, error: '请输入6位验证码' },
         { status: 400 }
@@ -78,7 +168,7 @@ export async function POST(request: Request) {
 
     // ===== 速率限制：基于邮箱（每分钟最多5次登录尝试） =====
     const emailRateLimit = await checkRateLimit(
-      `login:${email.toLowerCase()}`,
+      `login:${normalizedEmail}`,
       5,
       RATE_LIMIT_OTP_WINDOW
     )
@@ -89,9 +179,6 @@ export async function POST(request: Request) {
       )
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
     debugLog('[Login API] ===== 开始验证码登录 =====', {
       email: email.replace(/(.{2}).*(@.*)/, '$1***$2'),
       timestamp: new Date().toISOString(),
@@ -99,7 +186,7 @@ export async function POST(request: Request) {
 
     // ===== 第1步：校验验证码（不消费） =====
     debugLog('[Login API] 第1步：校验验证码...')
-    const otpResult = await verifyOtp(email, code, false)
+    const otpResult = await verifyOtp(normalizedEmail, code, false)
     debugLog(
       '[Login API] 第1步完成：',
       otpResult.valid,
@@ -120,7 +207,7 @@ export async function POST(request: Request) {
     const { data: linkData, error: linkError } =
       await admin.auth.admin.generateLink({
         type: 'magiclink',
-        email,
+        email: normalizedEmail,
         options: {
           send_email: false,
         } as Record<string, unknown>,
@@ -199,18 +286,22 @@ export async function POST(request: Request) {
       '[Login API] 第3步完成 耗时' + (Date.now() - step3Start) + 'ms'
     )
 
-    // ===== 第4步：并行消费验证码和获取 profile =====
-    debugLog('[Login API] 第4步：并行消费验证码和获取 profile...')
+    // ===== 第4步：先确保 profile 持久化成功，再消费验证码 =====
+    debugLog('[Login API] 第4步：创建或读取 profile...')
     const step4Start = Date.now()
     const userId = sessionData.user.id
-    const userEmail = sessionData.user.email ?? email
+    const userEmail = sessionData.user.email ?? normalizedEmail
 
-    const [, profileResult] = await Promise.all([
-      consumeOtp(email, code),
-      getOrCreateProfile(admin, userId, { email: userEmail }),
-    ])
+    const profileResult = await getOrCreateProfile(admin, userId, { email: userEmail })
 
-    const role = profileResult?.role ?? 'user'
+    if (!profileResult.is_active) {
+      return NextResponse.json(
+        { success: false, error: '账户已停用，请联系管理员' },
+        { status: 403 }
+      )
+    }
+    const role = profileResult.role
+    await consumeOtp(normalizedEmail, code)
 
     debugLog(
       '[Login API] 第4步完成 耗时' +
@@ -237,26 +328,9 @@ export async function POST(request: Request) {
       user: sessionData.user,
     }
 
-    // 使用统一的 cookie 工具获取 cookie 名称并编码 session（含分片支持）
-    const cookieName = getSupabaseCookieName()
-    const cookieParts = encodeSessionCookie(session)
-
     // 创建 response 对象
     const response = NextResponse.json({ success: true, role })
-
-    // 设置 cookie（使用统一的安全选项）
-    cookieParts.forEach(({ name, value }) => {
-      debugLog(`[Login API] 设置 cookie: ${name} (长度: ${value.length})`)
-      response.cookies.set(name, value, SECURE_COOKIE_OPTIONS)
-    })
-
-    // 如果有分片，需要清除主 cookie（避免读取冲突）
-    if (cookieParts.length > 1) {
-      response.cookies.set(cookieName, '', {
-        ...SECURE_COOKIE_OPTIONS,
-        maxAge: 0,
-      })
-    }
+    const cookieParts = setSessionCookies(request, response, session)
 
     debugLog('[Login API] cookie 设置完成，共', cookieParts.length, '个')
     debugLog('[Login API] ===== 登录成功 =====', {
@@ -277,4 +351,36 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
+}
+
+function setSessionCookies(
+  request: Request,
+  response: NextResponse,
+  session: Record<string, unknown>
+): Array<{ name: string; value: string }> {
+  const requestCookieNames = (request.headers.get('cookie') ?? '')
+    .split(';')
+    .map(part => part.trim().split('=')[0])
+    .filter((name): name is string => Boolean(name))
+    .map(name => ({ name }))
+
+  getSessionCookieNames(requestCookieNames).forEach(name => {
+    response.cookies.set(name, '', { ...SECURE_COOKIE_OPTIONS, maxAge: 0 })
+  })
+
+  // 额外清理常见旧分片，避免 session 变短后残留高编号分片。
+  const cookieName = getSupabaseCookieName()
+  for (let index = 0; index < 8; index += 1) {
+    response.cookies.set(`${cookieName}.${index}`, '', {
+      ...SECURE_COOKIE_OPTIONS,
+      maxAge: 0,
+    })
+  }
+  response.cookies.set(cookieName, '', { ...SECURE_COOKIE_OPTIONS, maxAge: 0 })
+
+  const cookieParts = encodeSessionCookie(session)
+  cookieParts.forEach(({ name, value }) => {
+    response.cookies.set(name, value, SECURE_COOKIE_OPTIONS)
+  })
+  return cookieParts
 }

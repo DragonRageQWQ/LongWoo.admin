@@ -52,9 +52,9 @@ export async function checkRateLimit(
 
     // RPC 不可用时回退到 insert-first 模式（比原 check-first 更安全）
     return await fallbackRateLimit(key, maxCount, windowMs)
-  } catch {
-    // 异常时放行，避免影响正常用户
-    return { allowed: true, remaining: maxCount, resetAt: Date.now() + windowMs }
+  } catch (error) {
+    console.error('速率限制服务异常:', error)
+    return { allowed: false, remaining: 0, resetAt: Date.now() + windowMs }
   }
 }
 
@@ -82,6 +82,7 @@ async function fallbackRateLimit(
 
   if (insertError) {
     console.error('速率限制记录失败:', insertError.message)
+    return { allowed: false, remaining: 0, resetAt: now + windowMs }
   }
 
   // 再计数（包含刚插入的记录）
@@ -93,7 +94,7 @@ async function fallbackRateLimit(
 
   if (countError) {
     console.error('速率限制查询失败:', countError.message)
-    return { allowed: true, remaining: maxCount, resetAt: now + windowMs }
+    return { allowed: false, remaining: 0, resetAt: now + windowMs }
   }
 
   const currentCount = count ?? 0
@@ -134,7 +135,7 @@ export async function peekRateLimit(
 
     if (error) {
       console.error('速率限制查询失败:', error.message)
-      return { allowed: true, remaining: maxCount, resetAt: now + windowMs }
+      return { allowed: false, remaining: 0, resetAt: now + windowMs }
     }
 
     const currentCount = count ?? 0
@@ -147,8 +148,9 @@ export async function peekRateLimit(
       remaining: Math.max(0, maxCount - currentCount),
       resetAt: now + windowMs,
     }
-  } catch {
-    return { allowed: true, remaining: maxCount, resetAt: Date.now() + windowMs }
+  } catch (error) {
+    console.error('速率限制状态查询异常:', error)
+    return { allowed: false, remaining: 0, resetAt: Date.now() + windowMs }
   }
 }
 

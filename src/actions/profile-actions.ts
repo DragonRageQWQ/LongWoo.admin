@@ -1,64 +1,14 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, getSessionUser } from '@/lib/supabase/server'
+import { getSessionUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { headers } from 'next/headers'
-import { checkRateLimit, peekRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
 import { validateFileMagicNumber } from '@/lib/file-validation'
 import { getOrCreateProfile } from '@/lib/profile'
-import { RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS, AVATAR_MAX_SIZE, AVATAR_ALLOWED_MIME_TYPES, RATE_LIMIT_AVATAR_WINDOW, RATE_LIMIT_AVATAR_MAX, RATE_LIMIT_PASSWORD_WINDOW, RATE_LIMIT_PASSWORD_MAX, RATE_LIMIT_CHECK_EMAIL_WINDOW, RATE_LIMIT_CHECK_EMAIL_MAX } from '@/lib/constants'
-
-// ==================== 密码登录失败次数限制 ====================
-// 防止暴力破解：同一邮箱 + IP 组合，超过最大失败次数后锁定指定时长
-// 基于 rate_limits 数据库表实现，记录自然过期，无需内存清理
-
-/**
- * 检查密码登录是否被锁定
- * C5 修复：使用 peekRateLimit 仅查询不递增，避免双重计数
- * @returns 锁定剩余秒数，0表示未锁定
- */
-async function checkLoginLock(email: string, ip: string): Promise<number> {
-  const key = `loginfail:${email.toLowerCase()}:${ip}`
-  // 使用 peekRateLimit 仅查询当前失败次数，不递增计数器
-  const result = await peekRateLimit(key, RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS)
-  if (!result.allowed) {
-    return Math.max(0, Math.ceil((result.resetAt - Date.now()) / 1000))
-  }
-  return 0
-}
-
-/**
- * 记录密码登录失败
- * @returns 是否已锁定、剩余尝试次数
- */
-async function recordLoginFail(
-  email: string,
-  ip: string
-): Promise<{ locked: boolean; remaining: number }> {
-  const key = `loginfail:${email.toLowerCase()}:${ip}`
-  const result = await checkRateLimit(key, RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS)
-  return {
-    locked: !result.allowed,
-    remaining: result.remaining,
-  }
-}
-
-/**
- * 清除密码登录失败记录（登录成功时调用）
- * 安全修复：登录成功后主动删除该邮箱+IP的失败记录，
- * 防止历史失败记录导致正常用户被误锁定
- */
-async function clearLoginFails(email: string, ip: string): Promise<void> {
-  try {
-    const admin = createAdminClient()
-    const key = `loginfail:${email.toLowerCase()}:${ip}`
-    await admin.from('rate_limits').delete().eq('key', key)
-  } catch {
-    // 清除失败不影响登录流程
-  }
-}
+import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_MIME_TYPES, RATE_LIMIT_AVATAR_WINDOW, RATE_LIMIT_AVATAR_MAX, RATE_LIMIT_PASSWORD_WINDOW, RATE_LIMIT_PASSWORD_MAX, RATE_LIMIT_CHECK_EMAIL_WINDOW, RATE_LIMIT_CHECK_EMAIL_MAX } from '@/lib/constants'
 
 // ==================== 修改昵称 ====================
 
@@ -86,7 +36,10 @@ export async function updateDisplayName(
     const admin = createAdminClient()
 
     // 确保 profile 存在（防止登录时未自动创建的情况）
-    await getOrCreateProfile(admin, user.id, { email: user.email })
+    const profile = await getOrCreateProfile(admin, user.id, { email: user.email })
+    if (!profile.is_active) {
+      return { success: false, error: '账户已停用', debug: 'InactiveUser' }
+    }
 
     const { error: updateError } = await admin
       .from('profiles')
@@ -162,7 +115,10 @@ export async function updateAvatar(
     const admin = createAdminClient()
 
     // 确保 profile 存在（防止登录时未自动创建的情况）
-    await getOrCreateProfile(admin, user.id, { email: user.email })
+    const ensuredProfile = await getOrCreateProfile(admin, user.id, { email: user.email })
+    if (!ensuredProfile.is_active) {
+      return { success: false, error: '账户已停用' }
+    }
 
     // 查询旧头像 URL，用于后续清理旧文件
     const { data: oldProfile } = await admin
@@ -295,7 +251,10 @@ export async function updatePassword(
     const admin = createAdminClient()
 
     // 确保 profile 存在（防止登录时未自动创建的情况）
-    await getOrCreateProfile(admin, user.id, { email: user.email })
+    const ensuredProfile = await getOrCreateProfile(admin, user.id, { email: user.email })
+    if (!ensuredProfile.is_active) {
+      return { success: false, error: '账户已停用' }
+    }
 
     // C4 安全修复：如果用户已设置密码，必须验证旧密码
     // 先查询用户是否已有密码
@@ -354,78 +313,6 @@ export async function updatePassword(
   } catch (error) {
     console.error('设置密码异常:', error)
     return { success: false, error: '操作时发生未知错误' }
-  }
-}
-
-// ==================== 密码登录 ====================
-
-export async function loginWithPassword(
-  email: string,
-  password: string
-): Promise<{ success: boolean; error?: string; role?: string }> {
-  // CSRF 保护
-  const csrfError = await validateCsrf()
-  if (csrfError) {
-    return { success: false, error: csrfError }
-  }
-
-  const supabase = await createClient()
-
-  try {
-    if (!email || !password) {
-      return { success: false, error: '请输入邮箱和密码' }
-    }
-
-    // 获取客户端 IP 用于登录失败限制
-    const headersList = await headers()
-    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
-
-    // 检查是否被锁定
-    const lockRemaining = await checkLoginLock(email, ip)
-    if (lockRemaining > 0) {
-      const minutes = Math.ceil(lockRemaining / 60)
-      return {
-        success: false,
-        error: `登录失败次数过多，请 ${minutes} 分钟后再试`,
-      }
-    }
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      // 记录登录失败
-      const { locked, remaining } = await recordLoginFail(email, ip)
-      if (locked) {
-        return {
-          success: false,
-          error: '密码错误次数过多，账户已锁定15分钟',
-        }
-      }
-      return {
-        success: false,
-        error: remaining > 0
-          ? `邮箱或密码错误，剩余尝试次数 ${remaining} 次`
-          : '邮箱或密码错误',
-      }
-    }
-
-    // 登录成功，清除失败记录
-    await clearLoginFails(email, ip)
-
-    // 使用 admin 客户端确保 profile 存在并获取角色（避免 RLS 问题）
-    const admin = createAdminClient()
-    const profile = await getOrCreateProfile(admin, data.user.id, {
-      email: data.user.email ?? email,
-    })
-
-    revalidatePath('/')
-    return { success: true, role: profile?.role ?? 'user' }
-  } catch (error) {
-    console.error('密码登录异常:', error)
-    return { success: false, error: '登录时发生未知错误' }
   }
 }
 

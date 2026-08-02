@@ -12,6 +12,7 @@ import { headers, cookies } from 'next/headers'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
 import { getSupabaseCookieName } from '@/lib/supabase/cookie-utils'
+import { getOrCreateProfile } from '@/lib/profile'
 import { RATE_LIMIT_OTP_WINDOW, RATE_LIMIT_OTP_MAX, DEFAULT_FROM_EMAIL } from '@/lib/constants'
 
 // ==================== 发送邮箱验证码 ====================
@@ -158,15 +159,21 @@ export async function getSession(): Promise<{
 
     // 使用 admin 客户端查询 profile，绕过 anon key 的 API 问题
     const admin = createAdminClient()
-    const { data: profile, error: profileError } = await admin
+    const { data: existingProfile, error: profileError } = await admin
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
     if (profileError) {
       console.error('获取用户信息失败:', profileError.message)
+      return { success: false, error: '获取用户资料失败' }
     }
+
+    const profile = existingProfile ?? await getOrCreateProfile(admin, user.id, {
+      email: user.email,
+    })
+    if (!profile.is_active) return { success: false, error: '账户已停用' }
 
     return {
       success: true,
@@ -176,7 +183,7 @@ export async function getSession(): Promise<{
           email: user.email,
         },
       },
-      profile: (profile as Profile) ?? null,
+      profile: profile as Profile,
     }
   } catch (error) {
     console.error('获取会话异常:', error)

@@ -16,12 +16,7 @@ DROP POLICY IF EXISTS profiles_update_own ON profiles;
 CREATE POLICY profiles_update_own ON profiles
   FOR UPDATE
   USING (auth.uid() = id)
-  WITH CHECK (
-    auth.uid() = id
-    AND NEW.role = OLD.role
-    AND NEW.uid = OLD.uid
-    AND NEW.is_active = OLD.is_active
-  );
+  WITH CHECK (auth.uid() = id);
 
 -- ===== 2. 扩展触发器：保护 uid 和 is_active 字段 =====
 -- 替换原有的 prevent_role_escalation，扩展为保护所有敏感字段
@@ -48,6 +43,14 @@ BEGIN
     RAISE EXCEPTION '无权修改激活状态';
   END IF;
 
+  IF NEW.email IS DISTINCT FROM OLD.email THEN
+    RAISE EXCEPTION '无权修改认证邮箱';
+  END IF;
+
+  IF NEW.has_password IS DISTINCT FROM OLD.has_password THEN
+    RAISE EXCEPTION '无权修改密码状态';
+  END IF;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -55,7 +58,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 删除旧触发器，创建新触发器监听所有敏感字段变更
 DROP TRIGGER IF EXISTS trigger_prevent_role_escalation ON profiles;
 CREATE TRIGGER trigger_prevent_sensitive_fields
-  BEFORE UPDATE OF role, uid, is_active ON profiles
+  BEFORE UPDATE OF role, uid, is_active, email, has_password ON profiles
   FOR EACH ROW
   EXECUTE FUNCTION prevent_sensitive_field_modification();
 

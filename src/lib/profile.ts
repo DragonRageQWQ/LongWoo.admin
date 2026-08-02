@@ -30,51 +30,66 @@ export async function getOrCreateProfile(
     phone?: string | null
     displayName?: string | null
     avatarUrl?: string | null
+    hasPassword?: boolean
   }
-): Promise<Profile | null> {
+): Promise<Profile> {
   try {
     // 查询是否已有 profile
     const { data: existing, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
-    if (!fetchError && existing) {
+    if (fetchError) {
+      throw new Error(`查询 profile 失败: ${fetchError.message}`)
+    }
+
+    if (existing) {
       // 已有 profile：如果有新的昵称/头像，则更新
-      if (options?.displayName || options?.avatarUrl) {
+      if (options?.displayName || options?.avatarUrl || options?.hasPassword === true) {
         const updateData: Record<string, unknown> = {
           updated_at: new Date().toISOString(),
         }
         if (options.displayName) updateData.display_name = options.displayName
         if (options.avatarUrl) updateData.avatar_url = options.avatarUrl
+        if (options.hasPassword === true) updateData.has_password = true
 
-        await supabase
+        const { data: updated, error: updateError } = await supabase
           .from('profiles')
           .update(updateData)
           .eq('id', userId)
+          .select()
+          .single()
+
+        if (updateError || !updated) {
+          throw new Error(`更新 profile 失败: ${updateError?.message ?? '无返回数据'}`)
+        }
+        return updated as Profile
       }
 
-      // 返回更新后的信息（合并传入字段）
-      return {
-        ...existing,
-        display_name: options?.displayName ?? existing.display_name,
-        avatar_url: options?.avatarUrl ?? existing.avatar_url,
-      }
+      return existing as Profile
     }
 
     // 自动创建 profile 记录，默认 role 为 user
     // uid 和 has_password 由数据库默认值/触发器处理
     const now = new Date().toISOString()
+    const email = options?.email?.trim().toLowerCase() ?? ''
+    if (!email) {
+      throw new Error('创建 profile 失败: 用户邮箱为空')
+    }
+    const defaultDisplayName = options?.displayName?.trim()
+      || email.split('@')[0]?.slice(0, 20)
+      || '新朋友'
     const newProfile = {
       id: userId,
-      email: options?.email ?? '',
+      email,
       role: 'user',
       phone: options?.phone ?? null,
-      display_name: options?.displayName ?? null, // null → 数据库触发器会设置为 "新朋友+uid"
+      display_name: defaultDisplayName,
       avatar_url: options?.avatarUrl ?? null,
       is_active: true,
-      has_password: false,
+      has_password: options?.hasPassword ?? false,
       created_at: now,
       updated_at: now,
     }
@@ -86,14 +101,22 @@ export async function getOrCreateProfile(
       .single()
 
     if (insertError) {
-      console.error('创建 profile 失败:', insertError.message)
-      return null
+      // OAuth/登录并发回调可能同时创建同一 profile；唯一键冲突时重新读取。
+      if (insertError.code === '23505') {
+        const { data: racedProfile, error: raceError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single()
+        if (!raceError && racedProfile) return racedProfile as Profile
+      }
+      throw new Error(`创建 profile 失败: ${insertError.message}`)
     }
 
     // 直接返回 created 结果，uid 和 display_name 由数据库触发器处理
     return created as Profile
   } catch (error) {
     console.error('获取/创建 profile 异常:', error)
-    return null
+    throw error instanceof Error ? error : new Error(String(error))
   }
 }

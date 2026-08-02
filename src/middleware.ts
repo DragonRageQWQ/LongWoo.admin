@@ -4,9 +4,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 import {
   readSessionCookieValue,
   decodeSessionCookie,
+  verifyAccessToken,
   refreshSession,
   encodeSessionCookie,
   getSupabaseCookieName,
+  getSessionCookieNames,
   SECURE_COOKIE_OPTIONS,
 } from '@/lib/supabase/cookie-utils'
 
@@ -20,10 +22,7 @@ import {
  *
  * 零号用户 (uid=10001) 是超级管理员，拥有管理员权限并管理角色授权
  *
- * 认证策略：
- *   信任 cookie 中的签名 JWT（Supabase JWT 由服务端签名，无法伪造）。
- *   仅当 access_token 过期时才发起网络请求刷新。
- *   避免每次请求都调用 Supabase API 导致网络波动时认证失败。
+ * 认证策略：Cookie 外层 JSON 不可信，身份必须通过 Supabase 验证 access token。
  *
  * Token 刷新机制：
  *   当 access_token 过期时，使用 refresh_token 获取新的 access_token，
@@ -68,7 +67,7 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // ===== 认证：从 cookie 读取 session，信任签名 JWT =====
+  // ===== 认证：从 cookie 读取 session，并通过 Supabase 验证 access token =====
   let userId: string | null = null
   let hasExpiredSession = false
 
@@ -85,35 +84,32 @@ export async function middleware(request: NextRequest) {
     }
 
     if (session.user?.id && session.access_token) {
-      // Step 2: 检查 token 是否过期
-      const now = Math.floor(Date.now() / 1000)
-      const isExpired = session.expires_at ? session.expires_at < now : false
+      userId = await verifyAccessToken(session.access_token)
+      if (userId !== session.user.id) userId = null
 
-      if (!isExpired) {
-        // Token 仍然有效 — 信任签名 JWT，直接使用（零网络调用）
-        userId = session.user.id
-      } else if (session.refresh_token) {
-        // Token 已过期 — 尝试刷新
+      if (!userId && session.refresh_token) {
         hasExpiredSession = true
         const refreshedSession = await refreshSession(session.refresh_token)
         if (refreshedSession) {
-          userId = refreshedSession.user.id
+          const refreshedUserId = await verifyAccessToken(refreshedSession.access_token)
+          if (refreshedUserId === refreshedSession.user.id) userId = refreshedUserId
 
-          // 将刷新后的 session 写入 response cookie（无感续期）
-          const cookieName = getSupabaseCookieName()
-          const cookieParts = encodeSessionCookie(refreshedSession)
-          cookieParts.forEach(({ name, value }) => {
-            response.cookies.set(name, value, SECURE_COOKIE_OPTIONS)
-          })
-          // 如果有分片，清除主 cookie 避免读取冲突
-          if (cookieParts.length > 1) {
-            response.cookies.set(cookieName, '', {
-              ...SECURE_COOKIE_OPTIONS,
-              maxAge: 0,
-            })
+          if (userId) {
+            const cookieName = getSupabaseCookieName()
+            getSessionCookieNames(request.cookies.getAll()).forEach(name =>
+              response.cookies.set(name, '', { ...SECURE_COOKIE_OPTIONS, maxAge: 0 }))
+            for (let index = 0; index < 8; index += 1) {
+              response.cookies.set(`${cookieName}.${index}`, '', {
+                ...SECURE_COOKIE_OPTIONS,
+                maxAge: 0,
+              })
+            }
+            response.cookies.set(cookieName, '', { ...SECURE_COOKIE_OPTIONS, maxAge: 0 })
+            encodeSessionCookie(refreshedSession).forEach(({ name, value }) =>
+              response.cookies.set(name, value, SECURE_COOKIE_OPTIONS))
           }
         }
-      } else {
+      } else if (!userId) {
         hasExpiredSession = true
       }
     }
@@ -124,21 +120,18 @@ export async function middleware(request: NextRequest) {
     try {
       const { data: { session: ssrSession } } = await supabase.auth.getSession()
       if (ssrSession?.user?.id && ssrSession.access_token) {
-        // 信任 SSR 客户端读取的 session（同样是签名 JWT）
-        const now = Math.floor(Date.now() / 1000)
-        const isExpired = ssrSession.expires_at ? ssrSession.expires_at < now : false
-
-        if (!isExpired) {
-          userId = ssrSession.user.id
-        } else if (ssrSession.refresh_token) {
+        userId = await verifyAccessToken(ssrSession.access_token)
+        if (userId !== ssrSession.user.id) userId = null
+        if (!userId && ssrSession.refresh_token) {
           hasExpiredSession = true
           const { data: refreshData, error: refreshError } =
             await supabase.auth.refreshSession({
               refresh_token: ssrSession.refresh_token,
             })
 
-          if (!refreshError && refreshData.session?.user?.id) {
-            userId = refreshData.session.user.id
+          if (!refreshError && refreshData.session?.user?.id && refreshData.session.access_token) {
+            const refreshedId = await verifyAccessToken(refreshData.session.access_token)
+            if (refreshedId === refreshData.session.user.id) userId = refreshedId
           }
         }
       }
@@ -156,12 +149,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
+  const profileAccess = userId ? await getProfileAccess(userId) : null
+  if (userId && (!profileAccess || !profileAccess.isActive)) {
+    return NextResponse.redirect(new URL('/login?inactive=1', request.url))
+  }
+
   // 已登录用户访问管理员专属路径 → 检查角色
   if (userId && adminOnlyPaths.some(p => pathname.startsWith(p))) {
-    const isAdmin = await checkAdminRole(userId)
-
     // 非管理员访问 /admin/* 或 /studio/* → 重定向到个人中心（防越级）
-    if (!isAdmin) {
+    if (!profileAccess?.isAdmin) {
       return NextResponse.redirect(new URL('/profile', request.url))
     }
   }
@@ -175,36 +171,31 @@ export async function middleware(request: NextRequest) {
  * 依次尝试 service_role key 和 anon key，
  * 确保即使其中一个 key 无效也能正常工作。
  */
-async function checkAdminRole(userId: string): Promise<boolean> {
+async function getProfileAccess(
+  userId: string
+): Promise<{ isAdmin: boolean; isActive: boolean } | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  // 依次尝试可用的 key
-  const keysToTry = [serviceKey, anonKey].filter(
-    (k): k is string => typeof k === 'string' && k.length > 0
-  )
-
-  for (const key of keysToTry) {
-    try {
-      const admin = createClient(supabaseUrl, key, {
+  if (!serviceKey) return null
+  try {
+      const admin = createClient(supabaseUrl, serviceKey, {
         auth: { autoRefreshToken: false, persistSession: false }
       })
 
       const { data: profile } = await admin
         .from('profiles')
-        .select('role')
+        .select('role, is_active')
         .eq('id', userId)
         .single()
 
-      if (profile?.role === 'admin') return true
-      if (profile) return false // 查到 profile 但不是 admin
+      if (!profile) return null
+      return {
+        isAdmin: profile.role === 'admin',
+        isActive: profile.is_active === true,
+      }
     } catch {
-      // 当前 key 失败，尝试下一个
-    }
+      return null
   }
-
-  return false
 }
 
 /**
@@ -240,7 +231,7 @@ async function handleDebugRequest(request: NextRequest) {
       userEmail: session.user?.email,
       expiresAt: session.expires_at,
       isExpired,
-      trusted: !isExpired, // 信任未过期的签名 JWT
+      tokenExpired: isExpired,
     } : null,
   })
 }

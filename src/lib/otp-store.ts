@@ -56,27 +56,15 @@ export async function saveOtp(email: string, code: string): Promise<void> {
     console.error('删除旧 OTP 失败:', deleteError.message)
   }
 
-  // 插入新验证码（存储 SHA-256 哈希，非明文）
-  // 尝试包含 attempts 列（用于暴力破解防护），如果列不存在则降级插入
-  const insertPayload = {
+  // attempts 是安全必需字段；缺失时拒绝生成 OTP，避免退化为无限尝试。
+  const { error: insertError } = await admin.from('otp_codes').insert({
     email,
     code: hashCode(code),
     token_hash: '',  // 不再提前存储 token_hash
     expires_at: expiresAt,
     used: false,
     attempts: 0,
-  }
-
-  let { error: insertError } = await admin.from('otp_codes').insert(insertPayload)
-
-  // 如果 attempts 列不存在，降级为不含 attempts 的插入
-  if (insertError && insertError.message.includes('attempts')) {
-    console.warn('attempts 列不存在，降级插入（建议执行迁移 SQL 添加该列）')
-    const fallbackPayload = { ...insertPayload }
-    delete (fallbackPayload as Record<string, unknown>).attempts
-    const fallbackResult = await admin.from('otp_codes').insert(fallbackPayload)
-    insertError = fallbackResult.error
-  }
+  })
 
   if (insertError) {
     console.error('数据库存储 OTP 失败:', insertError.message)
@@ -101,9 +89,8 @@ export async function verifyOtp(
 ): Promise<{ valid: boolean }> {
   const admin = createAdminClient()
 
-  // 查询该邮箱最新的未使用验证码
-  // 尝试包含 attempts 列，如果列不存在则降级查询
-  let { data, error } = await admin
+  // 查询该邮箱最新的未使用验证码；attempts 缺失时认证应失败关闭。
+  const { data, error } = await admin
     .from('otp_codes')
     .select('id, code, expires_at, used, attempts')
     .eq('email', email)
@@ -111,21 +98,6 @@ export async function verifyOtp(
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-
-  // 如果 attempts 列不存在，降级为不含 attempts 的查询
-  if (error && error.message.includes('attempts')) {
-    console.warn('attempts 列不存在，降级查询（建议执行迁移 SQL 添加该列）')
-    const fallbackResult = await admin
-      .from('otp_codes')
-      .select('id, code, expires_at, used')
-      .eq('email', email)
-      .eq('used', false)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    data = fallbackResult.data as typeof data
-    error = fallbackResult.error
-  }
 
   if (error) {
     console.error('数据库查询 OTP 失败:', error.message)
@@ -150,18 +122,20 @@ export async function verifyOtp(
     return { valid: true }
   }
 
-  // 验证码错误：增加尝试次数（如果 attempts 列存在）
-  const currentAttempts = (data as Record<string, unknown>).attempts as number | undefined
-  const newAttempts = (currentAttempts ?? 0) + 1
+  // 验证码错误：增加尝试次数
+  const newAttempts = data.attempts + 1
   if (newAttempts >= OTP_MAX_ATTEMPTS) {
     // 达到最大尝试次数，删除验证码使其失效，防止暴力破解
     await admin.from('otp_codes').delete().eq('id', data.id)
   } else {
-    // 未达到上限，保留验证码，更新尝试次数（attempts 列可能不存在，静默失败）
-    try {
-      await admin.from('otp_codes').update({ attempts: newAttempts }).eq('id', data.id)
-    } catch {
-      // attempts 列不存在时忽略错误
+    const { error: attemptError } = await admin
+      .from('otp_codes')
+      .update({ attempts: newAttempts })
+      .eq('id', data.id)
+    if (attemptError) {
+      // 无法可靠记录失败次数时立即使验证码失效。
+      await admin.from('otp_codes').delete().eq('id', data.id)
+      console.error('更新 OTP 尝试次数失败:', attemptError.message)
     }
   }
   return { valid: false }

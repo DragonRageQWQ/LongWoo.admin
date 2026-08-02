@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getSessionUser } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { isValidUUID, validateOrderInput } from '@/lib/order-utils'
+import { RATE_LIMIT_ORDER_MAX, RATE_LIMIT_ORDER_WINDOW } from '@/lib/constants'
+
+export const dynamic = 'force-dynamic'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,29 +64,35 @@ export async function POST(request: NextRequest) {
       ? body.serviceTypeId.trim()
       : null
 
-  // 字段校验（与 src/app/order/submit/page.tsx 的校验规则保持一致）
-  if (!customerName) {
+  const validationError = validateOrderInput({
+    customerName,
+    customerPhone,
+    customerEmail,
+    requirements,
+  })
+  if (validationError) {
     return NextResponse.json(
-      { success: false, error: '请输入姓名' },
+      { success: false, error: validationError },
       { status: 400 }
     )
   }
-  if (!customerPhone || !/^1[3-9]\d{9}$/.test(customerPhone)) {
+  if (serviceTypeId && !isValidUUID(serviceTypeId)) {
     return NextResponse.json(
-      { success: false, error: '请输入有效的手机号' },
+      { success: false, error: '无效的服务类型' },
       { status: 400 }
     )
   }
-  if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const rateLimit = await checkRateLimit(
+    `createorder:${ip}`,
+    RATE_LIMIT_ORDER_MAX,
+    RATE_LIMIT_ORDER_WINDOW
+  )
+  if (!rateLimit.allowed) {
     return NextResponse.json(
-      { success: false, error: '请输入有效的邮箱地址' },
-      { status: 400 }
-    )
-  }
-  if (!requirements || requirements.length < 10) {
-    return NextResponse.json(
-      { success: false, error: '需求描述至少需要 10 个字' },
-      { status: 400 }
+      { success: false, error: '提交过于频繁，请稍后再试' },
+      { status: 429 }
     )
   }
 

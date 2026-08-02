@@ -29,11 +29,13 @@ export const SECURE_COOKIE_OPTIONS = {
 }
 
 /**
- * base64url 编码（Node.js 环境用 Buffer）
+ * base64url 编码（Web API，兼容 Node.js 与 Edge Runtime）
  */
 function toBase64Url(str: string): string {
-  return Buffer.from(str, 'utf-8')
-    .toString('base64')
+  const bytes = new TextEncoder().encode(str)
+  let binary = ''
+  bytes.forEach(byte => { binary += String.fromCharCode(byte) })
+  return btoa(binary)
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '')
@@ -45,7 +47,9 @@ function toBase64Url(str: string): string {
 function fromBase64Url(b64url: string): string {
   const base64 = b64url.replace(/-/g, '+').replace(/_/g, '/')
   const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
-  return atob(padded)
+  const binary = atob(padded)
+  const bytes = Uint8Array.from(binary, char => char.charCodeAt(0))
+  return new TextDecoder().decode(bytes)
 }
 
 /**
@@ -129,7 +133,7 @@ export function readSessionCookieValue(
 
 // ===== JWT 验证 =====
 
-interface SupabaseSession {
+export interface SupabaseSession {
   access_token: string
   refresh_token: string
   expires_at: number
@@ -154,11 +158,6 @@ export function getSessionFromCookieValue(cookieValue: string | null): SupabaseS
   const session = decoded as unknown as SupabaseSession
   if (!session.access_token || !session.user?.id) return null
 
-  // 检查 token 是否过期
-  if (session.expires_at && session.expires_at < Math.floor(Date.now() / 1000)) {
-    return null
-  }
-
   return session
 }
 
@@ -170,53 +169,39 @@ export function getSessionFromCookieValue(cookieValue: string | null): SupabaseS
  *
  * 安全修复的核心：不再信任 cookie 内容，而是通过服务端验证 JWT。
  *
- * Key 选择策略：
- *   依次尝试 service_role key 和 anon key。
- *   如果 service_role key 无效或被截断，会自动降级到 anon key。
- *   这是纯服务端调用（middleware + route handlers），使用 service_role key 是安全的。
- *
  * @returns 验证通过返回 userId，否则返回 null
  */
 export async function verifyAccessToken(accessToken: string): Promise<string | null> {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !anonKey) return null
 
-    if (!supabaseUrl) return null
+    const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: 'no-store',
+    })
 
-    // 依次尝试可用的 key：service_role 优先，anon 兜底
-    const keysToTry = [serviceRoleKey, anonKey].filter(
-      (k): k is string => typeof k === 'string' && k.length > 0
-    )
-    if (keysToTry.length === 0) return null
+    if (!resp.ok) return null
 
-    for (const apiKey of keysToTry) {
-      try {
-        const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
-          headers: {
-            apikey: apiKey,
-            Authorization: `Bearer ${accessToken}`,
-          },
-        })
-
-        if (resp.ok) {
-          const userData = await resp.json()
-          return userData?.id ?? null
-        }
-
-        // 401 = token 无效或过期（换 key 也一样，直接返回 null）
-        if (resp.status === 401) return null
-        // 其他错误码（403/500 等）可能是 key 本身有问题，尝试下一个 key
-      } catch {
-        // 网络错误，尝试下一个 key
-      }
-    }
-
-    return null
+    const userData = await resp.json()
+    return typeof userData?.id === 'string' ? userData.id : null
   } catch {
     return null
   }
+}
+
+/** 返回请求中属于当前 Supabase session 的全部 cookie 名称。 */
+export function getSessionCookieNames(
+  cookieValues: Array<{ name: string }>
+): string[] {
+  const cookieName = getSupabaseCookieName()
+  return cookieValues
+    .map(cookie => cookie.name)
+    .filter(name => name === cookieName || name.startsWith(`${cookieName}.`))
 }
 
 /**
