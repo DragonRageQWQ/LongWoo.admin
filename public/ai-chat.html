@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 助手 - LongWoo Studio</title>
+    <meta name="description" content="LongWoo龙坞 AI 助手 - 测试功能，解答兽装定制相关问题。">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="/css/tailwind-static.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <style>
+      /* ===== 页面专属样式 ===== */
+      html, body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        background: var(--color-surface);
+        font-family: var(--font-family);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page-wrapper {
+        max-width: var(--content-max-width);
+        margin: 0 auto;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--color-background);
+        box-shadow: 0 0 24px rgba(0, 0, 0, 0.04);
+      }
+
+      /* Top Bar */
+      .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-md) var(--space-lg);
+        border-bottom: 1px solid var(--color-border-light);
+        flex-shrink: 0;
+        background: var(--color-background);
+        z-index: 10;
+      }
+
+      .logo-text {
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: var(--color-primary);
+        text-decoration: none;
+      }
+
+      .top-back {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        font-size: var(--font-size-sm);
+        color: var(--color-primary-light);
+        text-decoration: none;
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-full);
+        background: var(--color-surface);
+        transition: background 0.2s ease;
+      }
+
+      .top-back:hover {
+        background: var(--color-primary-lightest2);
+      }
+
+      .top-back svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* 测试标识 */
+      .beta-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        color: var(--color-warning);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        background: rgba(245, 158, 11, 0.08);
+        border-radius: var(--radius-full);
+        padding: 2px 10px;
+        letter-spacing: 0.5px;
+      }
+
+      /* 聊天主区域 */
+      .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-height: 0;
+      }
+
+      .chat-header {
+        padding: var(--space-md) var(--space-lg) var(--space-sm);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+        border-bottom: 1px solid var(--color-border-light);
+        flex-shrink: 0;
+      }
+
+      .chat-header-title {
+        font-size: var(--font-size-md);
+        font-weight: 700;
+        color: var(--color-primary);
+        margin: 0;
+      }
+
+      .chat-header-sub {
+        font-size: var(--font-size-xs);
+        color: var(--color-primary-lighter);
+        margin: 0;
+      }
+
+      /* 消息列表 */
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--space-lg);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+      }
+
+      .chat-messages::-webkit-scrollbar {
+        display: none;
+      }
+
+      .msg {
+        display: flex;
+        gap: var(--space-sm);
+        max-width: 92%;
+        animation: msg-in 0.25s ease;
+      }
+
+      @keyframes msg-in {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .msg.user {
+        align-self: flex-end;
+        flex-direction: row-reverse;
+      }
+
+      .msg-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        color: #fff;
+      }
+
+      .msg.ai .msg-avatar {
+        background: var(--color-primary);
+      }
+
+      .msg.user .msg-avatar {
+        background: var(--color-info);
+      }
+
+      .msg-bubble {
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-lg);
+        font-size: var(--font-size-base);
+        line-height: var(--line-height);
+        word-break: break-word;
+        white-space: pre-wrap;
+      }
+
+      .msg.ai .msg-bubble {
+        background: var(--color-surface);
+        color: var(--color-primary);
+        border-top-left-radius: var(--radius-sm);
+      }
+
+      .msg.user .msg-bubble {
+        background: var(--color-primary);
+        color: #fff;
+        border-top-right-radius: var(--radius-sm);
+      }
+
+      /* 快捷问题 */
+      .quick-questions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-sm);
+        padding: 0 var(--space-lg) var(--space-md);
+        flex-shrink: 0;
+      }
+
+      .quick-btn {
+        font-size: var(--font-size-xs);
+        color: var(--color-primary-light);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border-light);
+        border-radius: var(--radius-full);
+        padding: 6px 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .quick-btn:hover {
+        color: var(--color-primary);
+        border-color: var(--color-border);
+        background: var(--color-primary-lightest2);
+      }
+
+      /* 输入区 */
+      .chat-input-bar {
+        padding: var(--space-md) var(--space-lg);
+        padding-bottom: calc(var(--space-md) + var(--bottom-nav-height));
+        border-top: 1px solid var(--color-border-light);
+        background: var(--color-background);
+        flex-shrink: 0;
+      }
+
+      .chat-input-row {
+        display: flex;
+        align-items: flex-end;
+        gap: var(--space-sm);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border-light);
+        border-radius: var(--radius-lg);
+        padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-md);
+        transition: border-color 0.2s ease;
+      }
+
+      .chat-input-row:focus-within {
+        border-color: var(--color-border);
+      }
+
+      #chat-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: var(--font-size-base);
+        color: var(--color-primary);
+        font-family: inherit;
+        padding: var(--space-sm) 0;
+        resize: none;
+        min-height: 20px;
+        max-height: 120px;
+        line-height: var(--line-height);
+      }
+
+      #chat-input::placeholder {
+        color: var(--color-primary-lighter);
+      }
+
+      .send-btn {
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: var(--radius-full);
+        background: var(--color-primary);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: opacity 0.2s ease, transform 0.1s ease;
+      }
+
+      .send-btn:hover {
+        opacity: 0.85;
+      }
+
+      .send-btn:active {
+        transform: scale(0.95);
+      }
+
+      .send-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .send-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* 输入中指示 */
+      .typing-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: var(--space-sm) var(--space-md);
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        border-top-left-radius: var(--radius-sm);
+      }
+
+      .typing-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--color-primary-lighter);
+        animation: typing-bounce 1.2s infinite;
+      }
+
+      .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+      .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+      @keyframes typing-bounce {
+        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+        30% { transform: translateY(-4px); opacity: 1; }
+      }
+
+      /* 底部导航 */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: var(--content-max-width);
+        height: var(--bottom-nav-height);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-top: 1px solid var(--color-border-light);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 var(--space-xs);
+        box-sizing: border-box;
+      }
+
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        text-decoration: none;
+        cursor: pointer;
+        padding: var(--space-xs);
+        min-width: 60px;
+      }
+
+      .nav-item-icon {
+        width: 22px;
+        height: 22px;
+      }
+
+      .nav-item-icon svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .nav-item-label {
+        font-size: var(--font-size-xs);
+        color: var(--color-primary-light);
+        white-space: nowrap;
+        line-height: 1.2;
+      }
+
+      .nav-item.active .nav-item-label {
+        color: var(--color-primary);
+        font-weight: 600;
+      }
+
+      .nav-item.active .nav-item-icon svg {
+        stroke: var(--color-primary);
+      }
+    </style>
+</head>
+<body>
+  <div class="page-wrapper">
+
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <a href="index.html" class="logo-text">LongWoo</a>
+      <span class="beta-badge">AI 测试</span>
+    </header>
+
+    <!-- 聊天主体 -->
+    <main class="chat-main">
+
+      <div class="chat-header">
+        <h2 class="chat-header-title">AI 助手</h2>
+        <p class="chat-header-sub">测试功能 · 由 DeepSeek AI 驱动</p>
+      </div>
+
+      <!-- 消息列表 -->
+      <div id="chat-messages" class="chat-messages">
+        <!-- 欢迎消息由 JS 注入 -->
+      </div>
+
+      <!-- 快捷问题 -->
+      <div class="quick-questions" id="quick-questions">
+        <button class="quick-btn" data-q="你们能定制兽装吗？">你们能定制兽装吗？</button>
+        <button class="quick-btn" data-q="全装定制多少钱？">全装定制多少钱？</button>
+        <button class="quick-btn" data-q="定制需要多久？">定制需要多久？</button>
+        <button class="quick-btn" data-q="预设兽装掉落是什么？">预设兽装掉落是什么？</button>
+      </div>
+
+      <!-- 输入区 -->
+      <div class="chat-input-bar">
+        <div class="chat-input-row">
+          <textarea id="chat-input" rows="1" placeholder="输入你的问题..." maxlength="500"></textarea>
+          <button id="send-btn" class="send-btn" aria-label="发送">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2L11 13"/>
+              <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+
+      <!-- 购买兽装 -->
+      <a href="order-step1.html" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V6L18 2H6Z"/>
+            <path d="M3 6H21"/>
+            <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">购买兽装</span>
+      </a>
+
+      <!-- AI 助手（原购买现货） -->
+      <a href="ai-chat.html" class="nav-item active">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#101010" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 13.6 2.35 15.12 3 16.48L2.5 21.5L7.52 21C8.88 21.65 10.4 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z"/>
+            <path d="M8 9H8.01"/>
+            <path d="M12 9H12.01"/>
+            <path d="M16 9H16.01"/>
+            <path d="M8 13C9.2 14.5 10.6 15.2 12 15.2C13.4 15.2 14.8 14.5 16 13"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">AI 助手</span>
+      </a>
+
+      <!-- 购买掉落 -->
+      <a href="preorder-step1.html" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L12 16"/>
+            <path d="M12 16L7 11"/>
+            <path d="M12 16L17 11"/>
+            <path d="M4 19H20"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">购买掉落</span>
+      </a>
+
+      <!-- 查询进度&售后 -->
+      <a href="under-construction.html?feature=进度与售后" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 7V12L15 15"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">进度&售后</span>
+      </a>
+
+      <!-- 我的订单 -->
+      <a href="/login" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"/>
+            <path d="M14 2V8H20"/>
+            <path d="M8 13H16"/>
+            <path d="M8 17H16"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">我的订单</span>
+      </a>
+
+    </nav>
+
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var messagesEl = document.getElementById('chat-messages');
+      var inputEl = document.getElementById('chat-input');
+      var sendBtn = document.getElementById('send-btn');
+
+      // ===== 本地模拟 AI 知识库（测试模式） =====
+      var KNOWLEDGE = [
+        {
+          keywords: ['定制', '定制兽装', '可以定制'],
+          reply: '可以的！LongWoo 提供全装定制服务。您可以点击底部「购买兽装」进入下单流程，填写需求后我们会为您安排设计和制作。'
+        },
+        {
+          keywords: ['价格', '多少钱', '费用', '报价', '价'],
+          reply: '全装定制价格通常在几千到上万元不等，具体取决于尺寸、款式、材料和工艺复杂度。您可以在下单时填写预算范围，我们会与您沟通确认。'
+        },
+        {
+          keywords: ['多久', '时间', '工期', '周期', '几天'],
+          reply: '定制工期一般在 4-8 周左右，具体视排单情况和制作复杂度而定。正式下单后我们会给出明确的预计交付时间。'
+        },
+        {
+          keywords: ['掉落', '预设', '现货'],
+          reply: '「购买掉落」是指预设兽装销售，工作室会不定期放出已经制作好的预设兽装，先到先得。您可以点击底部「购买掉落」查看当前可抢购的预设款式。'
+        },
+        {
+          keywords: ['尺寸', '尺码', '量尺', '头围'],
+          reply: '定制全装需要提供头围、身高、肩宽等尺寸数据。下单后我们会发送详细的量尺教程和尺寸表给您。'
+        },
+        {
+          keywords: ['材料', '毛料', '布料', '材质'],
+          reply: '我们使用高品质的进口毛料和填充材料，确保舒适耐用。具体材质选择可以在定制流程中与设计师沟通。'
+        },
+        {
+          keywords: ['售后', '维修', '保修'],
+          reply: '我们提供完善的售后服务。兽装如有质量问题可在一定期限内免费维修，日常维护保养也可以联系我们。'
+        },
+        {
+          keywords: ['你好', '您好', 'hi', 'hello', '在吗'],
+          reply: '你好！我是 LongWoo 的 AI 助手（测试版）。关于兽装定制、预设掉落、价格工期等问题都可以问我哦～'
+        }
+      ];
+
+      var FALLBACK_REPLIES = [
+        '这个问题我还在学习中～您可以点击底部「购买兽装」或「购买掉落」查看具体信息，或直接联系客服邮箱 hello@longwoo.studio。',
+        '抱歉，这个我暂时答不上来。建议您通过 hello@longwoo.studio 联系我们的人工客服获取准确答复。',
+        '我目前是测试模式，知识有限。您可以试试问我关于「定制」「价格」「工期」「掉落」方面的问题～'
+      ];
+      var fallbackIndex = 0;
+
+      function getLocalReply(text) {
+        var lower = text.toLowerCase();
+        for (var i = 0; i < KNOWLEDGE.length; i++) {
+          var item = KNOWLEDGE[i];
+          for (var j = 0; j < item.keywords.length; j++) {
+            if (lower.indexOf(item.keywords[j]) !== -1) {
+              return item.reply;
+            }
+          }
+        }
+        var reply = FALLBACK_REPLIES[fallbackIndex % FALLBACK_REPLIES.length];
+        fallbackIndex++;
+        return reply;
+      }
+
+      // ===== 对话历史（发送给后端 AI） =====
+      var history = [];
+
+      /**
+       * 调用后端 AI 代理接口 /api/ai/chat
+       * API key 存储在后端环境变量中，前端不接触 key，无法被抓包获取
+       */
+      function callAI(messages) {
+        return fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: messages })
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              if (!res.ok || !data.success) {
+                throw new Error(data.error || 'AI 服务请求失败');
+              }
+              return data.reply;
+            });
+          });
+      }
+
+      // ===== 消息渲染 =====
+      function addMessage(text, role) {
+        var msg = document.createElement('div');
+        msg.className = 'msg ' + role;
+
+        var avatar = document.createElement('div');
+        avatar.className = 'msg-avatar';
+        avatar.textContent = role === 'ai' ? 'AI' : '我';
+
+        var bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+        bubble.textContent = text;
+
+        msg.appendChild(avatar);
+        msg.appendChild(bubble);
+        messagesEl.appendChild(msg);
+        scrollToBottom();
+        return msg;
+      }
+
+      function addTyping() {
+        var msg = document.createElement('div');
+        msg.className = 'msg ai';
+        msg.id = 'typing-msg';
+
+        var avatar = document.createElement('div');
+        avatar.className = 'msg-avatar';
+        avatar.textContent = 'AI';
+
+        var indicator = document.createElement('div');
+        indicator.className = 'typing-indicator';
+        indicator.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+
+        msg.appendChild(avatar);
+        msg.appendChild(indicator);
+        messagesEl.appendChild(msg);
+        scrollToBottom();
+        return msg;
+      }
+
+      function scrollToBottom() {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      // ===== 发送逻辑 =====
+      var isSending = false;
+
+      function sendMessage(text) {
+        var trimmed = (text || '').trim();
+        if (!trimmed || isSending) return;
+
+        // 将用户消息加入历史
+        history.push({ role: 'user', content: trimmed });
+        // 历史过长时截断（只保留最近 10 条）
+        if (history.length > 10) {
+          history = history.slice(history.length - 10);
+        }
+
+        addMessage(trimmed, 'user');
+        inputEl.value = '';
+        inputEl.style.height = 'auto';
+        sendBtn.disabled = true;
+        isSending = true;
+
+        var typing = addTyping();
+
+        // 调用后端 AI 接口；失败时降级到本地规则
+        callAI(history)
+          .then(function (reply) {
+            history.push({ role: 'assistant', content: reply });
+            if (history.length > 10) {
+              history = history.slice(history.length - 10);
+            }
+            removeTyping(typing);
+            addMessage(reply, 'ai');
+          })
+          .catch(function () {
+            // AI 服务不可用时降级为本地规则回复
+            removeTyping(typing);
+            var fallback = getLocalReply(trimmed);
+            history.push({ role: 'assistant', content: fallback });
+            if (history.length > 10) {
+              history = history.slice(history.length - 10);
+            }
+            addMessage(fallback, 'ai');
+          })
+          .finally(function () {
+            isSending = false;
+            sendBtn.disabled = false;
+            inputEl.focus();
+          });
+      }
+
+      function removeTyping(typing) {
+        if (typing && typing.parentNode) {
+          typing.parentNode.removeChild(typing);
+        }
+      }
+
+      // ===== 事件绑定 =====
+      sendBtn.addEventListener('click', function () {
+        sendMessage(inputEl.value);
+      });
+
+      inputEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage(inputEl.value);
+        }
+      });
+
+      // 输入框自适应高度
+      inputEl.addEventListener('input', function () {
+        inputEl.style.height = 'auto';
+        inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+      });
+
+      // 快捷问题
+      document.querySelectorAll('.quick-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          sendMessage(btn.getAttribute('data-q'));
+        });
+      });
+
+      // ===== 初始化：欢迎消息 =====
+      var now = new Date();
+      var hour = now.getHours();
+      var greeting = hour < 6 ? '夜深了' : hour < 12 ? '早上好' : hour < 18 ? '下午好' : '晚上好';
+
+      addMessage(
+        greeting + '！我是 LongWoo 的 AI 助手（测试版）😊\n' +
+        '已接入 DeepSeek AI 大模型，可以回答兽装定制相关问题。\n\n' +
+        '你可以问我：\n' +
+        '· 你们能定制兽装吗？\n' +
+        '· 全装定制多少钱？\n' +
+        '· 定制需要多久？\n' +
+        '· 预设兽装掉落是什么？',
+        'ai'
+      );
+    })();
+  </script>
+</body>
+</html>
