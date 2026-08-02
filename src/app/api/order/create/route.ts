@@ -7,8 +7,6 @@ import { RATE_LIMIT_ORDER_MAX, RATE_LIMIT_ORDER_WINDOW } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
-export const dynamic = 'force-dynamic'
-
 /**
  * POST /api/order/create
  *
