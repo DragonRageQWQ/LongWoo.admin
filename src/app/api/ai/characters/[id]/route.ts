@@ -91,7 +91,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   // 至少需要一个可更新字段
-  const hasField = ['name', 'persona', 'greeting', 'user_nickname', 'avatar_url'].some(k => k in body)
+  const hasField = ['name', 'persona', 'tone', 'greeting', 'user_nickname', 'avatar_url'].some(k => k in body)
   if (!hasField) {
     return NextResponse.json({ success: false, error: '没有需要更新的内容' }, { status: 400 })
   }
@@ -127,6 +127,7 @@ export async function PATCH(request: NextRequest) {
       updates.name = name
     }
     if (typeof body.persona === 'string') updates.persona = body.persona.trim()
+    if (typeof body.tone === 'string') updates.tone = body.tone.trim()
     if (typeof body.greeting === 'string') updates.greeting = body.greeting.trim()
     if (typeof body.user_nickname === 'string') updates.user_nickname = body.user_nickname.trim()
     if (typeof body.avatar_url === 'string') updates.avatar_url = body.avatar_url.trim()

@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         name,
         persona: typeof body.persona === 'string' ? body.persona.trim() : null,
+        tone: typeof body.tone === 'string' ? body.tone.trim() : null,
         greeting: typeof body.greeting === 'string' ? body.greeting.trim() : null,
         user_nickname: typeof body.user_nickname === 'string' ? body.user_nickname.trim() : null,
       })

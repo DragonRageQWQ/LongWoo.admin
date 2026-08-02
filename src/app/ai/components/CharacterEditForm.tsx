@@ -14,9 +14,13 @@ const CameraIcon = () => (
 const MAX_LENGTHS = {
   name: 30,
   persona: 2000,
+  tone: 50,
   greeting: 300,
   user_nickname: 20,
 }
+
+// 语气风格预设
+const TONE_PRESETS = ['温柔', '活泼', '傲娇', '高冷', '幽默', '可爱', '沉稳', '热情', '毒舌', '元气', '慵懒', '神秘']
 
 /**
  * 角色编辑表单（新建 / 编辑共用）
@@ -39,6 +43,7 @@ export default function CharacterEditForm({
 
   const [name, setName] = useState(initial?.name || '')
   const [persona, setPersona] = useState(initial?.persona || '')
+  const [tone, setTone] = useState(initial?.tone || '')
   const [greeting, setGreeting] = useState(initial?.greeting || '')
   const [userNickname, setUserNickname] = useState(initial?.user_nickname || '')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initial?.avatar_url || null)
@@ -121,6 +126,7 @@ export default function CharacterEditForm({
           body: JSON.stringify({
             name: trimmedName,
             persona: persona.trim(),
+            tone: tone.trim(),
             greeting: greeting.trim(),
             user_nickname: userNickname.trim(),
           }),
@@ -163,6 +169,7 @@ export default function CharacterEditForm({
         body: JSON.stringify({
           name: trimmedName,
           persona: persona.trim(),
+          tone: tone.trim(),
           greeting: greeting.trim(),
           user_nickname: userNickname.trim(),
           avatar_url: avatarUrl,
@@ -275,6 +282,32 @@ export default function CharacterEditForm({
           maxLength={MAX_LENGTHS.persona}
         />
         <div className="char-counter">{persona.length}/{MAX_LENGTHS.persona}</div>
+      </div>
+
+      {/* 语气风格 */}
+      <div className="form-section">
+        <label className="field-label">语气风格<span className="field-hint">点击选择，也可以自己写</span></label>
+        <div className="tone-presets">
+          {TONE_PRESETS.map(t => (
+            <button
+              key={t}
+              type="button"
+              className={`tone-chip ${tone === t ? 'active' : ''}`}
+              onClick={() => setTone(tone === t ? '' : t)}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <input
+          className="form-input"
+          style={{ marginTop: 'var(--space-sm)' }}
+          value={tone}
+          onChange={e => setTone(e.target.value)}
+          placeholder="自定义语气，例如：带着点方言腔、喜欢说反话…"
+          maxLength={MAX_LENGTHS.tone}
+        />
+        <div className="char-counter">{tone.length}/{MAX_LENGTHS.tone}</div>
       </div>
 
       {/* 开场白 */}

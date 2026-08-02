@@ -30,6 +30,13 @@ const ChatIcon = () => (
   </svg>
 )
 
+const EditIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+)
+
 // ===== 头像组件（无头像显示名字首字） =====
 function CharacterAvatar({ character, size = 56 }: { character: AiCharacter; size?: number }) {
   if (character.avatar_url) {
@@ -137,23 +144,32 @@ export default function CharactersPage() {
         <>
           <div className="character-list">
             {characters.map(char => (
-              <Link
-                key={char.id}
-                href={`/ai/characters/${char.id}`}
-                className="character-card"
-              >
-                <CharacterAvatar character={char} size={48} />
-                <div className="character-info">
-                  <div className="character-name-row">
-                    <span className="character-name">{char.name}</span>
-                    <ChatIcon />
+              <div key={char.id} className="character-card-wrap">
+                <Link
+                  href={`/ai/characters/${char.id}`}
+                  className="character-card"
+                >
+                  <CharacterAvatar character={char} size={48} />
+                  <div className="character-info">
+                    <div className="character-name-row">
+                      <span className="character-name">{char.name}</span>
+                      <ChatIcon />
+                    </div>
+                    <p className="character-desc">
+                      {char.persona?.slice(0, 40) || (char.user_nickname ? `叫你「${char.user_nickname}」` : '还没有人设')}
+                      {char.persona && char.persona.length > 40 ? '…' : ''}
+                    </p>
                   </div>
-                  <p className="character-desc">
-                    {char.persona?.slice(0, 40) || (char.user_nickname ? `叫你「${char.user_nickname}」` : '还没有人设')}
-                    {char.persona && char.persona.length > 40 ? '…' : ''}
-                  </p>
-                </div>
-              </Link>
+                </Link>
+                <Link
+                  href={`/ai/characters/${char.id}/edit`}
+                  className="character-card-edit"
+                  title="调整角色设定"
+                  aria-label="调整角色设定"
+                >
+                  <EditIcon />
+                </Link>
+              </div>
             ))}
           </div>
 
@@ -165,6 +181,11 @@ export default function CharactersPage() {
           </div>
         </>
       )}
+
+      {/* 浮动创建按钮（任何状态都可见） */}
+      <Link href="/ai/characters/new" className="fab-create" aria-label="创建新角色" title="创建新角色">
+        <PlusIcon />
+      </Link>
     </div>
   )
 }
@@ -178,6 +199,11 @@ function TopBar() {
           <h1 className="top-title">龙灵工坊</h1>
           <span className="top-sub">你的专属 AI 角色</span>
         </div>
+      </div>
+      <div className="top-actions">
+        <Link href="/ai/characters/new" className="icon-btn" title="创建新角色" aria-label="创建新角色">
+          <PlusIcon />
+        </Link>
       </div>
     </header>
   )

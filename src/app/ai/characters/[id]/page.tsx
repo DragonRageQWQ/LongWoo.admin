@@ -32,6 +32,12 @@ const TrashIcon = () => (
   </svg>
 )
 
+const PlusIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5v14" /><path d="M5 12h14" />
+  </svg>
+)
+
 // ===== 头像（角色或用户） =====
 function Avatar({ src, name, size, className }: { src?: string | null; name: string; size: number; className?: string }) {
   if (src) {
@@ -253,10 +259,14 @@ export default function CharacterChatPage() {
           </div>
         </div>
         <div className="top-actions">
+          <Link href="/ai/characters/new" className="chat-create-btn" title="创建新角色" aria-label="创建新角色">
+            <PlusIcon />
+            新建
+          </Link>
           <button className="icon-btn" onClick={handleClear} disabled={clearing} title="清空对话" aria-label="清空对话">
             <TrashIcon />
           </button>
-          <Link href={`/ai/characters/${characterId}/edit`} className="icon-btn" title="编辑角色" aria-label="编辑角色">
+          <Link href={`/ai/characters/${characterId}/edit`} className="icon-btn" title="调整角色设定" aria-label="调整角色设定">
             <EditIcon />
           </Link>
         </div>
@@ -271,6 +281,9 @@ export default function CharacterChatPage() {
               {character?.user_nickname ? `叫你「${character.user_nickname}」` : '和你的角色对话'}
             </p>
           </div>
+          <Link href={`/ai/characters/${characterId}/edit`} className="btn-ghost" style={{ fontSize: 'var(--font-size-xs)', padding: '6px 12px', flexShrink: 0 }}>
+            调整设定
+          </Link>
         </div>
 
         <div className="chat-messages" ref={messagesRef}>

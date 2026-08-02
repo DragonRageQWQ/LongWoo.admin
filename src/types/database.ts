@@ -98,6 +98,7 @@ export type CaseItem = {
  * name           - AI 角色昵称（AI 的名字）
  * avatar_url     - AI 头像
  * persona        - 人设（角色性格、背景、说话风格）
+ * tone           - 语气风格（温柔/活泼/傲娇/高冷等，可随时调整）
  * greeting       - 开场白（进入对话时的问候语）
  * user_nickname  - 称呼（AI 对用户的称呼，如"主人""朋友"）
  */
@@ -107,6 +108,7 @@ export type AiCharacter = {
   name: string
   avatar_url: string | null
   persona: string | null
+  tone: string | null
   greeting: string | null
   user_nickname: string | null
   is_active: boolean

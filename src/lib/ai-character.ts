@@ -10,6 +10,7 @@ import type { AiCharacter } from '@/types/database'
 export const AI_CHARACTER_MAX_COUNT = 20 // 每个账号最多角色数
 export const AI_CHARACTER_NAME_MAX = 30 // 角色名最大长度
 export const AI_CHARACTER_PERSONA_MAX = 2000 // 人设最大长度
+export const AI_CHARACTER_TONE_MAX = 50 // 语气风格最大长度
 export const AI_CHARACTER_GREETING_MAX = 300 // 开场白最大长度
 export const AI_CHARACTER_NICKNAME_MAX = 20 // 称呼最大长度
 
@@ -30,6 +31,7 @@ const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
 export function validateCharacterFields(input: {
   name?: unknown
   persona?: unknown
+  tone?: unknown
   greeting?: unknown
   user_nickname?: unknown
 }): string[] {
@@ -45,6 +47,11 @@ export function validateCharacterFields(input: {
   // 人设：可选，最多 2000 字符
   if (typeof input.persona === 'string' && input.persona.trim().length > AI_CHARACTER_PERSONA_MAX) {
     errors.push(`人设不能超过 ${AI_CHARACTER_PERSONA_MAX} 个字符`)
+  }
+
+  // 语气风格：可选，最多 50 字符
+  if (typeof input.tone === 'string' && input.tone.trim().length > AI_CHARACTER_TONE_MAX) {
+    errors.push(`语气风格不能超过 ${AI_CHARACTER_TONE_MAX} 个字符`)
   }
 
   // 开场白：可选，最多 300 字符
@@ -69,11 +76,17 @@ export function validateCharacterFields(input: {
 export function buildCharacterSystemPrompt(character: AiCharacter): string {
   const nickname = character.user_nickname?.trim() || '朋友'
   const persona = character.persona?.trim() || '（未设定人设，请以自然亲切的方式与用户对话）'
+  const tone = character.tone?.trim()
   const greeting = character.greeting?.trim()
+
+  const toneLine = tone
+    ? `【语气风格】${tone}。说话时始终保持这种语气，让用户能明显感受到。\n`
+    : ''
 
   let prompt =
     `你正在扮演一个名为「${character.name}」的角色，与用户进行一对一聊天。\n` +
     `【角色人设】${persona}\n` +
+    toneLine +
     `【你对用户的称呼】${nickname}\n` +
     `【你的开场白】${greeting ? `"${greeting}"` : '（无固定开场白，自然开始对话）'}\n` +
     `【对话规则】\n` +
