@@ -141,9 +141,9 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* 下拉面板 */}
+      {/* 下拉面板：自适应视口，不超出屏幕可交互区域 */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+        <div className="fixed sm:absolute right-2 sm:right-0 top-14 sm:top-full sm:mt-2 w-[calc(100vw-2rem)] max-w-[20rem] sm:w-96 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
           {/* 头部 */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-lw-black">通知</h3>
