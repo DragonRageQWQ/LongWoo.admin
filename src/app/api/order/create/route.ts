@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createBrowserClient } from '@supabase/supabase-js'
-import { createClient, getSessionUser } from '@/lib/supabase/server'
+import { getSessionUser } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { isValidUUID, validateOrderInput } from '@/lib/order-utils'
@@ -28,8 +28,11 @@ export const dynamic = 'force-dynamic'
  *   serviceTypeId   string  可选  服务类型 id
  *
  * 返回（JSON）：
- *   成功 { success: true, orderNo: string }
+ *   成功 { success: true, orderNo: string, orderId: string }
  *   失败 { success: false, error: string }
+ *
+ * 附件：订单创建后，前端用返回的 orderId 调用
+ * POST /api/order/upload-attachment 上传设定图片。
  */
 export async function POST(request: NextRequest) {
   // CSRF 保护：校验 Origin/Referer 头，确保请求来自本站
@@ -94,8 +97,6 @@ export async function POST(request: NextRequest) {
       { status: 429 }
     )
   }
-
-  const supabase = await createClient()
 
   // 验证用户登录状态（通过 Supabase cookie）
   // 客户可匿名下单：登录态仅用于关联 operation_logs，未登录不阻断下单流程
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest) {
       console.error('记录操作日志失败:', logError)
     }
 
-    return NextResponse.json({ success: true, orderNo })
+    return NextResponse.json({ success: true, orderNo, orderId: order.id })
   } catch (error) {
     console.error('创建订单异常:', error)
     return NextResponse.json(

@@ -820,6 +820,30 @@
 
           if (result.success && result.orderNo) {
             try { sessionStorage.setItem('longwoo_order_no', result.orderNo); } catch (e) {}
+
+            // 上传设定图（如果用户在第 1 步选择了图片）
+            // 订单已创建成功，上传失败不阻断下单流程（静默记录）
+            var designRefImage = '';
+            try { designRefImage = sessionStorage.getItem('longwoo_design_ref_image') || ''; } catch (e) {}
+            var designRefName = '';
+            try { designRefName = sessionStorage.getItem('longwoo_design_ref_name') || ''; } catch (e) {}
+
+            if (result.orderId && designRefImage) {
+              try {
+                await fetch('/api/order/upload-attachment', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    orderId: result.orderId,
+                    fileName: designRefName,
+                    dataUrl: designRefImage
+                  })
+                });
+              } catch (e) {
+                // 上传失败静默处理，不阻断跳转
+              }
+            }
+
             window.location.href = 'order-step5.html';
           } else {
             showTip(result.error || '提交失败，请重试');
