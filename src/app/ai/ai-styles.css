@@ -303,9 +303,65 @@ textarea.form-input {
 
 .empty-desc {
   font-size: var(--font-size-sm);
-  color: var(--color-primary-lighter);
+  color: #9CA3AF;
   margin: 0;
   line-height: var(--line-height);
+}
+
+/* 空状态长方形创建按钮 */
+.empty-create-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-xl);
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+  margin-top: var(--space-sm);
+}
+
+.empty-create-btn:active {
+  transform: scale(0.97);
+}
+
+.empty-create-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* 列表底部创建按钮 */
+.footer-create-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: var(--space-md);
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.footer-create-btn:active {
+  transform: scale(0.97);
+}
+
+.footer-create-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* ===== 语气风格选择器 ===== */

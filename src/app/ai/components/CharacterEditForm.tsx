@@ -2,14 +2,9 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Camera, Loader2, Trash2 } from 'lucide-react'
+import Button from '@/components/ui/Button'
 import type { AiCharacter } from '@/types/database'
-
-const CameraIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-    <circle cx="12" cy="13" r="4" />
-  </svg>
-)
 
 const MAX_LENGTHS = {
   name: 30,
@@ -22,8 +17,12 @@ const MAX_LENGTHS = {
 // 语气风格预设
 const TONE_PRESETS = ['温柔', '活泼', '傲娇', '高冷', '幽默', '可爱', '沉稳', '热情', '毒舌', '元气', '慵懒', '神秘']
 
+const inputClass =
+  'w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition'
+
 /**
  * 角色编辑表单（新建 / 编辑共用）
+ * 采用与委托提交页面一致的卡片式 Tailwind 设计
  *
  * @param mode         'create' | 'edit'
  * @param characterId  编辑模式下的角色 ID
@@ -218,19 +217,28 @@ export default function CharacterEditForm({
   }, [characterId, name, deleting, router])
 
   return (
-    <div className="edit-form">
-      {/* 头像 */}
-      <div className="avatar-uploader">
-        <button type="button" className="avatar-circle-btn" onClick={handleAvatarClick} disabled={uploadingAvatar || saving}>
+    <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
+      {/* ===== 头像 ===== */}
+      <div className="flex flex-col items-center gap-2 mb-6">
+        <button
+          type="button"
+          onClick={handleAvatarClick}
+          disabled={uploadingAvatar || saving}
+          className="relative w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold overflow-hidden cursor-pointer group disabled:opacity-60"
+        >
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="角色头像" />
+            <img src={avatarUrl} alt="角色头像" className="w-full h-full object-cover" />
           ) : (
-            name.trim() ? name.charAt(0) : '灵'
+            <span>{name.trim() ? name.charAt(0) : '灵'}</span>
           )}
-          <span className="avatar-overlay">
-            <CameraIcon />
-            更换头像
+          <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+            {uploadingAvatar ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Camera className="w-4 h-4" />
+            )}
+            <span className="text-[10px]">更换头像</span>
           </span>
         </button>
         <input
@@ -238,112 +246,197 @@ export default function CharacterEditForm({
           type="file"
           accept="image/jpeg,image/png,image/gif,image/webp"
           onChange={handleAvatarChange}
-          style={{ display: 'none' }}
+          className="hidden"
         />
-        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary-lighter)' }}>
+        <p className="text-xs text-gray-400">
           {uploadingAvatar ? '上传中…' : '点击头像可更换图片（2MB以内）'}
-        </span>
+        </p>
       </div>
 
-      {/* 名字 */}
-      <div className="form-section">
-        <label className="field-label">角色名字<span className="field-hint">AI 的名字</span></label>
-        <input
-          className="form-input"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="例如：小灵、龙岚、阿焰…"
-          maxLength={MAX_LENGTHS.name}
-        />
-        <div className="char-counter">{name.length}/{MAX_LENGTHS.name}</div>
-      </div>
-
-      {/* 称呼 */}
-      <div className="form-section">
-        <label className="field-label">对你的称呼<span className="field-hint">AI 怎么叫你</span></label>
-        <input
-          className="form-input"
-          value={userNickname}
-          onChange={e => setUserNickname(e.target.value)}
-          placeholder="例如：主人、朋友、搭档…"
-          maxLength={MAX_LENGTHS.user_nickname}
-        />
-        <div className="char-counter">{userNickname.length}/{MAX_LENGTHS.user_nickname}</div>
-      </div>
-
-      {/* 人设 */}
-      <div className="form-section">
-        <label className="field-label">角色人设<span className="field-hint">性格、背景、说话风格</span></label>
-        <textarea
-          className="form-input"
-          value={persona}
-          onChange={e => setPersona(e.target.value)}
-          placeholder={'例如：\n你是一只温柔又傲娇的银龙，喜欢晒太阳和收集亮晶晶的东西。\n说话简短带点小脾气，但心里很在意对方。'}
-          maxLength={MAX_LENGTHS.persona}
-        />
-        <div className="char-counter">{persona.length}/{MAX_LENGTHS.persona}</div>
-      </div>
-
-      {/* 语气风格 */}
-      <div className="form-section">
-        <label className="field-label">语气风格<span className="field-hint">点击选择，也可以自己写</span></label>
-        <div className="tone-presets">
-          {TONE_PRESETS.map(t => (
-            <button
-              key={t}
-              type="button"
-              className={`tone-chip ${tone === t ? 'active' : ''}`}
-              onClick={() => setTone(tone === t ? '' : t)}
-            >
-              {t}
-            </button>
-          ))}
+      {/* ===== 表单字段 ===== */}
+      <div className="space-y-5">
+        {/* 名字 */}
+        <div>
+          <label className="block text-sm font-medium text-lw-black mb-1.5">
+            角色名字 <span className="text-red-500">*</span>
+            <span className="text-xs text-gray-400 font-normal ml-2">AI 的名字</span>
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="例如：小灵、龙岚、阿焰…"
+            maxLength={MAX_LENGTHS.name}
+            className={inputClass}
+          />
+          <p className="mt-1.5 text-xs text-gray-400 text-right">
+            {name.length}/{MAX_LENGTHS.name}
+          </p>
         </div>
-        <input
-          className="form-input"
-          style={{ marginTop: 'var(--space-sm)' }}
-          value={tone}
-          onChange={e => setTone(e.target.value)}
-          placeholder="自定义语气，例如：带着点方言腔、喜欢说反话…"
-          maxLength={MAX_LENGTHS.tone}
-        />
-        <div className="char-counter">{tone.length}/{MAX_LENGTHS.tone}</div>
+
+        {/* 称呼 */}
+        <div>
+          <label className="block text-sm font-medium text-lw-black mb-1.5">
+            对你的称呼
+            <span className="text-xs text-gray-400 font-normal ml-2">AI 怎么叫你</span>
+          </label>
+          <input
+            type="text"
+            value={userNickname}
+            onChange={(e) => setUserNickname(e.target.value)}
+            placeholder="例如：主人、朋友、搭档…"
+            maxLength={MAX_LENGTHS.user_nickname}
+            className={inputClass}
+          />
+          <p className="mt-1.5 text-xs text-gray-400 text-right">
+            {userNickname.length}/{MAX_LENGTHS.user_nickname}
+          </p>
+        </div>
+
+        {/* 人设 */}
+        <div>
+          <label className="block text-sm font-medium text-lw-black mb-1.5">
+            角色人设
+            <span className="text-xs text-gray-400 font-normal ml-2">性格、背景、说话风格</span>
+          </label>
+          <textarea
+            rows={5}
+            value={persona}
+            onChange={(e) => setPersona(e.target.value)}
+            placeholder={'例如：\n你是一只温柔又傲娇的银龙，喜欢晒太阳和收集亮晶晶的东西。\n说话简短带点小脾气，但心里很在意对方。'}
+            maxLength={MAX_LENGTHS.persona}
+            className={`${inputClass} resize-none`}
+          />
+          <p className="mt-1.5 text-xs text-gray-400 text-right">
+            {persona.length}/{MAX_LENGTHS.persona}
+          </p>
+        </div>
+
+        {/* 语气风格 */}
+        <div>
+          <label className="block text-sm font-medium text-lw-black mb-1.5">
+            语气风格
+            <span className="text-xs text-gray-400 font-normal ml-2">点击选择，也可以自己写</span>
+          </label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {TONE_PRESETS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className={`px-3 py-1.5 text-sm rounded-full border transition cursor-pointer ${
+                  tone === t
+                    ? 'bg-lw-accent text-white border-lw-accent'
+                    : 'bg-white text-lw-black border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => setTone(tone === t ? '' : t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <input
+            type="text"
+            value={tone}
+            onChange={(e) => setTone(e.target.value)}
+            placeholder="自定义语气，例如：带着点方言腔、喜欢说反话…"
+            maxLength={MAX_LENGTHS.tone}
+            className={inputClass}
+          />
+          <p className="mt-1.5 text-xs text-gray-400 text-right">
+            {tone.length}/{MAX_LENGTHS.tone}
+          </p>
+        </div>
+
+        {/* 开场白 */}
+        <div>
+          <label className="block text-sm font-medium text-lw-black mb-1.5">
+            开场白
+            <span className="text-xs text-gray-400 font-normal ml-2">对话开始时它说的第一句话</span>
+          </label>
+          <input
+            type="text"
+            value={greeting}
+            onChange={(e) => setGreeting(e.target.value)}
+            placeholder="例如：哼，你终于来了，我等你好久了。"
+            maxLength={MAX_LENGTHS.greeting}
+            className={inputClass}
+          />
+          <p className="mt-1.5 text-xs text-gray-400 text-right">
+            {greeting.length}/{MAX_LENGTHS.greeting}
+          </p>
+        </div>
       </div>
 
-      {/* 开场白 */}
-      <div className="form-section">
-        <label className="field-label">开场白<span className="field-hint">对话开始时它说的第一句话</span></label>
-        <input
-          className="form-input"
-          value={greeting}
-          onChange={e => setGreeting(e.target.value)}
-          placeholder="例如：哼，你终于来了，我等你好久了。"
-          maxLength={MAX_LENGTHS.greeting}
-        />
-        <div className="char-counter">{greeting.length}/{MAX_LENGTHS.greeting}</div>
-      </div>
+      {/* 错误提示 */}
+      {error && (
+        <div className="mt-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          {error}
+        </div>
+      )}
 
-      {error && <p className="form-error">{error}</p>}
-
-      {/* 底部操作 */}
-      <div className="form-actions">
+      {/* ===== 底部操作按钮 ===== */}
+      <div className="flex gap-3 mt-8 pt-6 border-t border-gray-100">
         {mode === 'edit' && characterId ? (
           <>
-            <button className="btn-danger" onClick={handleDelete} disabled={deleting || saving}>
-              {deleting ? '删除中…' : '删除角色'}
-            </button>
-            <button className="btn-primary" onClick={handleSave} disabled={saving || !name.trim()}>
-              {saving ? '保存中…' : '保存'}
-            </button>
+            <Button
+              variant="outline"
+              onClick={handleDelete}
+              disabled={deleting || saving}
+              className="flex-1"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  删除中…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  删除角色
+                </>
+              )}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              disabled={saving || !name.trim()}
+              className="flex-1"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  保存中…
+                </>
+              ) : (
+                '保存'
+              )}
+            </Button>
           </>
         ) : (
           <>
-            <button className="btn-ghost" onClick={() => router.push('/ai/characters')} disabled={saving}>
+            <Button
+              variant="outline"
+              onClick={() => router.push('/ai/characters')}
+              disabled={saving}
+              className="flex-1"
+            >
               取消
-            </button>
-            <button className="btn-primary" onClick={handleSave} disabled={saving || !name.trim()}>
-              {saving ? '创建中…' : '创建角色'}
-            </button>
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              disabled={saving || !name.trim()}
+              className="flex-1"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  创建中…
+                </>
+              ) : (
+                '创建角色'
+              )}
+            </Button>
           </>
         )}
       </div>

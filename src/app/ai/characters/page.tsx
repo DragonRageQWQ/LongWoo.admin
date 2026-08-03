@@ -135,9 +135,9 @@ export default function CharactersPage() {
             创建一个属于你的 AI 角色吧<br />
             设定它的名字、人设和称呼，和它自由对话
           </p>
-          <Link href="/ai/characters/new" className="btn-primary" style={{ marginTop: 'var(--space-sm)' }}>
+          <Link href="/ai/characters/new" className="empty-create-btn">
             <PlusIcon />
-            创建第一个角色
+            添加角色
           </Link>
         </div>
       ) : (
@@ -174,18 +174,13 @@ export default function CharactersPage() {
           </div>
 
           <div className="character-list-footer">
-            <Link href="/ai/characters/new" className="btn-primary" style={{ width: '100%' }}>
+            <Link href="/ai/characters/new" className="footer-create-btn">
               <PlusIcon />
-              创建新角色
+              添加角色
             </Link>
           </div>
         </>
       )}
-
-      {/* 浮动创建按钮（任何状态都可见） */}
-      <Link href="/ai/characters/new" className="fab-create" aria-label="创建新角色" title="创建新角色">
-        <PlusIcon />
-      </Link>
     </div>
   )
 }
@@ -199,11 +194,6 @@ function TopBar() {
           <h1 className="top-title">龙灵工坊</h1>
           <span className="top-sub">你的专属 AI 角色</span>
         </div>
-      </div>
-      <div className="top-actions">
-        <Link href="/ai/characters/new" className="icon-btn" title="创建新角色" aria-label="创建新角色">
-          <PlusIcon />
-        </Link>
       </div>
     </header>
   )
