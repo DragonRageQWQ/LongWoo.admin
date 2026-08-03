@@ -81,12 +81,16 @@ export async function saveOtp(email: string, code: string): Promise<void> {
  *                设为 false 时仅校验不消费，用于延迟消费场景：
  *                先校验验证码 → 建立会话 → 成功后再调用 consumeOtp 消费
  *                这样如果建立会话失败，验证码仍然有效，用户可重试
+ * @returns { valid, systemError }
+ *   - valid: 验证码是否正确有效
+ *   - systemError: 数据库查询失败等系统错误（区别于验证码错误，
+ *     调用方应提示"系统繁忙请重试"而非"验证码无效"）
  */
 export async function verifyOtp(
   email: string,
   code: string,
   consume: boolean = true
-): Promise<{ valid: boolean }> {
+): Promise<{ valid: boolean; systemError?: boolean }> {
   const admin = createAdminClient()
 
   // 查询该邮箱最新的未使用验证码；attempts 缺失时认证应失败关闭。
@@ -101,17 +105,18 @@ export async function verifyOtp(
 
   if (error) {
     console.error('数据库查询 OTP 失败:', error.message)
-    return { valid: false }
+    // 系统错误与"验证码无效"区分，避免把网络抖动误报为用户输入错误
+    return { valid: false, systemError: true }
   }
 
   if (!data) {
-    return { valid: false }
+    return { valid: false, systemError: false }
   }
 
   // 检查是否过期
   if (new Date(data.expires_at) < new Date()) {
     await admin.from('otp_codes').delete().eq('id', data.id)
-    return { valid: false }
+    return { valid: false, systemError: false }
   }
 
   // 恒定时间比较验证码哈希，防止时序攻击
@@ -119,7 +124,7 @@ export async function verifyOtp(
     if (consume) {
       await admin.from('otp_codes').update({ used: true }).eq('id', data.id)
     }
-    return { valid: true }
+    return { valid: true, systemError: false }
   }
 
   // 验证码错误：增加尝试次数
@@ -138,7 +143,7 @@ export async function verifyOtp(
       console.error('更新 OTP 尝试次数失败:', attemptError.message)
     }
   }
-  return { valid: false }
+  return { valid: false, systemError: false }
 }
 
 /**

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "build:static-css": "tailwindcss -i src/styles/tailwind-static.css -o public/css/tailwind-static.css --content 'public/**/*.html' --minify"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

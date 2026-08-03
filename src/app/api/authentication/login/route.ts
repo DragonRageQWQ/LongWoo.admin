@@ -10,6 +10,7 @@ import {
 } from '@/lib/supabase/cookie-utils'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateApiCsrf } from '@/lib/api-csrf'
+import { fetchWithRetry } from '@/lib/network-utils'
 import { RATE_LIMIT_OTP_WINDOW } from '@/lib/constants'
 
 // Vercel Hobby 计划默认超时 10 秒，认证流程含 5+ API 调用需要更长时间
@@ -194,24 +195,48 @@ export async function POST(request: Request) {
     )
 
     if (!otpResult.valid) {
+      // 区分系统错误与验证码错误：系统错误（数据库查询失败/网络抖动）
+      // 提示重试而非"验证码无效"，验证码错误则提示重新获取。
+      if (otpResult.systemError) {
+        return NextResponse.json(
+          { success: false, error: '系统繁忙，请重试' },
+          { status: 500 }
+        )
+      }
       return NextResponse.json(
         { success: false, error: '验证码无效或已过期，请重新获取' },
         { status: 400 }
       )
     }
 
-    // ===== 第2步：生成 magic link（禁用邮件发送） =====
+    // ===== 第2步：生成 magic link（禁用邮件发送，带有限重试） =====
     debugLog('[Login API] 第2步：生成 magic link...')
     const step2Start = Date.now()
     const admin = createAdminClient()
-    const { data: linkData, error: linkError } =
-      await admin.auth.admin.generateLink({
+
+    // generateLink 偶发网络抖动会直接导致登录失败（验证码未消费，
+    // 用户重试可成功——这正是"首次报错、再次成功"的来源之一）。
+    // 此处对临时错误做有限重试，减少偶发失败。
+    let linkData: {
+      properties?: { hashed_token?: string | null } | null
+      user?: { id?: string } | null
+    } | null = null
+    let linkError: { message?: string; status?: string | number } | null = null
+    for (let attempt = 0; attempt <= 2; attempt += 1) {
+      const result = await admin.auth.admin.generateLink({
         type: 'magiclink',
         email: normalizedEmail,
         options: {
           send_email: false,
         } as Record<string, unknown>,
       } as Parameters<typeof admin.auth.admin.generateLink>[0])
+      linkData = result.data
+      linkError = result.error
+      if (!linkError && linkData) break
+      if (attempt < 2) {
+        await new Promise(resolve => setTimeout(resolve, 300 * (attempt + 1)))
+      }
+    }
 
     if (linkError || !linkData) {
       debugError(
@@ -220,7 +245,7 @@ export async function POST(request: Request) {
         linkError?.status
       )
       return NextResponse.json(
-        { success: false, error: '生成登录令牌失败，请稍后重试' },
+        { success: false, error: '系统繁忙，请重试' },
         { status: 500 }
       )
     }
@@ -240,35 +265,45 @@ export async function POST(request: Request) {
       )
     }
 
-    // ===== 第3步：HTTP POST 到 /auth/v1/verify 交换 session =====
+    // ===== 第3步：HTTP POST 到 /auth/v1/verify 交换 session（带有限重试） =====
     debugLog('[Login API] 第3步：验证 token 获取 session...')
     const step3Start = Date.now()
-    const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: supabaseAnonKey,
-      },
-      body: JSON.stringify({
-        token_hash: tokenHash,
-        type: 'magiclink',
-      }),
-    })
+    // /auth/v1/verify 偶发网络抖动同样会导致登录失败；用 fetchWithRetry
+    // 对网络异常与 5xx 做有限重试（验证码已通过校验且未消费，重试安全）。
+    const verifyJson = await fetchWithRetry(
+      () =>
+        fetch(`${supabaseUrl}/auth/v1/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: supabaseAnonKey,
+          },
+          body: JSON.stringify({
+            token_hash: tokenHash,
+            type: 'magiclink',
+          }),
+          cache: 'no-store',
+        }),
+      { retries: 2, delayMs: 300 }
+    )
 
-    if (!verifyResponse.ok) {
-      const errText = await verifyResponse.text()
-      debugError(
-        '[Login API] verify 失败:',
-        verifyResponse.status,
-        errText
-      )
+    if (!verifyJson) {
+      debugError('[Login API] verify 失败（重试后仍失败）')
       return NextResponse.json(
-        { success: false, error: '令牌验证失败，请重新获取验证码' },
+        { success: false, error: '系统繁忙，请重试' },
         { status: 500 }
       )
     }
 
-    const sessionData = await verifyResponse.json()
+    const sessionData = verifyJson as {
+      access_token?: string
+      refresh_token?: string
+      expires_at?: number
+      expires_in?: number
+      token_type?: string
+      user?: { id?: string; email?: string; [key: string]: unknown }
+      [key: string]: unknown
+    }
 
     if (
       !sessionData.access_token ||
@@ -277,7 +312,7 @@ export async function POST(request: Request) {
     ) {
       debugError('[Login API] verify 返回数据不完整')
       return NextResponse.json(
-        { success: false, error: '令牌验证失败，请重新获取验证码' },
+        { success: false, error: '系统繁忙，请重试' },
         { status: 500 }
       )
     }

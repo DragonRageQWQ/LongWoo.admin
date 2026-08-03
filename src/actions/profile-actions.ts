@@ -7,6 +7,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
 import { validateFileMagicNumber } from '@/lib/file-validation'
 import { getOrCreateProfile } from '@/lib/profile'
+import { confirmPasswordSet } from '@/lib/password-confirm'
 import { getClientIp } from '@/lib/server-utils'
 import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_MIME_TYPES, RATE_LIMIT_AVATAR_WINDOW, RATE_LIMIT_AVATAR_MAX, RATE_LIMIT_PASSWORD_WINDOW, RATE_LIMIT_PASSWORD_MAX, RATE_LIMIT_CHECK_EMAIL_WINDOW, RATE_LIMIT_CHECK_EMAIL_MAX } from '@/lib/constants'
 
@@ -212,7 +213,7 @@ export async function updateAvatar(
 export async function updatePassword(
   newPassword: string,
   currentPassword?: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; sessionInvalidated?: boolean }> {
   try {
     // CSRF 保护
     const csrfError = await validateCsrf()
@@ -290,9 +291,27 @@ export async function updatePassword(
       { password: newPassword }
     )
 
+    // 幂等确认（修复"报错但实际成功"）：
+    // updateUserById 偶发"响应丢失/超时"——服务端已成功修改密码，
+    // 但客户端收到错误。此时直接返回失败会误导用户以为密码未设置。
+    // 用新密码尝试登录验证：能登录说明密码已实际设置，仅响应丢失。
     if (updateError) {
-      console.error('设置密码失败:', updateError.message)
-      return { success: false, error: '设置密码失败：' + updateError.message }
+      console.error('设置密码报错（尝试确认是否实际已设置）:', updateError.message)
+      const confirmResult = await confirmPasswordSet({
+        email: user.email!,
+        newPassword,
+        updateError,
+        attemptLogin: async (email, password) => {
+          const { createClient: createServerSupabase } = await import('@/lib/supabase/server')
+          const client = await createServerSupabase()
+          const { error } = await client.auth.signInWithPassword({ email, password })
+          return { error }
+        },
+      })
+      if (!confirmResult.success) {
+        return { success: false, error: confirmResult.error }
+      }
+      // 密码已成功设置（响应丢失场景），继续走成功流程
     }
 
     // 使用 admin 客户端更新 has_password 标记，绕过 RLS 限制
@@ -310,7 +329,19 @@ export async function updatePassword(
     }
 
     revalidatePath('/profile')
-    return { success: true }
+
+    // 修改密码成功后，Supabase GoTrue 会撤销该用户的所有现有 session
+    //（含当前 access token 与 refresh token）。清除本地 cookie 并提示
+    // 重新登录，避免"密码已改但后续请求 401"的困惑。
+    try {
+      const { createClient: createServerSupabase } = await import('@/lib/supabase/server')
+      const client = await createServerSupabase()
+      await client.auth.signOut()
+    } catch {
+      // 登出失败不阻断主流程；middleware 会兜底处理失效 session
+    }
+
+    return { success: true, sessionInvalidated: true }
   } catch (error) {
     console.error('设置密码异常:', error)
     return { success: false, error: '操作时发生未知错误' }

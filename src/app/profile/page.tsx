@@ -234,12 +234,20 @@ export default function ProfilePage() {
         profile?.has_password ? oldPassword : undefined
       );
       if (result.success) {
-        await refreshProfile();
-        setEditingPassword(false);
-        setOldPassword("");
-        setPasswordInput("");
-        setPasswordConfirm("");
-        setPasswordSuccess("密码设置成功");
+        // 修改密码成功：Supabase 会撤销旧 session，需重新登录
+        if (result.sessionInvalidated) {
+          setPasswordSuccess("密码设置成功，请重新登录");
+          setTimeout(() => {
+            window.location.href = "/login?changed=1";
+          }, 1200);
+        } else {
+          await refreshProfile();
+          setEditingPassword(false);
+          setOldPassword("");
+          setPasswordInput("");
+          setPasswordConfirm("");
+          setPasswordSuccess("密码设置成功");
+        }
       } else {
         setPasswordError(result.error ?? "设置密码失败");
       }

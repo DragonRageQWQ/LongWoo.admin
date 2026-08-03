@@ -76,6 +76,12 @@ function LoginForm() {
       setInfo("登录状态已过期，请重新登录");
     }
 
+    // 密码修改成功提示
+    const changed = searchParams.get("changed");
+    if (changed === "1") {
+      setInfo("密码已修改，请使用新密码重新登录");
+    }
+
     isQQConfigured().then(setQqAvailable).catch(() => setQqAvailable(false));
   }, [searchParams]);
 
