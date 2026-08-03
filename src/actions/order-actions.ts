@@ -1,135 +1,20 @@
-'use server'
+﻿'use server'
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, canUserAccessOrder, requireAdmin } from '@/lib/auth'
 import { escapeHtml, escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
-import { validateOrderInput, validateUrl, isValidUUID } from '@/lib/order-utils'
+import { validateUrl, isValidUUID } from '@/lib/order-utils'
 import { maskPhone, maskEmail } from '@/lib/utils'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
 import { getClientIp, logOperation, sendEmail } from '@/lib/server-utils'
-import { RATE_LIMIT_ORDER_WINDOW, RATE_LIMIT_ORDER_MAX, MAX_PAGE_LIMIT, ESTIMATE_PRICE_MIN, ESTIMATE_PRICE_MAX, RATE_LIMIT_EMAIL_REPLY_MAX, RATE_LIMIT_EMAIL_REPLY_WINDOW } from '@/lib/constants'
+import { RATE_LIMIT_ORDER_WINDOW, MAX_PAGE_LIMIT, ESTIMATE_PRICE_MIN, ESTIMATE_PRICE_MAX, RATE_LIMIT_EMAIL_REPLY_MAX, RATE_LIMIT_EMAIL_REPLY_WINDOW } from '@/lib/constants'
 import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/database'
 
 // ==================== 订单查询速率限制（数据库版） ====================
 // 基于 IP + 手机号组合做限制，同一组合 1 分钟内最多查询 5 次
 // 使用数据库表实现，兼容 Vercel Serverless 多实例环境
-
-// ==================== 创建委托单 ====================
-
-export async function createOrder(formData: {
-  serviceTypeId?: string
-  customerName: string
-  customerPhone: string
-  customerEmail: string
-  requirements: string
-  attachments?: Array<{
-    fileName: string
-    filePath: string
-    fileSize?: number
-    fileType?: string
-  }>
-}): Promise<{ success: boolean; orderNo?: string; error?: string }> {
-  // CSRF 保护
-  const csrfError = await validateCsrf()
-  if (csrfError) {
-    return { success: false, error: csrfError }
-  }
-
-  // 输入验证
-  const validationError = validateOrderInput(formData)
-  if (validationError) {
-    return { success: false, error: validationError }
-  }
-
-  // 速率限制：基于 IP，防止恶意刷单
-  const ip = await getClientIp()
-  const rateLimitResult = await checkRateLimit(
-    `createorder:${ip}`,
-    RATE_LIMIT_ORDER_MAX,
-    RATE_LIMIT_ORDER_WINDOW
-  )
-  if (!rateLimitResult.allowed) {
-    return { success: false, error: '提交过于频繁，请稍后再试' }
-  }
-
-  const supabase = await createClient()
-
-  try {
-    // 尝试获取当前登录用户（客户可能已登录也可能未登录）
-    const currentUser = await getCurrentUser()
-
-    // 生成单号（使用 admin client：generate_order_no 已 REVOKE anon 执行权限，
-    // 仅 service_role 可调用，未登录用户下单同样适用）
-    const { data: orderNoData, error: orderNoError } = await createAdminClient()
-      .rpc('generate_order_no')
-
-    if (orderNoError || !orderNoData) {
-      return { success: false, error: '生成单号失败' }
-    }
-
-    const orderNo = orderNoData as string
-
-    // 插入 orders 表
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        order_no: orderNo,
-        service_type_id: formData.serviceTypeId || null,
-        status: 'pending',
-        customer_name: formData.customerName,
-        customer_phone: formData.customerPhone,
-        customer_email: formData.customerEmail,
-        requirements: formData.requirements,
-      })
-      .select()
-      .single()
-
-    if (orderError) {
-      console.error('创建委托单失败:', orderError.message)
-      return { success: false, error: '创建委托单失败，请稍后重试' }
-    }
-
-    // 如有附件则插入 order_attachments
-    if (formData.attachments && formData.attachments.length > 0) {
-      const attachmentsToInsert = formData.attachments.map(att => ({
-        order_id: order.id,
-        file_name: att.fileName,
-        file_path: att.filePath,
-        file_size: att.fileSize || null,
-        file_type: att.fileType || null,
-      }))
-
-      const { error: attachError } = await supabase
-        .from('order_attachments')
-        .insert(attachmentsToInsert)
-
-      if (attachError) {
-        console.error('插入附件失败:', attachError.message)
-        // 附件插入失败不影响主流程
-      }
-    }
-
-    // 记录 operation_logs（使用统一的日志记录函数）
-    // 仅在用户已登录时记录；未登录时 RLS 也会阻止写入，行为一致
-    if (currentUser?.userId) {
-      await logOperation(currentUser.userId, 'create_order', 'order', order.id, {
-        customer_name: formData.customerName,
-        customer_email: formData.customerEmail,
-      })
-    }
-
-    revalidatePath('/order/submit')
-    revalidatePath('/admin/dashboard')
-
-    return { success: true, orderNo }
-  } catch (error) {
-    console.error('创建委托单异常:', error)
-    return { success: false, error: '创建委托单时发生未知错误' }
-  }
-}
 
 /**
  * 构建订单查询的公共逻辑
