@@ -47,6 +47,8 @@ export const RATE_LIMIT_PASSWORD_WINDOW = 60 * 1000
 export const RATE_LIMIT_PASSWORD_MAX = 3              // 每分钟最多 3 次密码修改
 export const RATE_LIMIT_CHECK_EMAIL_WINDOW = 60 * 1000
 export const RATE_LIMIT_CHECK_EMAIL_MAX = 10          // 每分钟最多 10 次邮箱查询
+export const RATE_LIMIT_NOTIFY_WINDOW = 60 * 1000
+export const RATE_LIMIT_NOTIFY_MAX = 5                // 每分钟最多 5 次通知发送
 
 // ===== 邮件 =====
 export const DEFAULT_FROM_EMAIL = 'noreply@longwoo.studio'

@@ -125,3 +125,19 @@ export type AiChatMessage = {
   content: string
   created_at: string
 }
+
+/** 通知/站内信（单表 + 每用户一条记录） */
+export type Notification = {
+  id: string
+  /** 收件人 */
+  user_id: string
+  /** 发送人（管理员），null 表示系统 */
+  sender_user_id: string | null
+  /** 发送时的目标群体：all=全体用户，admin=全体管理员，user=全体普通成员 */
+  target_role: 'all' | 'admin' | 'user'
+  title: string
+  content: string
+  is_read: boolean
+  read_at: string | null
+  created_at: string
+}

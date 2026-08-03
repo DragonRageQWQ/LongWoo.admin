@@ -4,10 +4,11 @@ import AdminSidebar, { type AdminTab } from "./_components/AdminSidebar";
 import StatsOverview from "./_components/StatsOverview";
 import OrderList from "./_components/OrderList";
 import UserManagement from "./_components/UserManagement";
+import NotificationManagement from "./_components/NotificationManagement";
 import { getCurrentUser } from "@/lib/auth";
 
 // 支持的有效标签页
-const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "settings"];
+const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "notifications", "settings"];
 
 // 解析当前标签页
 function resolveTab(tabParam: string | undefined): AdminTab {
@@ -48,6 +49,8 @@ function DashboardContent({ activeTab }: { activeTab: AdminTab }) {
       return <OrderList />;
     case "users":
       return <UserManagement />;
+    case "notifications":
+      return <NotificationManagement />;
     case "settings":
       return <PlaceholderPanel title="系统设置" />;
     default:

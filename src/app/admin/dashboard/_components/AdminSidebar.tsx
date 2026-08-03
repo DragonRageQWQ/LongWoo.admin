@@ -13,10 +13,11 @@ import {
   Inbox,
   Home,
   Briefcase,
+  Bell,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 
-export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "settings";
+export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "notifications" | "settings";
 
 interface NavItem {
   key: AdminTab;
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { key: "overview", label: "数据概览", icon: LayoutDashboard },
   { key: "orders", label: "委托管理", icon: ClipboardList },
   { key: "users", label: "用户管理", icon: Users },
+  { key: "notifications", label: "通知管理", icon: Bell },
   { key: "settings", label: "系统设置", icon: Settings, disabled: true },
 ];
 

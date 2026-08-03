@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, LogOut, Loader2 } from "lucide-react";
 import Button from "@/components/ui/Button";
+import NotificationBell from "@/components/layout/NotificationBell";
 import { logoutUser } from "@/actions/auth-actions";
 import { useSession, clearSessionCache } from "@/components/providers/SessionProvider";
 
@@ -74,6 +75,8 @@ function HeaderContent() {
               <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
             ) : profile ? (
               <div className="flex items-center gap-2">
+                {/* 通知铃铛（头像左侧） */}
+                <NotificationBell />
                 <Link
                   href={getDashboardHref()}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
@@ -153,6 +156,12 @@ function HeaderContent() {
 
                 {profile ? (
                   <>
+                    <div className="flex items-center gap-2 px-2">
+                      <NotificationBell />
+                      <span className="text-sm font-medium text-lw-black">
+                        {profile.display_name}
+                      </span>
+                    </div>
                     <Link
                       href={getDashboardHref()}
                       onClick={() => setMobileOpen(false)}
@@ -172,8 +181,8 @@ function HeaderContent() {
                           </span>
                         )}
                       </div>
-                      <span className="text-sm font-medium text-lw-black">
-                        {profile.display_name}
+                      <span className="text-sm font-medium text-lw-accent">
+                        进入{profile.role === "admin" ? "管理后台" : "个人中心"}
                       </span>
                     </Link>
                     <button
