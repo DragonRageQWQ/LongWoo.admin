@@ -13,16 +13,18 @@
 # misc
 .DS_Store
 *.pem
+*.test
 .gittest
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
-# env files
-.env*.local
-.env
+# env files — 拦截所有环境变量文件，仅允许 .env.example
+.env*
+!.env.example
 
 # vercel
 .vercel
@@ -31,5 +33,18 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# IDE
+.idea/
+.vscode/
+
+# test coverage
+coverage/
+
 # temp scripts
 fix-deploy.ps1
+deploy.ps1
+
+# supabase temp files
+supabase-email-template.html
+supabase-email-preview.html
+email-setup-guide.html
