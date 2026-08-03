@@ -578,6 +578,7 @@ npm run build:static-css
 
 ## 13. 版本历史
 
+- **v1.1.0(803)**: 安全加固：修复认证信任链（middleware 一律验证 access_token）、管理后台二次鉴权、profiles INSERT 提权、RLS 策略 'studio'→'user'、SECURITY DEFINER search_path 固定、OTP 哈希约束、AI 角色上限竞态修复、头像文件名随机化、getSession 字段白名单化等（依据安全审计报告 FIND-01~14）。
 - **v1.0.8(731)**: 工作台待估价和管理后台绑定真实数据库；添加导航按钮（返回首页/进入工作台/进入管理后台）。SHA: a794ca0
 
 ---
