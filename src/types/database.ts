@@ -133,6 +133,8 @@ export type Notification = {
   user_id: string
   /** 发送人（管理员），null 表示系统 */
   sender_user_id: string | null
+  /** 群发批次标识：同批次所有收件人记录共享，供超管按批次修改/删除 */
+  batch_id: string | null
   /** 发送时的目标群体：all=全体用户，admin=全体管理员，user=全体普通成员 */
   target_role: 'all' | 'admin' | 'user'
   title: string
