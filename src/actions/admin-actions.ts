@@ -6,6 +6,7 @@ import { requireZeroUser, requireAdmin, ZERO_USER_UID } from '@/lib/auth'
 import { validateCsrf } from '@/lib/csrf'
 import { MAX_PAGE_LIMIT } from '@/lib/constants'
 import { escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
+import { buildUserListMeta, type UserListMeta } from '@/lib/admin-meta'
 import type { Profile, UserRole } from '@/types/database'
 
 // ==================== 零号用户专属操作 ====================
@@ -201,8 +202,9 @@ export async function listAllUsers(options?: {
   limit?: number
 }): Promise<{
   success: boolean
-  data?: Array<Pick<Profile, 'id' | 'uid' | 'email' | 'role' | 'display_name' | 'avatar_url' | 'is_active' | 'has_password' | 'created_at'>>
+  data?: Array<Pick<Profile, 'id' | 'uid' | 'email' | 'role' | 'display_name' | 'avatar_url' | 'is_active' | 'created_at'>>
   total?: number
+  meta?: UserListMeta
   error?: string
 }> {
   // 鉴权：仅管理员可调用
@@ -211,14 +213,19 @@ export async function listAllUsers(options?: {
     return { success: false, error: authResult.error }
   }
 
+  // 性能优化：与列表查询并行下发权限元数据，客户端无需
+  // 再单独调用 checkIsZeroUser，消除"权限检查→拉列表"瀑布。
+  const meta = buildUserListMeta(authResult.user.uid, authResult.user.role)
+
   const admin = createAdminClient()
   const offset = options?.offset ?? 0
   const limit = Math.min(options?.limit ?? 20, MAX_PAGE_LIMIT)
 
   try {
+    // 性能优化：移除前端未使用的 has_password 字段，减少传输
     let query = admin
       .from('profiles')
-      .select('id, uid, email, role, display_name, avatar_url, is_active, has_password, created_at', { count: 'exact' })
+      .select('id, uid, email, role, display_name, avatar_url, is_active, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -242,8 +249,9 @@ export async function listAllUsers(options?: {
 
     return {
       success: true,
-      data: data as Array<Pick<Profile, 'id' | 'uid' | 'email' | 'role' | 'display_name' | 'avatar_url' | 'is_active' | 'has_password' | 'created_at'>>,
+      data: data as Array<Pick<Profile, 'id' | 'uid' | 'email' | 'role' | 'display_name' | 'avatar_url' | 'is_active' | 'created_at'>>,
       total: count ?? 0,
+      meta,
     }
   } catch (error) {
     console.error('查询用户列表异常:', error)
@@ -303,29 +311,5 @@ export async function getAdminAuditLog(options?: {
   } catch (error) {
     console.error('查询审计日志异常:', error)
     return { success: false, error: '查询时发生未知错误' }
-  }
-}
-
-/**
- * 检查当前用户是否为零号用户
- * 供前端组件判断是否显示管理员授权管理界面
- * 安全加固（FIND-09）：零号用户 UID 由服务端下发，前端不硬编码，避免泄露内部常量
- */
-export async function checkIsZeroUser(): Promise<{
-  isZeroUser: boolean
-  isAdmin: boolean
-  uid: number | null
-  zeroUserUid: number | null
-}> {
-  const authResult = await requireAdmin()
-  if (!authResult.success) {
-    return { isZeroUser: false, isAdmin: false, uid: null, zeroUserUid: ZERO_USER_UID }
-  }
-
-  return {
-    isZeroUser: authResult.user.uid === ZERO_USER_UID,
-    isAdmin: authResult.user.role === 'admin',
-    uid: authResult.user.uid,
-    zeroUserUid: ZERO_USER_UID,
   }
 }

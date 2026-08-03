@@ -18,7 +18,6 @@ import {
   listAllUsers,
   grantAdminRole,
   revokeAdminRole,
-  checkIsZeroUser,
 } from "@/actions/admin-actions";
 import { formatDate } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
@@ -35,7 +34,6 @@ interface UserItem {
   display_name: string;
   avatar_url: string | null;
   is_active: boolean;
-  has_password: boolean;
   created_at: string;
 }
 
@@ -63,11 +61,10 @@ interface ConfirmState {
 }
 
 export default function UserManagement() {
-  // 当前用户权限
+  // 当前用户权限（由 listAllUsers 一次请求下发，不再单独串行请求）
   const [isZeroUser, setIsZeroUser] = useState(false);
   // 零号用户 UID — 安全加固（FIND-09）：由服务端下发，不在前端硬编码
   const [zeroUserUid, setZeroUserUid] = useState<number | null>(null);
-  const [permissionChecked, setPermissionChecked] = useState(false);
 
   // 搜索与筛选状态
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -101,23 +98,9 @@ export default function UserManagement() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // 挂载时检查当前用户是否为零号用户
-  useEffect(() => {
-    (async () => {
-      try {
-        const result = await checkIsZeroUser();
-        setIsZeroUser(result.isZeroUser);
-        setZeroUserUid(result.zeroUserUid);
-      } catch (err) {
-        console.error("检查用户权限失败:", err);
-        setIsZeroUser(false);
-      } finally {
-        setPermissionChecked(true);
-      }
-    })();
-  }, []);
-
   // 获取用户列表（搜索、筛选、分页均在服务端执行）
+  // 权限元数据（isZeroUser / zeroUserUid）由同一请求返回，
+  // 与列表并行加载，消除"权限检查 → 拉列表"的串行瀑布。
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -138,6 +121,10 @@ export default function UserManagement() {
 
       setUsers((result.data || []) as UserItem[]);
       setTotalCount(result.total ?? 0);
+      if (result.meta) {
+        setIsZeroUser(result.meta.isZeroUser);
+        setZeroUserUid(result.meta.zeroUserUid);
+      }
     } catch (err) {
       console.error("加载用户列表异常:", err);
       setError("加载用户列表时发生未知错误");
@@ -148,12 +135,11 @@ export default function UserManagement() {
     }
   }, [appliedKeyword, roleFilter, currentPage]);
 
-  // 权限校验完成后拉取用户列表，并在搜索/筛选/分页变化时重新拉取
+  // 挂载即拉取，并在搜索/筛选/分页变化时重新拉取
   useEffect(() => {
-    if (!permissionChecked) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers();
-  }, [fetchUsers, permissionChecked]);
+  }, [fetchUsers]);
 
   // 搜索
   const handleSearch = () => {
@@ -469,6 +455,7 @@ export default function UserManagement() {
                             <img
                               src={user.avatar_url}
                               alt={user.display_name}
+                              loading="lazy"
                               className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                             />
                           ) : (
@@ -511,6 +498,7 @@ export default function UserManagement() {
                         <img
                           src={user.avatar_url}
                           alt={user.display_name}
+                          loading="lazy"
                           className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                         />
                       ) : (
