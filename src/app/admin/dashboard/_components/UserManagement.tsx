@@ -23,9 +23,6 @@ import {
 import { formatDate } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 
-// 零号用户 UID — 超级管理员，唯一可授予/撤销管理员权限的用户
-const ZERO_USER_UID = 10001;
-
 // 分页大小
 const PAGE_SIZE = 10;
 
@@ -68,6 +65,8 @@ interface ConfirmState {
 export default function UserManagement() {
   // 当前用户权限
   const [isZeroUser, setIsZeroUser] = useState(false);
+  // 零号用户 UID — 安全加固（FIND-09）：由服务端下发，不在前端硬编码
+  const [zeroUserUid, setZeroUserUid] = useState<number | null>(null);
   const [permissionChecked, setPermissionChecked] = useState(false);
 
   // 搜索与筛选状态
@@ -108,6 +107,7 @@ export default function UserManagement() {
       try {
         const result = await checkIsZeroUser();
         setIsZeroUser(result.isZeroUser);
+        setZeroUserUid(result.zeroUserUid);
       } catch (err) {
         console.error("检查用户权限失败:", err);
         setIsZeroUser(false);
@@ -249,7 +249,7 @@ export default function UserManagement() {
   // 渲染角色徽章
   const renderRoleBadge = (user: UserItem) => {
     // 零号用户：紫色「超级管理员」
-    if (user.uid === ZERO_USER_UID) {
+    if (zeroUserUid !== null && user.uid === zeroUserUid) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
           <ShieldCheck className="w-3 h-3" />
@@ -280,7 +280,7 @@ export default function UserManagement() {
       return <span className="text-xs text-gray-300">—</span>;
     }
     // 零号用户自身或 uid 为空：不可操作
-    if (user.uid === ZERO_USER_UID || user.uid === null) {
+    if (user.uid === zeroUserUid || user.uid === null) {
       return <span className="text-xs text-gray-300">—</span>;
     }
     // 管理员：撤销（红色描边）

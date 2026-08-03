@@ -162,6 +162,21 @@ export async function getSession(): Promise<{
     })
     if (!profile.is_active) return { success: false, error: '账户已停用' }
 
+    // 安全加固（FIND-05）：白名单化返回字段，避免把未来新增的敏感字段
+    // （如身份证号、地址等）自动下发客户端。仅返回页面功能所需的字段。
+    const safeProfile = profile ? {
+      id: profile.id,
+      display_name: profile.display_name,
+      avatar_url: profile.avatar_url,
+      role: profile.role,
+      uid: profile.uid,
+      email: profile.email,
+      phone: profile.phone,
+      is_active: profile.is_active,
+      has_password: profile.has_password,
+      created_at: profile.created_at,
+    } : null
+
     return {
       success: true,
       session: {
@@ -170,7 +185,7 @@ export async function getSession(): Promise<{
           email: user.email,
         },
       },
-      profile: profile as Profile,
+      profile: safeProfile as Profile,
     }
   } catch (error) {
     console.error('获取会话异常:', error)

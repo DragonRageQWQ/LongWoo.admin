@@ -22,7 +22,10 @@ export const RATE_LIMIT_ORDER_WINDOW = 60 * 1000
 export const RATE_LIMIT_ORDER_MAX = 10
 
 // ===== 用户角色 =====
-export const ZERO_USER_UID = 10001
+// 零号用户 UID — 超级管理员。安全加固（FIND-08）：支持通过环境变量 ZERO_USER_UID
+// 显式配置，避免依赖可预测的 uid 序列值；默认 10001 仅为兼容历史数据。
+// 生产环境建议在部署平台显式设置该变量并确保对应账号为管理员。
+export const ZERO_USER_UID = parseInt(process.env.ZERO_USER_UID || '', 10) || 10001
 
 // ===== 分页安全 =====
 export const MAX_PAGE_LIMIT = 100 // 分页查询每页最大记录数

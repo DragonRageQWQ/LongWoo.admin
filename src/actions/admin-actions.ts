@@ -309,20 +309,23 @@ export async function getAdminAuditLog(options?: {
 /**
  * 检查当前用户是否为零号用户
  * 供前端组件判断是否显示管理员授权管理界面
+ * 安全加固（FIND-09）：零号用户 UID 由服务端下发，前端不硬编码，避免泄露内部常量
  */
 export async function checkIsZeroUser(): Promise<{
   isZeroUser: boolean
   isAdmin: boolean
   uid: number | null
+  zeroUserUid: number | null
 }> {
   const authResult = await requireAdmin()
   if (!authResult.success) {
-    return { isZeroUser: false, isAdmin: false, uid: null }
+    return { isZeroUser: false, isAdmin: false, uid: null, zeroUserUid: ZERO_USER_UID }
   }
 
   return {
     isZeroUser: authResult.user.uid === ZERO_USER_UID,
     isAdmin: authResult.user.role === 'admin',
     uid: authResult.user.uid,
+    zeroUserUid: ZERO_USER_UID,
   }
 }

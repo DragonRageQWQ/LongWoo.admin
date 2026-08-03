@@ -144,7 +144,10 @@ export async function updateAvatar(
       'image/webp': 'webp',
     }
     const ext = extMap[file.type] || 'jpg'
-    const fileName = `${user.id}/avatar-${Date.now()}.${ext}`
+    // 安全加固（FIND-06）：文件名使用随机 UUID，不包含用户 ID。
+    // 公开 bucket 中固定路径模式（含完整 UUID）可被枚举，随机化后无法
+    // 通过路径推断用户身份。
+    const fileName = `${crypto.randomUUID()}/avatar-${crypto.randomUUID()}.${ext}`
 
     // 将 File 转为 ArrayBuffer 再上传，避免序列化问题
     const arrayBuffer = await file.arrayBuffer()

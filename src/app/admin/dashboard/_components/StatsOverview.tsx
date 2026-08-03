@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentUser } from "@/lib/auth";
+import { notFound, redirect } from "next/navigation";
 import {
   ClipboardPlus,
   Clock,
@@ -155,6 +157,17 @@ async function fetchStats() {
 }
 
 export default async function StatsOverview() {
+  // 安全加固（FIND-02）：本组件使用 service_role 客户端直查全平台订单统计，
+  // 必须在组件内部二次鉴权，不能只依赖 middleware（middleware 只是路由级防线）。
+  // 通过 getCurrentUser 真实网络验证 access token + 校验 admin 角色。
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    redirect("/login");
+  }
+  if (currentUser.role !== "admin") {
+    notFound();
+  }
+
   let stats: StatCard[] = [];
   let trend: TrendItem[] = [];
   let loadError: string | null = null;

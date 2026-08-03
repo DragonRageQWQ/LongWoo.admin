@@ -1,8 +1,10 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import AdminSidebar, { type AdminTab } from "./_components/AdminSidebar";
 import StatsOverview from "./_components/StatsOverview";
 import OrderList from "./_components/OrderList";
 import UserManagement from "./_components/UserManagement";
+import { getCurrentUser } from "@/lib/auth";
 
 // 支持的有效标签页
 const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "settings"];
@@ -61,6 +63,17 @@ export default async function AdminDashboardPage({
   // Next.js 16: searchParams 是异步的，需要 await
   const params = await searchParams;
   const activeTab = resolveTab(params.tab);
+
+  // 安全加固（FIND-02）：管理后台统一二次鉴权（纵深防御）。
+  // middleware 只是路由级防线，此处通过 getCurrentUser 真实网络验证 access token
+  // 并校验 admin 角色，确保伪造 cookie 无法进入任何管理面板。
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    redirect("/login");
+  }
+  if (currentUser.role !== "admin") {
+    redirect("/profile");
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">

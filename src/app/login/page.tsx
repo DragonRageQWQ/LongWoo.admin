@@ -66,7 +66,8 @@ function LoginForm() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setError("第三方登录失败，请重试或选择其他登录方式");
     } else if (errParam === "qq_not_configured") {
-      setError("QQ登录尚未配置，请在环境变量中填写 QQ_CLIENT_ID 和 QQ_CLIENT_SECRET");
+      // 安全加固（FIND-09）：不向未认证访客暴露内部环境变量名
+      setError("该登录方式暂不可用，请选择其他方式登录");
     }
 
     // Session 过期提示
@@ -183,7 +184,6 @@ function LoginForm() {
       });
 
       const result = await response.json();
-      console.log("[Login] API 返回:", result, "HTTP状态:", response.status);
 
       if (!response.ok || !result.success) {
         setError(result.error ?? "验证失败");

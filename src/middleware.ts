@@ -22,9 +22,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
  *
  * 零号用户 (uid=10001) 是超级管理员，拥有管理员权限并管理角色授权
  *
- * 认证策略：Cookie 外层 JSON 不可信，身份必须通过 Supabase 验证 access token。
- * 优化：当 cookie 中的 session 尚未过期时，直接信任其 user.id，跳过网络验证，
- *      显著减少中间件的网络往返开销。
+ * 认证策略：Cookie 外层 JSON 不可信（仅为 base64url 编码，可被任意伪造），
+ * 身份必须通过 Supabase 验证 access token。middleware 对受保护路径一律执行
+ * verifyAccessToken 网络验证，绝不信任 cookie 中未经验证的 user.id。
  *
  * Token 刷新机制：
  *   当 access_token 过期时，使用 refresh_token 获取新的 access_token，
@@ -89,36 +89,29 @@ export async function middleware(request: NextRequest) {
     }
 
     if (session.user?.id && session.access_token) {
-      // Step 1.5: 本地 JWT 过期检查（减少网络调用）
-      // 如果 token 尚未过期（含 60 秒缓冲），直接信任 cookie 中的 user.id，
-      // 跳过 verifyAccessToken 的网络验证。
-      const now = Math.floor(Date.now() / 1000)
-      if (session.expires_at && session.expires_at > now + 60) {
-        // token 还有效（60秒缓冲），跳过网络验证
-        userId = session.user.id
-      } else {
-        // token 已过期或即将过期，走网络验证 + 刷新流程
-        userId = await verifyAccessToken(session.access_token)
-        if (userId !== session.user.id) userId = null
+      // 安全修复（FIND-01）：cookie 只是 base64url 编码的 JSON，攻击者可自行构造
+      // {"access_token":"任意","expires_at":<未来>,"user":{"id":"<目标UUID>"}} 伪造身份。
+      // 因此一律通过 Supabase 网络验证 access_token，绝不信任 cookie 中的 user.id。
+      userId = await verifyAccessToken(session.access_token)
+      if (userId !== session.user.id) userId = null
 
-        if (!userId && session.refresh_token) {
-          hasExpiredSession = true
-          const refreshedSession = await refreshSession(session.refresh_token)
-          if (refreshedSession) {
-            const refreshedUserId = await verifyAccessToken(refreshedSession.access_token)
-            if (refreshedUserId === refreshedSession.user.id) userId = refreshedUserId
+      if (!userId && session.refresh_token) {
+        hasExpiredSession = true
+        const refreshedSession = await refreshSession(session.refresh_token)
+        if (refreshedSession) {
+          const refreshedUserId = await verifyAccessToken(refreshedSession.access_token)
+          if (refreshedUserId === refreshedSession.user.id) userId = refreshedUserId
 
-            if (userId) {
-              // 使用统一的 cookie 清理函数清除旧 session cookie（含分片），
-              // 再写入刷新后的新 session
-              clearAllSessionCookies(response, getSessionCookieNames(request.cookies.getAll()))
-              encodeSessionCookie(refreshedSession).forEach(({ name, value }) =>
-                response.cookies.set(name, value, SECURE_COOKIE_OPTIONS))
-            }
+          if (userId) {
+            // 使用统一的 cookie 清理函数清除旧 session cookie（含分片），
+            // 再写入刷新后的新 session
+            clearAllSessionCookies(response, getSessionCookieNames(request.cookies.getAll()))
+            encodeSessionCookie(refreshedSession).forEach(({ name, value }) =>
+              response.cookies.set(name, value, SECURE_COOKIE_OPTIONS))
           }
-        } else if (!userId) {
-          hasExpiredSession = true
         }
+      } else if (!userId) {
+        hasExpiredSession = true
       }
     }
   }
