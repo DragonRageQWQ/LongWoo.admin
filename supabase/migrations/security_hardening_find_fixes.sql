@@ -50,6 +50,9 @@ CREATE TRIGGER trigger_prevent_anonymous_profile_insert
 -- ===== FIND-07：orders / order_replies 策略 'studio' → 'user' =====
 -- rbac 迁移已将角色体系从 'studio' 改为 'user'，但 orders 与 replies 的
 -- 旧策略仍引用 'studio'，导致普通用户 RLS 层无法读取/更新订单与回复。
+-- 注意：策略必须调用 current_user_role()（已 SET row_security = off），
+-- 不能使用 EXISTS 子查询直接访问 profiles——否则会触发 profiles 表的
+-- SELECT 策略再次评估，造成 infinite recursion（导致订单创建 500）。
 DROP POLICY IF EXISTS orders_select_staff ON public.orders;
 DROP POLICY IF EXISTS orders_update_staff ON public.orders;
 
@@ -64,15 +67,27 @@ DROP POLICY IF EXISTS replies_staff ON public.order_replies;
 CREATE POLICY replies_staff ON public.order_replies
   FOR ALL USING (public.current_user_role() IN ('user', 'admin'));
 
+-- ===== FIND-07b：profiles_select_admin 策略递归修复 =====
+-- 原策略使用 EXISTS (SELECT 1 FROM profiles p ...) 直接访问 profiles 表，
+-- 触发 profiles 的 SELECT 策略自我评估，导致 infinite recursion。
+-- 改为调用已绕过 RLS 的 current_user_role()。
+DROP POLICY IF EXISTS profiles_select_admin ON public.profiles;
+
+CREATE POLICY profiles_select_admin ON public.profiles
+  FOR SELECT USING (public.current_user_role() = 'admin');
+
 -- ===== FIND-10：SECURITY DEFINER 函数固定 search_path =====
 -- 未固定 search_path 的函数存在搜索路径劫持/函数替换的理论风险。
 -- 逐个重建所有 SECURITY DEFINER 函数并附加 SET search_path。
 
 -- 10.1 current_user_role（被所有 RLS 策略调用，最关键）
+-- 注意：必须同时 SET row_security = off，否则函数内查询 profiles 表会再次触发
+-- profiles 的 SELECT 策略（profiles_select_admin 调用本函数），造成无限递归，
+-- 导致所有依赖该函数判断权限的插入/更新操作（如订单创建）报错。
 CREATE OR REPLACE FUNCTION public.current_user_role()
 RETURNS text AS $$
   select role from public.profiles where id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp;
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp SET row_security = off;
 
 -- 10.2 is_admin
 CREATE OR REPLACE FUNCTION is_admin(user_id UUID)
