@@ -6,7 +6,9 @@
     <title>购买自设兽装 - 第3步折抵权益 | LongWoo 工作室</title>
     <meta name="description" content="LongWoo兽装定制 - 查看可用权益和优惠详情。">
     <meta name="robots" content="index, follow">
-    <link rel="stylesheet" href="/css/tailwind-static.css">
+    <!-- 预连接 Supabase API -->
+    <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
+    <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
@@ -81,7 +83,7 @@
           </svg>
         </div>
         <div class="locked-image-preview" id="lockedImagePreview" style="display:none;">
-          <img id="lockedImage" alt="设定图预览" loading="lazy" width="480" height="300">
+          <img id="lockedImage" alt="设定图预览" loading="lazy" decoding="async" width="480" height="300">
         </div>
         <span class="locked-text" id="lockedText">上传完成</span>
         <span class="locked-filename" id="lockedFileName" style="display:none;"></span>
@@ -164,14 +166,6 @@
       <span class="price-row-label">合计</span>
       <span class="price-row-value">RMB 15,000 - 25,000</span>
     </div>
-  </div>
-
-  <!-- Terms Section -->
-  <div class="terms-section">
-    <h3 class="terms-title">委托须知</h3>
-    <div class="terms-item">条款一（待定）</div>
-    <div class="terms-item">条款二（待定）</div>
-    <div class="terms-item">条款三（待定）</div>
   </div>
 
   <!-- Next Step Action -->
@@ -784,5 +778,6 @@
       } catch (err) {}
     })();
   </script>
+<script src="/js/common.js" defer></script>
 </body>
 </html>

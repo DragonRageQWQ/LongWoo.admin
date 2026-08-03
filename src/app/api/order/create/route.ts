@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient as createBrowserClient } from '@supabase/supabase-js'
 import { createClient, getSessionUser } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -107,9 +108,22 @@ export async function POST(request: NextRequest) {
     userId = null
   }
 
+  // 订单写入使用 service_role 客户端（服务端可信，不受 RLS 限制）。
+  // 原因：orders 的 SELECT 策略（orders_select_staff）要求当前用户为 user/admin，
+  // 而匿名下单用户 current_user_role() 为 NULL，insert().select() 返回新行时会被
+  // RLS 拒绝，导致匿名下单 500。service_role 由服务端持有、不暴露给前端，可安全
+  // 完成写入与返回；RLS 对直接客户端（anon/authenticated）的读取限制保持不变。
+  const serviceSupabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { autoRefreshToken: false, persistSession: false },
+    }
+  )
+
   try {
     // 生成订单号（与 createOrder 一致，调用数据库 RPC）
-    const { data: orderNoData, error: orderNoError } = await supabase
+    const { data: orderNoData, error: orderNoError } = await serviceSupabase
       .rpc('generate_order_no')
 
     if (orderNoError || !orderNoData) {
@@ -122,7 +136,7 @@ export async function POST(request: NextRequest) {
     const orderNo = orderNoData as string
 
     // 插入 orders 表（与 createOrder 的字段完全一致，匹配现有数据库 schema）
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await serviceSupabase
       .from('orders')
       .insert({
         order_no: orderNo,
@@ -146,7 +160,7 @@ export async function POST(request: NextRequest) {
 
     // 记录操作日志（与 createOrder 一致；失败不影响主流程）
     try {
-      await supabase.from('operation_logs').insert({
+      await serviceSupabase.from('operation_logs').insert({
         order_id: order.id,
         user_id: userId,
         action: 'create_order',

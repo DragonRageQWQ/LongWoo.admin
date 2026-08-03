@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>购买自设兽装 - 付款确认 + 付款完成 | LongWoo 工作室</title>
-    <meta name="description" content="LongWoo兽装定制第五步 - 确认订单信息并完成提交。">
+    <title>购买自设兽装 - 等待估价 | LongWoo 工作室</title>
+    <meta name="description" content="LongWoo兽装定制 - 提交委托等待估价确认。">
     <meta name="robots" content="index, follow">
     <!-- 预连接 Supabase API -->
     <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
@@ -71,72 +71,88 @@
       </div>
       <div class="step-label done">联系方式</div>
     </div>
-    <div class="step-line done"></div>
+    <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle active">5</div>
       <div class="step-label active">等待估价</div>
     </div>
   </div>
 
-  <!-- ============================================================ -->
-  <!-- 状态2: 付款确认 -->
-  <!-- ============================================================ -->
-  <div class="state-separator">
-    <div class="state-separator-line"></div>
-    <div class="state-separator-label">状态2: 付款确认</div>
-    <div class="state-separator-line"></div>
-  </div>
-
-  <!-- Payment Section -->
-  <div class="payment-section">
-    <h2 class="payment-title">第五步：第一笔付款</h2>
-
-    <div class="payment-card">
-      <div class="payment-row">
-        <span class="payment-row-label">估价金额</span>
-        <span class="payment-row-value">RMB XX,XXX</span>
-      </div>
-      <div class="payment-row">
-        <span class="payment-row-label">附加选项</span>
-        <span class="payment-row-value">RMB XX,XXX</span>
-      </div>
-      <div class="payment-row discount">
-        <span class="payment-row-label">折抵</span>
-        <span class="payment-row-value">- RMB XX,XXX</span>
-      </div>
-      <div class="payment-divider"></div>
-      <div class="payment-row total">
-        <span class="payment-row-label">合计</span>
-        <span class="payment-row-value">RMB XX,XXX</span>
+  <!-- Main Content: Two Column Layout -->
+  <div class="main-content">
+    <!-- Left Column: Locked image preview -->
+    <div class="image-column">
+      <div class="image-zone-locked">
+        <div class="locked-overlay" id="lockedOverlay">
+          <svg class="locked-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span class="locked-text">设定图</span>
+        </div>
+        <div class="locked-image-fill" id="lockedImageFill" style="display:none;">
+          <img id="lockedImage" alt="设定图预览" loading="lazy" decoding="async" width="480" height="300">
+        </div>
       </div>
     </div>
 
-    <div class="deposit-note">RMB 2,000 该笔定金可退</div>
+    <!-- Right Column: Locked steps + Active step 5 -->
+    <div class="form-column">
 
-    <button class="pay-btn" onclick="confirmPayment()">付 款</button>
+      <!-- Locked Step 1 -->
+      <div class="locked-step">
+        <div class="locked-step-title">第一步：请上传设定图</div>
+        <div class="locked-step-value">
+          <span class="tag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            上传完成
+          </span>
+        </div>
+      </div>
 
-    <p class="terms-text"><span class="terms-link">条款</span> 待定</p>
-  </div>
+      <!-- Locked Step 2 -->
+      <div class="locked-step">
+        <div class="locked-step-title">第二步：选配内容</div>
+        <div class="locked-step-value">无</div>
+      </div>
 
-  <!-- ============================================================ -->
-  <!-- 状态3: 付款完成确认 -->
-  <!-- ============================================================ -->
-  <div class="state-separator">
-    <div class="state-separator-line"></div>
-    <div class="state-separator-label">状态3: 付款完成确认</div>
-    <div class="state-separator-line"></div>
-  </div>
+      <!-- Locked Step 3 -->
+      <div class="locked-step">
+        <div class="locked-step-title">第三步：是否行使折抵权益与复购权益</div>
+        <div class="locked-step-value">
+          <span class="tag">4年期换购权益</span>
+          <span class="tag">复购权益*</span>
+        </div>
+        <div class="locked-step-note">*原 象山工作室 的首任单主同享复购权益</div>
+      </div>
 
-  <div class="success-section">
-    <div class="success-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
+      <!-- Locked Step 4 -->
+      <div class="locked-step">
+        <div class="locked-step-title">第四步：请填写您的数据与联系方式</div>
+        <div class="locked-step-value">
+          <span class="tag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            已提交
+          </span>
+        </div>
+      </div>
+
+      <!-- Active Step 5: Waiting for estimation -->
+      <div class="active-step">
+        <h2 class="active-step-title">第五步：请等待我们的人工估价回复</h2>
+
+        <div class="waiting-content">
+          <p class="waiting-text">我们将在工作日9:00-17:00回复报价并与您进行接下来的沟通</p>
+          <div class="spinner"></div>
+          <div class="order-code" id="orderCode">您的订单代码：XXXXXXXXXXXXXXXX</div>
+        </div>
+      </div>
+
     </div>
-    <h2 class="success-title">订单已付款</h2>
-    <p class="success-subtitle">我们将尽快与您联系</p>
-    <p class="success-desc">我们将在工作日9:00-17:00与您进行接下来的沟通</p>
-    <div class="success-order-code">您的订单代码：XXXXXXXXXXXXXXXX</div>
   </div>
 
   <!-- Bottom Spacer -->
@@ -340,35 +356,113 @@
       background-color: var(--color-success);
     }
 
-    /* State separator */
-    .state-separator {
+    /* Main content area - two column layout */
+    .main-content {
+      display: flex;
+      padding: var(--space-md);
+      gap: var(--space-md);
+    }
+
+    /* Left column - locked image area */
+    .image-column {
+      flex: 0 0 40%;
+      max-width: 40%;
+    }
+
+    .image-zone-locked {
+      width: 179px;
+      height: 260px;
+      border-radius: var(--radius-md);
+      background-color: var(--color-surface);
       display: flex;
       align-items: center;
-      gap: var(--space-md);
-      padding: var(--space-xl) var(--space-md) var(--space-md);
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
     }
 
-    .state-separator-label {
-      font-size: var(--font-size-xs);
-      font-weight: 600;
+    .image-zone-locked::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(16,16,16,0.02) 0%, rgba(16,16,16,0.06) 100%);
+    }
+
+    .locked-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-sm);
+      z-index: 1;
+    }
+
+    .locked-icon {
+      width: 36px;
+      height: 36px;
       color: var(--color-primary-lighter);
-      white-space: nowrap;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
     }
 
-    .state-separator-line {
+    .locked-text {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-lighter);
+    }
+
+    /* Right column - steps */
+    .form-column {
       flex: 1;
-      height: 1px;
-      background-color: var(--color-border-light);
+      min-width: 0;
     }
 
-    /* Payment section */
-    .payment-section {
-      padding: var(--space-md);
+    /* Locked steps (compact, gray) */
+    .locked-step {
+      margin-bottom: var(--space-lg);
+      opacity: 0.4;
     }
 
-    .payment-title {
+    .locked-step-title {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary);
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .locked-step-value {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-light);
+    }
+
+    .locked-step-value .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      background-color: var(--color-surface);
+      border-radius: var(--radius-full);
+      font-size: 10px;
+      color: var(--color-primary-light);
+      margin-right: 4px;
+      margin-top: 2px;
+    }
+
+    .locked-step-value .tag svg {
+      width: 10px;
+      height: 10px;
+      color: var(--color-success);
+    }
+
+    .locked-step-note {
+      font-size: 9px;
+      color: var(--color-primary-lighter);
+      margin-top: 2px;
+      line-height: 1.5;
+    }
+
+    /* Active step */
+    .active-step {
+      margin-bottom: var(--space-lg);
+    }
+
+    .active-step-title {
       font-size: var(--font-size-md);
       font-weight: 600;
       color: var(--color-primary);
@@ -376,150 +470,23 @@
       line-height: var(--line-height-tight);
     }
 
-    /* Payment details card */
-    .payment-card {
-      background-color: var(--color-surface);
-      border-radius: var(--radius-md);
-      padding: var(--space-md);
-      margin-bottom: var(--space-md);
-    }
-
-    .payment-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 0;
-    }
-
-    .payment-row-label {
-      font-size: var(--font-size-sm);
-      color: var(--color-primary-light);
-    }
-
-    .payment-row-value {
-      font-size: var(--font-size-sm);
-      color: var(--color-primary);
-    }
-
-    .payment-row.discount .payment-row-value {
-      color: var(--color-success);
-    }
-
-    .payment-divider {
-      height: 1px;
-      background-color: var(--color-border);
-      margin: 8px 0;
-    }
-
-    .payment-row.total {
-      padding-top: var(--space-sm);
-    }
-
-    .payment-row.total .payment-row-label {
-      font-weight: 700;
-      color: var(--color-primary);
-      font-size: var(--font-size-lg);
-    }
-
-    .payment-row.total .payment-row-value {
-      font-weight: 700;
-      color: var(--color-primary);
-      font-size: var(--font-size-lg);
-    }
-
-    .deposit-note {
-      font-size: var(--font-size-xs);
-      color: var(--color-primary-light);
-      margin-top: var(--space-sm);
-      padding-top: var(--space-sm);
-      border-top: 1px dashed var(--color-border);
-      text-align: center;
-    }
-
-    /* Pay button */
-    .pay-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 48px;
-      background-color: var(--color-primary);
-      color: var(--color-background);
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: var(--font-size-lg);
-      font-weight: 600;
-      font-family: var(--font-family);
-      cursor: pointer;
-      letter-spacing: 0.15em;
-      transition: opacity 0.2s;
-    }
-
-    .pay-btn:hover {
-      opacity: 0.85;
-    }
-
-    /* Terms */
-    .terms-text {
-      text-align: center;
-      font-size: var(--font-size-xs);
-      color: var(--color-primary-lighter);
-      margin-top: var(--space-md);
-    }
-
-    .terms-link {
-      color: var(--color-primary-light);
-      text-decoration: underline;
-      cursor: pointer;
-    }
-
-    /* Payment success section */
-    .success-section {
+    /* Waiting state */
+    .waiting-content {
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      padding: var(--space-xl) var(--space-md) var(--space-md);
+      padding: var(--space-md) 0;
     }
 
-    .success-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background-color: var(--color-success);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: var(--space-lg);
-    }
-
-    .success-icon svg {
-      width: 24px;
-      height: 24px;
-      color: var(--color-background);
-    }
-
-    .success-title {
-      font-size: var(--font-size-xl);
-      font-weight: 700;
-      color: var(--color-primary);
-      margin-bottom: var(--space-sm);
-    }
-
-    .success-subtitle {
+    .waiting-text {
       font-size: var(--font-size-sm);
       color: var(--color-primary-light);
-      margin-bottom: var(--space-xs);
-    }
-
-    .success-desc {
-      font-size: var(--font-size-xs);
-      color: var(--color-primary-lighter);
       line-height: 1.6;
-      max-width: 240px;
+      max-width: 200px;
     }
 
-    .success-order-code {
+    .order-code {
       font-size: var(--font-size-xs);
       color: var(--color-primary-light);
       margin-top: var(--space-lg);
@@ -528,6 +495,22 @@
       border-radius: var(--radius-sm);
       word-break: break-all;
       letter-spacing: 0.05em;
+    }
+
+    /* Spinner animation */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-top: var(--space-lg);
     }
 
     /* Bottom navigation */
@@ -582,113 +565,47 @@
     .bottom-spacer {
       height: calc(var(--bottom-nav-height) + var(--space-xl));
     }
+
+    /* Locked image fill */
+    .locked-image-fill {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+
+    .locked-image-fill img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
   </style>
 
   <script>
-    // 从 sessionStorage 收集各步骤填写的所有数据
-    function collectOrderData() {
-      function get(k) {
-        try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; }
-      }
-      return {
-        customerName: get('longwoo_contact_name'),
-        customerPhone: get('longwoo_contact_phone'),
-        customerEmail: get('longwoo_contact_email'),
-        bodyHeight: get('longwoo_body_height'),
-        bodyWeight: get('longwoo_body_weight'),
-        bodyChest: get('longwoo_body_chest'),
-        bodyWaist: get('longwoo_body_waist'),
-        bodyHip: get('longwoo_body_hip'),
-        shoeSize: get('longwoo_shoe_size'),
-        socialAccount: get('longwoo_social_account'),
-        designRefName: get('longwoo_design_ref_name'),
-        addonOption: get('longwoo_step2_addon'),
-        benefitOption: get('longwoo_step3_benefit')
-      };
-    }
-
-    // 将各步骤数据拼接为订单需求描述（写入 orders.requirements）
-    function buildRequirements(d) {
-      var lines = [];
-      lines.push('【下单来源】自设兽装购买流程（静态页下单）');
-      if (d.designRefName) lines.push('【设定图】' + d.designRefName);
-      if (d.addonOption) lines.push('【选配内容】' + d.addonOption);
-      if (d.benefitOption) lines.push('【折抵权益】' + d.benefitOption);
-      var body = [];
-      if (d.bodyHeight) body.push('身高' + d.bodyHeight + 'CM');
-      if (d.bodyWeight) body.push('体重' + d.bodyWeight + 'KG');
-      if (d.bodyChest) body.push('胸围' + d.bodyChest + 'CM');
-      if (d.bodyWaist) body.push('腰围' + d.bodyWaist + 'CM');
-      if (d.bodyHip) body.push('臀围' + d.bodyHip + 'CM');
-      if (d.shoeSize) body.push('鞋码' + d.shoeSize);
-      if (body.length) lines.push('【身体数据】' + body.join('，'));
-      if (d.socialAccount) lines.push('【社交账号】' + d.socialAccount);
-      return lines.join('\n');
-    }
-
-    // 提交成功后清理全部 sessionStorage 下单数据
-    function clearOrderSession() {
-      var keys = [
-        'longwoo_design_ref_image', 'longwoo_design_ref_name', 'longwoo_design_ref_size',
-        'longwoo_contact_name', 'longwoo_contact_phone', 'longwoo_contact_email',
-        'longwoo_body_height', 'longwoo_body_weight', 'longwoo_body_chest',
-        'longwoo_body_waist', 'longwoo_body_hip', 'longwoo_shoe_size', 'longwoo_social_account',
-        'longwoo_step2_addon', 'longwoo_step3_benefit'
-      ];
-      keys.forEach(function (k) { try { sessionStorage.removeItem(k); } catch (e) {} });
-    }
-
-    async function confirmPayment() {
-      var btn = document.querySelector('.pay-btn');
-
-      // 1. 收集 sessionStorage 中的所有步骤数据
-      var data = collectOrderData();
-
-      // 2. 校验必填联系方式（来自 step3 联系方式表单）
-      if (!data.customerName) { alert('请先在“联系方式”步骤填写姓名'); return; }
-      if (!data.customerPhone) { alert('请先在“联系方式”步骤填写手机号'); return; }
-      if (!data.customerEmail) { alert('请先在“联系方式”步骤填写邮箱'); return; }
-
-      // 3. 拼接需求描述
-      var requirements = buildRequirements(data);
-      if (requirements.length < 10) { alert('需求信息不足，请返回补充联系方式与身体数据'); return; }
-
-      // 4. 提交中状态
-      if (btn) { btn.disabled = true; btn.textContent = '提交中...'; }
-
+    (function() {
       try {
-        // 5. 通过 fetch POST 到后端 API 创建订单
-        var res = await fetch('/api/order/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customerName: data.customerName,
-            customerPhone: data.customerPhone,
-            customerEmail: data.customerEmail,
-            requirements: requirements
-          })
-        });
-        var result = await res.json();
-
-        if (result.success && result.orderNo) {
-          // 6. 成功：显示订单号
-          var codeEl = document.querySelector('.success-order-code');
-          if (codeEl) codeEl.textContent = '您的订单代码：' + result.orderNo;
-          // 7. 清理 sessionStorage
-          clearOrderSession();
-          // 8. 滚动到付款完成状态
-          var success = document.querySelector('.success-section');
-          if (success) success.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          // 失败：显示错误信息
-          alert(result.error || '提交失败，请重试');
+        var imgData = sessionStorage.getItem('longwoo_design_ref_image');
+        if (imgData) {
+          var overlay = document.getElementById('lockedOverlay');
+          var fill = document.getElementById('lockedImageFill');
+          var img = document.getElementById('lockedImage');
+          overlay.style.display = 'none';
+          fill.style.display = 'flex';
+          img.src = imgData;
         }
-      } catch (e) {
-        alert('网络错误，请稍后重试');
-      } finally {
-        if (btn) { btn.disabled = false; btn.textContent = '付 款'; }
-      }
-    }
+      } catch (err) {}
+
+      // 展示真实订单号（由第 4 步联系方式提交时创建并写入 sessionStorage）
+      try {
+        var orderNo = sessionStorage.getItem('longwoo_order_no');
+        var codeEl = document.getElementById('orderCode');
+        if (orderNo && codeEl) {
+          codeEl.textContent = '您的订单代码：' + orderNo;
+        }
+      } catch (err) {}
+    })();
   </script>
 <script src="/js/common.js" defer></script>
 </body>

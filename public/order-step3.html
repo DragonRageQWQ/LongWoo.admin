@@ -781,8 +781,34 @@
         }
       }
 
-      // 提交：校验 -> 存 sessionStorage -> 进入等待估价页
-      submitBtn.addEventListener('click', function() {
+      // 拼接需求描述（与旧付款页 order-step5 逻辑一致，保证落库格式相同）
+      function buildRequirements() {
+        function get(k) {
+          try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; }
+        }
+        var lines = [];
+        lines.push('【下单来源】自设兽装购买流程（静态页下单）');
+        var designRefName = get('longwoo_design_ref_name');
+        var addonOption = get('longwoo_step2_addon');
+        var benefitOption = get('longwoo_step3_benefit');
+        if (designRefName) lines.push('【设定图】' + designRefName);
+        if (addonOption) lines.push('【选配内容】' + addonOption);
+        if (benefitOption) lines.push('【折抵权益】' + benefitOption);
+        var body = [];
+        var bh = get('longwoo_body_height'); if (bh) body.push('身高' + bh + 'CM');
+        var bw = get('longwoo_body_weight'); if (bw) body.push('体重' + bw + 'KG');
+        var bc = get('longwoo_body_chest'); if (bc) body.push('胸围' + bc + 'CM');
+        var bwa = get('longwoo_body_waist'); if (bwa) body.push('腰围' + bwa + 'CM');
+        var bhi = get('longwoo_body_hip'); if (bhi) body.push('臀围' + bhi + 'CM');
+        var ss = get('longwoo_shoe_size'); if (ss) body.push('鞋码' + ss);
+        if (body.length) lines.push('【身体数据】' + body.join('，'));
+        var sa = get('longwoo_social_account');
+        if (sa) lines.push('【社交账号】' + sa);
+        return lines.join('\n');
+      }
+
+      // 提交：校验 -> 创建订单 -> 保存订单号 -> 进入等待估价页
+      submitBtn.addEventListener('click', async function() {
         var name = (document.getElementById('contactName').value || '').trim();
         var phone = (document.getElementById('contactPhone').value || '').trim();
         var email = (document.getElementById('contactEmail').value || '').trim();
@@ -791,15 +817,45 @@
         if (!phone || !/^1[3-9]\d{9}$/.test(phone)) { showTip('请输入有效的手机号'); return; }
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showTip('请输入有效的邮箱'); return; }
 
-        // 保存全部字段到 sessionStorage，供最终付款步骤提交后端
+        // 保存全部字段到 sessionStorage
         FIELD_KEYS.forEach(function(pair) {
           var el = document.getElementById(pair[0]);
           if (!el) return;
           try { sessionStorage.setItem(pair[1], el.value || ''); } catch (e) {}
         });
 
+        // 提交中状态
+        submitBtn.disabled = true;
+        submitBtn.textContent = '提交中...';
         showTip('');
-        window.location.href = 'order-step4.html';
+
+        try {
+          // 创建订单（此时立即落库，等待估价页展示真实订单号）
+          var res = await fetch('/api/order/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customerName: name,
+              customerPhone: phone,
+              customerEmail: email,
+              requirements: buildRequirements()
+            })
+          });
+          var result = await res.json();
+
+          if (result.success && result.orderNo) {
+            try { sessionStorage.setItem('longwoo_order_no', result.orderNo); } catch (e) {}
+            window.location.href = 'order-step5.html';
+          } else {
+            showTip(result.error || '提交失败，请重试');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '提 交';
+          }
+        } catch (e) {
+          showTip('网络错误，请稍后重试');
+          submitBtn.disabled = false;
+          submitBtn.textContent = '提 交';
+        }
       });
     })();
   </script>
