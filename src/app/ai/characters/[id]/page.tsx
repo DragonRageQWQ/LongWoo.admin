@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+import { useSession } from '@/components/providers/SessionProvider'
 import type { AiCharacter, AiChatMessage } from '@/types/database'
 
 // ===== 内联 SVG 图标 =====
@@ -59,6 +60,8 @@ export default function CharacterChatPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const characterId = params.id
+  // 当前登录用户信息（用于对话中显示用户头像）
+  const { profile: userProfile } = useSession()
 
   const [character, setCharacter] = useState<AiCharacter | null>(null)
   const [messages, setMessages] = useState<AiChatMessage[]>([])
@@ -248,6 +251,8 @@ export default function CharacterChatPage() {
 
   const charName = character?.name || '角色'
   const charAvatar = character?.avatar_url || null
+  const userAvatar = userProfile?.avatar_url || null
+  const userDisplayName = userProfile?.display_name || '我'
 
   return (
     <div className="page-wrapper">
@@ -299,7 +304,7 @@ export default function CharacterChatPage() {
               {msg.role === 'assistant' ? (
                 <Avatar src={charAvatar} name={charName} size={30} className="chat-message-avatar" />
               ) : (
-                <div className="chat-message-avatar" style={{ background: 'var(--color-primary)' }}>我</div>
+                <Avatar src={userAvatar} name={userDisplayName} size={30} className="chat-message-avatar" />
               )}
               <div className="chat-bubble">{msg.content}</div>
             </div>

@@ -39,6 +39,8 @@ export default function CharacterEditForm({
 }) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // 创建模式下保存选中的头像文件（input 的 value 会被清空，不能依赖 fileInputRef.current.files）
+  const pendingAvatarFileRef = useRef<File | null>(null)
 
   const [name, setName] = useState(initial?.name || '')
   const [persona, setPersona] = useState(initial?.persona || '')
@@ -78,7 +80,8 @@ export default function CharacterEditForm({
     try {
       // 创建模式：头像上传需要角色 ID，所以先跳过后台上传
       if (mode === 'create') {
-        // 本地预览（最终保存时若无角色 ID，先创建再补头像）
+        // 保存文件引用 + 本地预览（最终保存时先创建角色，再用该文件上传头像）
+        pendingAvatarFileRef.current = file
         const localUrl = URL.createObjectURL(file)
         setAvatarUrl(localUrl)
         return
@@ -140,9 +143,9 @@ export default function CharacterEditForm({
 
         const newId = createData.character.id
 
-        // 若创建前选择了头像（本地预览），现在上传
+        // 若创建前选择了头像（本地预览），现在用保存的文件引用上传
         if (finalAvatarUrl && finalAvatarUrl.startsWith('blob:')) {
-          const file = fileInputRef.current?.files?.[0]
+          const file = pendingAvatarFileRef.current
           if (file) {
             const formData = new FormData()
             formData.append('file', file)
