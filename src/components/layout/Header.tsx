@@ -64,7 +64,7 @@ function HeaderContent() {
 
           {/* 桌面端右侧操作区 */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/order/submit">
+            <Link href="/order-step1.html">
               <Button variant="primary" size="sm">
                 提交委托
               </Button>
@@ -145,7 +145,7 @@ function HeaderContent() {
                 </Link>
               ))}
               <div className="flex flex-col gap-3 mt-2 px-2">
-                <Link href="/order/submit" onClick={() => setMobileOpen(false)}>
+                <Link href="/order-step1.html" onClick={() => setMobileOpen(false)}>
                   <Button variant="primary" size="sm" className="w-full">
                     提交委托
                   </Button>

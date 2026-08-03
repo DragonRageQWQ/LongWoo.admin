@@ -35,7 +35,7 @@ export default function NotFound() {
             返回首页
           </Link>
           <Link
-            href="/order/submit"
+            href="/order-step1.html"
             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-lw-black text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
           >
             <Package className="w-4 h-4" />
