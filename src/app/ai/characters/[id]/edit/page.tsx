@@ -1,19 +1,15 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionUser } from '@/lib/supabase/server'
 import { isValidUUID } from '@/lib/order-utils'
+import Header from '@/components/layout/Header'
+import Footer from '@/components/layout/Footer'
 import CharacterEditForm from '../../../components/CharacterEditForm'
-
-const BackIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
-    <path d="M19 12H5" /><path d="M12 19l-7-7 7-7" />
-  </svg>
-)
 
 /**
  * 龙灵工坊：编辑角色
  * 服务端获取角色数据，交给客户端表单组件
+ * 采用与委托提交页面一致的布局设计
  */
 export default async function EditCharacterPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -43,17 +39,23 @@ export default async function EditCharacterPage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className="page-wrapper">
-      <header className="top-bar">
-        <div className="top-bar-left">
-          <Link href={`/ai/characters/${id}`} className="top-back" aria-label="返回"><BackIcon /></Link>
-          <div>
-            <h1 className="top-title">编辑角色</h1>
-            <span className="top-sub">调整它的设定</span>
-          </div>
+    <div className="min-h-screen flex flex-col bg-lw-gray">
+      <Header />
+
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* 页面标题 */}
+        <div className="text-center mb-10">
+          <h1 className="text-2xl font-bold text-lw-black">编辑角色</h1>
+          <p className="mt-2 text-sm text-gray-500">
+            调整它的设定，随时让它焕然一新
+          </p>
         </div>
-      </header>
-      <CharacterEditForm mode="edit" characterId={id} initial={character} />
+
+        {/* 表单卡片 */}
+        <CharacterEditForm mode="edit" characterId={id} initial={character} />
+      </main>
+
+      <Footer />
     </div>
   )
 }
