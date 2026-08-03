@@ -53,8 +53,9 @@ const targetOptions: Array<{
 
 interface SentRecord {
   id: string;
-  batch_id: string | null;
+  batch_id: string;
   title: string;
+  content: string;
   target_role: NotificationTargetRole;
   recipient_count: number;
   created_at: string;
@@ -127,13 +128,9 @@ export default function NotificationManagement({
 
   // 打开编辑弹窗
   const openEdit = (record: SentRecord) => {
-    if (!record.batch_id) {
-      setToast({ type: "error", message: "该记录无批次信息，无法修改" });
-      return;
-    }
     setEditing(record);
     setEditTitle(record.title);
-    setEditContent("");
+    setEditContent(record.content);
   };
 
   // 保存修改（静默修改：仅改标题/内容，不影响已读状态）

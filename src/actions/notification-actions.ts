@@ -153,8 +153,12 @@ export async function sendNotification(input: {
 }
 
 /**
- * 查询当前用户的通知列表（供管理后台历史记录使用，按发送时间倒序）
+ * 查询已发送公告列表（按发送时间倒序，按批次聚合）
  * 仅管理员可调用
+ *
+ * 数据源：notifications 表按 batch_id 分组聚合。
+ * 相比审计日志：batch_id 必然存在（删除/修改可用），
+ * 且收件人数为实际记录数、可顺带返回内容供编辑预填。
  */
 export async function listSentNotifications(options?: {
   limit?: number
@@ -162,8 +166,9 @@ export async function listSentNotifications(options?: {
   success: boolean
   data?: Array<{
     id: string
-    batch_id: string | null
+    batch_id: string
     title: string
+    content: string
     target_role: NotificationTargetRole
     recipient_count: number
     created_at: string
@@ -180,28 +185,60 @@ export async function listSentNotifications(options?: {
   const limit = Math.min(options?.limit ?? 20, 50)
 
   try {
-    // 读取审计日志中的发送记录（按时间倒序）
+    // 拉取足够多的批次记录（按时间倒序），在内存中按 batch_id 分组聚合
     const { data, error } = await admin
-      .from('admin_audit_log')
-      .select('*')
-      .eq('action', 'send_notification')
+      .from('notifications')
+      .select('batch_id, title, content, target_role, created_at')
+      .not('batch_id', 'is', null)
       .order('created_at', { ascending: false })
-      .limit(limit)
+      .limit(500)
 
     if (error) {
       console.error('查询发送记录失败:', error.message)
       return { success: false, error: '查询失败，请稍后重试' }
     }
 
+    // 按 batch_id 分组：取每组最新一条为批次代表，收件人数 = 组内条数
+    const groupMap = new Map<string, {
+      batch_id: string
+      title: string
+      content: string
+      target_role: NotificationTargetRole
+      created_at: string
+      recipient_count: number
+    }>()
+
+    for (const row of data ?? []) {
+      if (!row.batch_id) continue
+      const existing = groupMap.get(row.batch_id)
+      if (existing) {
+        existing.recipient_count += 1
+      } else {
+        groupMap.set(row.batch_id, {
+          batch_id: row.batch_id,
+          title: row.title,
+          content: row.content,
+          target_role: row.target_role as NotificationTargetRole,
+          created_at: row.created_at,
+          recipient_count: 1,
+        })
+      }
+    }
+
+    const batches = Array.from(groupMap.values())
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limit)
+
     return {
       success: true,
-      data: (data ?? []).map((log) => ({
-        id: log.id,
-        batch_id: ((log.details as Record<string, unknown> | null)?.batch_id as string) ?? null,
-        title: (log.details as Record<string, unknown> | null)?.title as string ?? '通知',
-        target_role: ((log.details as Record<string, unknown> | null)?.target_role ?? 'all') as NotificationTargetRole,
-        recipient_count: ((log.details as Record<string, unknown> | null)?.recipient_count as number) ?? 0,
-        created_at: log.created_at,
+      data: batches.map((b) => ({
+        id: b.batch_id,
+        batch_id: b.batch_id,
+        title: b.title,
+        content: b.content,
+        target_role: b.target_role,
+        recipient_count: b.recipient_count,
+        created_at: b.created_at,
       })),
     }
   } catch (error) {
