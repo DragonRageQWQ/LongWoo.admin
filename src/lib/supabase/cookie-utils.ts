@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
+import { importJWK, jwtVerify } from 'jose'
 import { COOKIE_MAX_CHUNK_SIZE, COOKIE_BASE64_PREFIX, COOKIE_MAX_AGE } from '@/lib/constants'
 
 /**
@@ -169,27 +169,23 @@ export function getSessionFromCookieValue(cookieValue: string | null): SupabaseS
  * 安全修复的核心：不再信任 cookie 内容，而是通过服务端验证 JWT。
  *
  * 性能/可用性修复（H4）：优先在 Edge 本地验证 JWT 签名与过期时间
- * （需配置 SUPABASE_JWT_SECRET，零网络往返）；未配置或本地验证失败
- * 时回退到 Supabase /auth/v1/user 网络验证，并为网络请求设置 3 秒
- * 超时（AbortSignal），避免无超时的悬挂请求拖垮 middleware。
+ * （零网络往返），失败时回退到 Supabase /auth/v1/user 网络验证，
+ * 并为网络请求设置 3 秒超时（AbortSignal），避免无超时的悬挂请求
+ * 拖垮 middleware。
+ *
+ * 本地验证支持两种签名（按配置依次尝试）：
+ *   1. ES256（当前 Supabase ECC P-256 签名密钥，2026-07 起启用）
+ *      - 配置 SUPABASE_JWT_PUBLIC_JWKS（JWKS JSON 字符串）
+ *   2. HS256（历史 Shared Secret 签发的 token）
+ *      - 配置 SUPABASE_JWT_SECRET
+ * 两种都未配置或验证失败 → 网络回退。
  *
  * @returns 验证通过返回 userId，否则返回 null
  */
 export async function verifyAccessToken(accessToken: string): Promise<string | null> {
-  // 1) 本地 JWT 验证（Edge 零往返；配置 SUPABASE_JWT_SECRET 后自动启用）
-  const jwtSecret = process.env.SUPABASE_JWT_SECRET
-  if (jwtSecret) {
-    try {
-      const { payload } = await jwtVerify(
-        accessToken,
-        new TextEncoder().encode(jwtSecret),
-        { algorithms: ['HS256'] }
-      )
-      if (typeof payload.sub === 'string' && payload.sub) return payload.sub
-    } catch {
-      // 签名/过期校验失败 → 回退网络验证（覆盖 token 已撤销等场景）
-    }
-  }
+  // 1) 本地 JWT 验证（Edge 零往返）
+  const localUserId = await verifyTokenLocally(accessToken)
+  if (localUserId) return localUserId
 
   // 2) 网络验证（回退路径）+ 3 秒超时
   try {
@@ -219,6 +215,64 @@ export async function verifyAccessToken(accessToken: string): Promise<string | n
   } catch {
     return null
   }
+}
+
+// ES256 公钥导入缓存（模块级，避免每个请求重复 importJWK）
+let es256KeyPromise: Promise<CryptoKey | Uint8Array> | null = null
+
+function getEs256Key(): Promise<CryptoKey | Uint8Array> | null {
+  const jwksJson = process.env.SUPABASE_JWT_PUBLIC_JWKS
+  if (!jwksJson) return null
+  if (!es256KeyPromise) {
+    try {
+      const jwk = JSON.parse(jwksJson)?.keys?.[0]
+      if (!jwk) return null
+      es256KeyPromise = importJWK(jwk as JsonWebKey, 'ES256')
+    } catch {
+      return null
+    }
+  }
+  return es256KeyPromise
+}
+
+/**
+ * 本地 JWT 验证（零网络往返）
+ *
+ * 依次尝试 ES256（当前 Supabase ECC 签名）与 HS256（历史 Shared Secret），
+ * 任一验证通过即返回 userId。全部失败返回 null（调用方回退网络验证）。
+ *
+ * 拆分为独立函数便于单元测试（测试中通过环境变量注入测试密钥）。
+ */
+export async function verifyTokenLocally(accessToken: string): Promise<string | null> {
+  // 1) ES256：当前 Supabase 签名密钥（ECC P-256）
+  const es256KeyPromiseResult = getEs256Key()
+  if (es256KeyPromiseResult) {
+    try {
+      const { payload } = await jwtVerify(accessToken, await es256KeyPromiseResult, {
+        algorithms: ['ES256'],
+      })
+      if (typeof payload.sub === 'string' && payload.sub) return payload.sub
+    } catch {
+      // 签名/过期校验失败 → 尝试其他路径
+    }
+  }
+
+  // 2) HS256：历史 Shared Secret 签发的 token（保留兼容）
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET
+  if (jwtSecret) {
+    try {
+      const { payload } = await jwtVerify(
+        accessToken,
+        new TextEncoder().encode(jwtSecret),
+        { algorithms: ['HS256'] }
+      )
+      if (typeof payload.sub === 'string' && payload.sub) return payload.sub
+    } catch {
+      // 失败 → 回退网络验证
+    }
+  }
+
+  return null
 }
 
 /** 返回请求中属于当前 Supabase session 的全部 cookie 名称。 */
