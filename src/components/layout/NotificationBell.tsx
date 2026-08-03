@@ -27,6 +27,7 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detail, setDetail] = useState<NotificationItem | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -107,6 +108,14 @@ export default function NotificationBell() {
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
       console.error("[NotificationBell] 标记已读异常:", err);
+    }
+  };
+
+  // 点击通知：打开详情弹窗（查看完整内容）并标记已读
+  const handleOpenDetail = (item: NotificationItem) => {
+    setDetail(item);
+    if (!item.is_read) {
+      handleRead(item.id);
     }
   };
 
@@ -193,7 +202,7 @@ export default function NotificationBell() {
                 {items.map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => !item.is_read && handleRead(item.id)}
+                    onClick={() => handleOpenDetail(item)}
                     className={`w-full text-left px-4 py-3 transition-colors cursor-pointer ${
                       item.is_read ? "bg-white" : "bg-blue-50/40"
                     } hover:bg-gray-50`}
@@ -216,6 +225,46 @@ export default function NotificationBell() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 公告详情弹窗（查看完整内容） */}
+      {detail && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setDetail(null)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+              <h3 className="text-base font-bold text-lw-black flex-1 pr-2">
+                {detail.title}
+              </h3>
+              <button
+                onClick={() => setDetail(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-md cursor-pointer"
+                aria-label="关闭"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-5 py-4 flex-1 overflow-y-auto">
+              <p className="text-xs text-gray-400 mb-3">
+                {formatDate(detail.created_at)}
+              </p>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
+                {detail.content}
+              </p>
+            </div>
+            <div className="px-5 py-3 border-t border-gray-100 flex justify-end flex-shrink-0">
+              <button
+                onClick={() => setDetail(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                关闭
+              </button>
+            </div>
           </div>
         </div>
       )}

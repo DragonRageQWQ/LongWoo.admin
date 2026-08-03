@@ -63,3 +63,39 @@ export function resolveTargetRoleFilter(
   }
   return { ok: true, query: mapped.query, label: mapped.label }
 }
+
+/**
+ * 构造通知插入行（每收件人一条，共享同一 batchId）
+ *
+ * 批次标识用于超管对"已发送公告"的统一修改/删除：
+ * 同一次群发的所有收件人记录共享 batch_id，超管按批次操作。
+ */
+export function buildNotificationRows(input: {
+  targetUserIds: string[]
+  senderUserId: string
+  targetRole: NotificationTargetRole
+  title: string
+  content: string
+  batchId: string
+  createdAt: string
+}): Array<{
+  user_id: string
+  sender_user_id: string
+  target_role: NotificationTargetRole
+  title: string
+  content: string
+  batch_id: string
+  created_at: string
+}> {
+  const title = input.title.trim()
+  const content = input.content.trim()
+  return input.targetUserIds.map((userId) => ({
+    user_id: userId,
+    sender_user_id: input.senderUserId,
+    target_role: input.targetRole,
+    title,
+    content,
+    batch_id: input.batchId,
+    created_at: input.createdAt,
+  }))
+}

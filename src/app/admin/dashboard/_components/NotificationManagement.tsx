@@ -11,10 +11,15 @@ import {
   Shield,
   User,
   History,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 import {
   sendNotification,
   listSentNotifications,
+  updateSentNotification,
+  deleteSentNotification,
 } from "@/actions/notification-actions";
 import type { NotificationTargetRole } from "@/lib/notification-utils";
 import { formatDate } from "@/lib/utils";
@@ -48,6 +53,7 @@ const targetOptions: Array<{
 
 interface SentRecord {
   id: string;
+  batch_id: string | null;
   title: string;
   target_role: NotificationTargetRole;
   recipient_count: number;
@@ -65,7 +71,11 @@ interface ToastState {
   message: string;
 }
 
-export default function NotificationManagement() {
+export default function NotificationManagement({
+  isSuperAdmin = false,
+}: {
+  isSuperAdmin?: boolean;
+}) {
   // 发送表单
   const [targetRole, setTargetRole] = useState<NotificationTargetRole>("all");
   const [title, setTitle] = useState("");
@@ -75,6 +85,16 @@ export default function NotificationManagement() {
   // 历史记录
   const [history, setHistory] = useState<SentRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+
+  // 编辑弹窗
+  const [editing, setEditing] = useState<SentRecord | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  // 删除确认弹窗
+  const [deleting, setDeleting] = useState<SentRecord | null>(null);
+  const [deleteSaving, setDeleteSaving] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -104,6 +124,73 @@ export default function NotificationManagement() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadHistory();
   }, [loadHistory]);
+
+  // 打开编辑弹窗
+  const openEdit = (record: SentRecord) => {
+    if (!record.batch_id) {
+      setToast({ type: "error", message: "该记录无批次信息，无法修改" });
+      return;
+    }
+    setEditing(record);
+    setEditTitle(record.title);
+    setEditContent("");
+  };
+
+  // 保存修改（静默修改：仅改标题/内容，不影响已读状态）
+  const handleSaveEdit = async () => {
+    if (!editing?.batch_id || editSaving) return;
+    if (!editTitle.trim()) {
+      setToast({ type: "error", message: "请输入标题" });
+      return;
+    }
+    if (!editContent.trim()) {
+      setToast({ type: "error", message: "请输入内容" });
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      const result = await updateSentNotification({
+        batchId: editing.batch_id,
+        title: editTitle,
+        content: editContent,
+      });
+      if (result.success) {
+        setToast({ type: "success", message: "公告已静默修改" });
+        setEditing(null);
+        loadHistory();
+      } else {
+        setToast({ type: "error", message: result.error || "修改失败" });
+      }
+    } catch (err) {
+      console.error("修改公告异常:", err);
+      setToast({ type: "error", message: "修改时发生未知错误" });
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  // 确认删除
+  const handleConfirmDelete = async () => {
+    if (!deleting?.batch_id || deleteSaving) return;
+
+    setDeleteSaving(true);
+    try {
+      const result = await deleteSentNotification({ batchId: deleting.batch_id });
+      if (result.success) {
+        setToast({ type: "success", message: "公告已删除" });
+        setDeleting(null);
+        loadHistory();
+      } else {
+        setToast({ type: "error", message: result.error || "删除失败" });
+      }
+    } catch (err) {
+      console.error("删除公告异常:", err);
+      setToast({ type: "error", message: "删除时发生未知错误" });
+    } finally {
+      setDeleteSaving(false);
+    }
+  };
 
   // 发送
   const handleSend = async () => {
@@ -299,7 +386,7 @@ export default function NotificationManagement() {
                 key={record.id}
                 className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-lw-black truncate">
                     {record.title}
                   </p>
@@ -308,11 +395,145 @@ export default function NotificationManagement() {
                     · {formatDate(record.created_at)}
                   </p>
                 </div>
+                {isSuperAdmin && (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => openEdit(record)}
+                      title="修改公告（静默）"
+                      className="p-1.5 text-gray-400 hover:text-lw-accent hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleting(record)}
+                      title="删除公告"
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* 编辑弹窗（超管静默修改） */}
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => !editSaving && setEditing(null)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-lw-black">修改公告</h3>
+              <button
+                onClick={() => !editSaving && setEditing(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-md cursor-pointer"
+                aria-label="关闭"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">
+              静默修改：仅更新标题与内容，用户已读状态保持不变，不产生新通知。
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                  标题（最多100字）
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  maxLength={100}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                  内容（最多2000字）
+                </label>
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  maxLength={2000}
+                  rows={5}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors resize-y"
+                />
+                <p className="text-xs text-gray-400 mt-1 text-right">
+                  {editContent.length}/2000
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setEditing(null)}
+                disabled={editSaving}
+                className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={editSaving}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-lw-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {editSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                {editSaving ? "保存中..." : "保存修改"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 删除确认弹窗（超管） */}
+      {deleting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => !deleteSaving && setDeleting(null)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
+              <Trash2 className="w-6 h-6 text-red-500" />
+            </div>
+            <h3 className="text-base font-bold text-lw-black">删除公告</h3>
+            <p className="text-sm text-gray-500 mt-2">
+              确定删除「{deleting.title}」吗？该公告将从
+              {deleting.recipient_count}位用户的铃铛中移除，且无法恢复。
+            </p>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setDeleting(null)}
+                disabled={deleteSaving}
+                className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleteSaving}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {deleteSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                {deleteSaving ? "删除中..." : "确认删除"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

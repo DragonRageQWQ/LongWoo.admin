@@ -1,14 +1,16 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { randomUUID } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAdmin } from '@/lib/auth'
+import { requireAdmin, requireZeroUser } from '@/lib/auth'
 import { validateCsrf } from '@/lib/csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/server-utils'
 import {
   validateNotificationInput,
   resolveTargetRoleFilter,
+  buildNotificationRows,
   type NotificationTargetRole,
 } from '@/lib/notification-utils'
 import { RATE_LIMIT_NOTIFY_MAX, RATE_LIMIT_NOTIFY_WINDOW } from '@/lib/constants'
@@ -97,19 +99,21 @@ export async function sendNotification(input: {
       return { success: false, error: '该群体暂无可用用户' }
     }
 
-    // 7) 批量插入通知（每收件人一条）
+    // 7) 批量插入通知（每收件人一条，共享同一 batchId 便于超管后续修改/删除）
     const title = input.title.trim()
     const content = input.content.trim()
     const now = new Date().toISOString()
+    const batchId = randomUUID()
 
-    const rows = activeTargets.map((t) => ({
-      user_id: t.id,
-      sender_user_id: operator.userId,
-      target_role: input.targetRole,
+    const rows = buildNotificationRows({
+      targetUserIds: activeTargets.map((t) => t.id),
+      senderUserId: operator.userId,
+      targetRole: input.targetRole,
       title,
       content,
-      created_at: now,
-    }))
+      batchId,
+      createdAt: now,
+    })
 
     for (let i = 0; i < rows.length; i += INSERT_CHUNK_SIZE) {
       const chunk = rows.slice(i, i + INSERT_CHUNK_SIZE)
@@ -129,6 +133,7 @@ export async function sendNotification(input: {
         target_uid: null,
         target_email: null,
         details: {
+          batch_id: batchId,
           target_role: input.targetRole,
           target_label: target.label,
           recipient_count: activeTargets.length,
@@ -157,6 +162,7 @@ export async function listSentNotifications(options?: {
   success: boolean
   data?: Array<{
     id: string
+    batch_id: string | null
     title: string
     target_role: NotificationTargetRole
     recipient_count: number
@@ -191,6 +197,7 @@ export async function listSentNotifications(options?: {
       success: true,
       data: (data ?? []).map((log) => ({
         id: log.id,
+        batch_id: ((log.details as Record<string, unknown> | null)?.batch_id as string) ?? null,
         title: (log.details as Record<string, unknown> | null)?.title as string ?? '通知',
         target_role: ((log.details as Record<string, unknown> | null)?.target_role ?? 'all') as NotificationTargetRole,
         recipient_count: ((log.details as Record<string, unknown> | null)?.recipient_count as number) ?? 0,
@@ -200,5 +207,185 @@ export async function listSentNotifications(options?: {
   } catch (error) {
     console.error('查询发送记录异常:', error)
     return { success: false, error: '查询时发生未知错误' }
+  }
+}
+
+export interface ManageNotificationResult {
+  success: boolean
+  error?: string
+}
+
+/**
+ * 超管（uid=10001）静默修改已发送公告
+ *
+ * 静默：仅更新 title/content，不改动任何收件人的 is_read/read_at，
+ * 用户已读状态保持不变（下次看到的是新内容，但不产生新通知）。
+ *
+ * 安全：CSRF → 超管鉴权 → 速率限制 → 输入校验
+ */
+export async function updateSentNotification(input: {
+  batchId: string
+  title: string
+  content: string
+}): Promise<ManageNotificationResult> {
+  // 1) CSRF 保护（最先）
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 2) 鉴权：仅超级管理员（uid=10001）
+  const authResult = await requireZeroUser()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+
+  // 3) 速率限制
+  const ip = await getClientIp()
+  const rateLimitResult = await checkRateLimit(
+    `admin-notify:${ip}`,
+    RATE_LIMIT_NOTIFY_MAX,
+    RATE_LIMIT_NOTIFY_WINDOW
+  )
+  if (!rateLimitResult.allowed) {
+    return { success: false, error: '操作过于频繁，请稍后再试' }
+  }
+
+  // 4) 输入校验
+  const validationError = validateNotificationInput(input.title, input.content)
+  if (validationError) {
+    return { success: false, error: validationError }
+  }
+
+  // 5) 参数校验
+  if (!input.batchId || typeof input.batchId !== 'string') {
+    return { success: false, error: '批次参数错误' }
+  }
+
+  const admin = createAdminClient()
+
+  try {
+    // 6) 静默修改：只更新 title/content，保留 is_read/read_at
+    const { data: updated, error: updateError } = await admin
+      .from('notifications')
+      .update({
+        title: input.title.trim(),
+        content: input.content.trim(),
+      })
+      .eq('batch_id', input.batchId)
+      .select('id')
+
+    if (updateError) {
+      console.error('修改通知失败:', updateError.message)
+      return { success: false, error: '修改失败，请稍后重试' }
+    }
+    if (!updated || updated.length === 0) {
+      return { success: false, error: '未找到该批次公告' }
+    }
+
+    // 7) 审计日志（静默失败）
+    try {
+      await admin.from('admin_audit_log').insert({
+        operator_uid: authResult.user.uid,
+        operator_email: authResult.user.profile?.email ?? null,
+        action: 'update_notification',
+        target_uid: null,
+        target_email: null,
+        details: {
+          batch_id: input.batchId,
+          title: input.title.trim(),
+          recipient_count: updated.length,
+        },
+      })
+    } catch (auditError) {
+      console.error('写入审计日志失败:', auditError)
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('修改通知异常:', error)
+    return { success: false, error: '操作时发生未知错误' }
+  }
+}
+
+/**
+ * 超管（uid=10001）删除已发送公告
+ *
+ * 删除该批次全部收件人记录（用户侧铃铛中将不再显示）。
+ *
+ * 安全：CSRF → 超管鉴权 → 速率限制
+ */
+export async function deleteSentNotification(input: {
+  batchId: string
+}): Promise<ManageNotificationResult> {
+  // 1) CSRF 保护（最先）
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 2) 鉴权：仅超级管理员（uid=10001）
+  const authResult = await requireZeroUser()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+
+  // 3) 速率限制
+  const ip = await getClientIp()
+  const rateLimitResult = await checkRateLimit(
+    `admin-notify:${ip}`,
+    RATE_LIMIT_NOTIFY_MAX,
+    RATE_LIMIT_NOTIFY_WINDOW
+  )
+  if (!rateLimitResult.allowed) {
+    return { success: false, error: '操作过于频繁，请稍后再试' }
+  }
+
+  // 4) 参数校验
+  if (!input.batchId || typeof input.batchId !== 'string') {
+    return { success: false, error: '批次参数错误' }
+  }
+
+  const admin = createAdminClient()
+
+  try {
+    // 5) 删除该批次全部记录
+    const { data: deleted, error: deleteError } = await admin
+      .from('notifications')
+      .delete()
+      .eq('batch_id', input.batchId)
+      .select('id')
+
+    if (deleteError) {
+      console.error('删除通知失败:', deleteError.message)
+      return { success: false, error: '删除失败，请稍后重试' }
+    }
+    if (!deleted || deleted.length === 0) {
+      return { success: false, error: '未找到该批次公告' }
+    }
+
+    // 6) 审计日志（静默失败）
+    try {
+      await admin.from('admin_audit_log').insert({
+        operator_uid: authResult.user.uid,
+        operator_email: authResult.user.profile?.email ?? null,
+        action: 'delete_notification',
+        target_uid: null,
+        target_email: null,
+        details: {
+          batch_id: input.batchId,
+          recipient_count: deleted.length,
+        },
+      })
+    } catch (auditError) {
+      console.error('写入审计日志失败:', auditError)
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('删除通知异常:', error)
+    return { success: false, error: '操作时发生未知错误' }
   }
 }

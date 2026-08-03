@@ -5,7 +5,7 @@ import StatsOverview from "./_components/StatsOverview";
 import OrderList from "./_components/OrderList";
 import UserManagement from "./_components/UserManagement";
 import NotificationManagement from "./_components/NotificationManagement";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, ZERO_USER_UID } from "@/lib/auth";
 
 // 支持的有效标签页
 const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "notifications", "settings"];
@@ -34,7 +34,13 @@ function PlaceholderPanel({ title }: { title: string }) {
 }
 
 // 主体内容区（根据 tab 渲染不同面板）
-function DashboardContent({ activeTab }: { activeTab: AdminTab }) {
+function DashboardContent({
+  activeTab,
+  isSuperAdmin,
+}: {
+  activeTab: AdminTab;
+  isSuperAdmin: boolean;
+}) {
   switch (activeTab) {
     case "all-orders":
       return (
@@ -50,7 +56,7 @@ function DashboardContent({ activeTab }: { activeTab: AdminTab }) {
     case "users":
       return <UserManagement />;
     case "notifications":
-      return <NotificationManagement />;
+      return <NotificationManagement isSuperAdmin={isSuperAdmin} />;
     case "settings":
       return <PlaceholderPanel title="系统设置" />;
     default:
@@ -94,7 +100,7 @@ export default async function AdminDashboardPage({
               </div>
             }
           >
-            <DashboardContent activeTab={activeTab} />
+            <DashboardContent activeTab={activeTab} isSuperAdmin={currentUser.uid === ZERO_USER_UID} />
           </Suspense>
         </div>
       </main>

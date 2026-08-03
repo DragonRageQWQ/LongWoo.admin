@@ -721,9 +721,44 @@
 
           notifyList.querySelectorAll('.notify-item').forEach(function(el) {
             el.addEventListener('click', function() {
-              markNotifyRead(this.getAttribute('data-id'));
+              openNotifyDetail(this.getAttribute('data-id'));
             });
           });
+        }
+
+        // 打开公告详情弹窗（查看完整内容）并标记已读
+        function openNotifyDetail(id) {
+          var item = notifyItems.find(function(n) { return n.id === id; });
+          if (!item) return;
+          if (!item.is_read) markNotifyRead(id);
+          var overlay = document.createElement('div');
+          overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+          overlay.innerHTML = ''
+            + '<div style="background:#fff;border-radius:14px;max-width:420px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.15);">'
+            +   '<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #F3F3F3;">'
+            +     '<h3 style="font-size:15px;font-weight:600;color:var(--color-primary);font-family:inherit;flex:1;padding-right:8px;margin:0;">' + escapeHtml(item.title) + '</h3>'
+            +     '<button class="notify-detail-close" style="background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:18px;line-height:1;padding:0 2px;font-family:inherit;" aria-label="关闭">&times;</button>'
+            +   '</div>'
+            +   '<div style="padding:16px 18px;overflow-y:auto;flex:1;">'
+            +     '<p style="font-size:12px;color:#9CA3AF;margin:0 0 12px;font-family:inherit;">' + escapeHtml(formatNotifyTime(item.created_at)) + '</p>'
+            +     '<p style="font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap;word-break:break-word;margin:0;font-family:inherit;">' + escapeHtml(item.content) + '</p>'
+            +   '</div>'
+            +   '<div style="padding:12px 18px;border-top:1px solid #F3F3F3;display:flex;justify-content:flex-end;">'
+            +     '<button class="notify-detail-close" style="padding:8px 16px;border:1px solid #E5E7EB;border-radius:8px;background:#fff;color:#4B5563;font-size:13px;cursor:pointer;font-family:inherit;">关闭</button>'
+            +   '</div>'
+            + '</div>';
+          document.body.appendChild(overlay);
+          function closeDetail() {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            document.removeEventListener('click', overlayClickHandler, true);
+          }
+          function overlayClickHandler(ev) {
+            if (ev.target === overlay) closeDetail();
+          }
+          overlay.querySelectorAll('.notify-detail-close').forEach(function(btn) {
+            btn.addEventListener('click', closeDetail);
+          });
+          document.addEventListener('click', overlayClickHandler, true);
         }
 
         // 更新未读徽标

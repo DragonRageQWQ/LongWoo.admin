@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   validateNotificationInput,
   resolveTargetRoleFilter,
+  buildNotificationRows,
   type NotificationTargetRole,
 } from './notification-utils'
 
@@ -78,5 +79,44 @@ describe('resolveTargetRoleFilter', () => {
   it('空字符串 → 返回错误', () => {
     const result = resolveTargetRoleFilter('' as NotificationTargetRole)
     expect(result.ok).toBe(false)
+  })
+})
+
+describe('buildNotificationRows', () => {
+  it('为每个收件人生成一条记录，且共享同一 batchId', () => {
+    const rows = buildNotificationRows({
+      targetUserIds: ['u1', 'u2', 'u3'],
+      senderUserId: 'admin-1',
+      targetRole: 'all',
+      title: '  系统通知  ',
+      content: '  维护公告  ',
+      batchId: 'batch-abc',
+      createdAt: '2026-08-03T00:00:00.000Z',
+    })
+    expect(rows).toHaveLength(3)
+    expect(rows[0]).toEqual({
+      user_id: 'u1',
+      sender_user_id: 'admin-1',
+      target_role: 'all',
+      title: '系统通知',
+      content: '维护公告',
+      batch_id: 'batch-abc',
+      created_at: '2026-08-03T00:00:00.000Z',
+    })
+    // 共享同一批次标识
+    expect(new Set(rows.map((r) => r.batch_id))).toEqual(new Set(['batch-abc']))
+  })
+
+  it('目标用户为空 → 返回空数组', () => {
+    const rows = buildNotificationRows({
+      targetUserIds: [],
+      senderUserId: 'admin-1',
+      targetRole: 'user',
+      title: '标题',
+      content: '内容',
+      batchId: 'batch-1',
+      createdAt: '2026-08-03T00:00:00.000Z',
+    })
+    expect(rows).toHaveLength(0)
   })
 })
