@@ -32,8 +32,10 @@ CREATE POLICY profiles_insert_own ON profiles
 CREATE OR REPLACE FUNCTION prevent_anonymous_profile_insert()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- service_role（admin client）上下文中 auth.uid() 返回 NULL，允许创建
-  IF auth.uid() IS NULL THEN
+  -- 仅 service_role（admin client）可创建用户档案。
+  -- 注意：不能用 auth.uid() IS NULL 判断 service_role——匿名用户（anon）
+  -- 的 auth.uid() 同样为 NULL，会导致触发器把 anon 一并放行（形同虚设）。
+  IF auth.role() = 'service_role' THEN
     RETURN NEW;
   END IF;
   -- 任何通过 anon/authenticated 角色的直接 INSERT 一律拒绝
@@ -113,8 +115,10 @@ $$ LANGUAGE plpgsql IMMUTABLE SET search_path = public, pg_temp;
 CREATE OR REPLACE FUNCTION prevent_sensitive_field_modification()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- service_role（admin client）上下文中 auth.uid() 返回 NULL，允许修改
-  IF auth.uid() IS NULL THEN
+  -- 仅 service_role（admin client）可修改敏感字段。
+  -- 注意：不能用 auth.uid() IS NULL 判断 service_role——匿名用户（anon）
+  -- 的 auth.uid() 同样为 NULL，会被一并放行（形同虚设）。
+  IF auth.role() = 'service_role' THEN
     RETURN NEW;
   END IF;
 

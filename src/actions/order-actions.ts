@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, canUserAccessOrder, requireAdmin } from '@/lib/auth'
 import { escapeHtml, escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
 import { validateOrderInput, validateUrl, isValidUUID } from '@/lib/order-utils'
@@ -60,8 +61,9 @@ export async function createOrder(formData: {
     // 尝试获取当前登录用户（客户可能已登录也可能未登录）
     const currentUser = await getCurrentUser()
 
-    // 生成单号
-    const { data: orderNoData, error: orderNoError } = await supabase
+    // 生成单号（使用 admin client：generate_order_no 已 REVOKE anon 执行权限，
+    // 仅 service_role 可调用，未登录用户下单同样适用）
+    const { data: orderNoData, error: orderNoError } = await createAdminClient()
       .rpc('generate_order_no')
 
     if (orderNoError || !orderNoData) {

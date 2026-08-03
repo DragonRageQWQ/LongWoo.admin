@@ -6,6 +6,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { jwtVerify } from 'jose'
 import { COOKIE_MAX_CHUNK_SIZE, COOKIE_BASE64_PREFIX, COOKIE_MAX_AGE } from '@/lib/constants'
 
 /**
@@ -165,31 +166,56 @@ export function getSessionFromCookieValue(cookieValue: string | null): SupabaseS
 /**
  * 通过 Supabase API 验证 access_token 有效性
  *
- * 使用直接 fetch 调用 /auth/v1/user，显式设置 apikey 头，
- * 避免 @supabase/ssr 在 Edge Runtime 中的 "Invalid API key" 问题。
- *
  * 安全修复的核心：不再信任 cookie 内容，而是通过服务端验证 JWT。
+ *
+ * 性能/可用性修复（H4）：优先在 Edge 本地验证 JWT 签名与过期时间
+ * （需配置 SUPABASE_JWT_SECRET，零网络往返）；未配置或本地验证失败
+ * 时回退到 Supabase /auth/v1/user 网络验证，并为网络请求设置 3 秒
+ * 超时（AbortSignal），避免无超时的悬挂请求拖垮 middleware。
  *
  * @returns 验证通过返回 userId，否则返回 null
  */
 export async function verifyAccessToken(accessToken: string): Promise<string | null> {
+  // 1) 本地 JWT 验证（Edge 零往返；配置 SUPABASE_JWT_SECRET 后自动启用）
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET
+  if (jwtSecret) {
+    try {
+      const { payload } = await jwtVerify(
+        accessToken,
+        new TextEncoder().encode(jwtSecret),
+        { algorithms: ['HS256'] }
+      )
+      if (typeof payload.sub === 'string' && payload.sub) return payload.sub
+    } catch {
+      // 签名/过期校验失败 → 回退网络验证（覆盖 token 已撤销等场景）
+    }
+  }
+
+  // 2) 网络验证（回退路径）+ 3 秒超时
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (!supabaseUrl || !anonKey) return null
 
-    const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: 'no-store',
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 3000)
+    try {
+      const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: 'no-store',
+        signal: controller.signal,
+      })
 
-    if (!resp.ok) return null
+      if (!resp.ok) return null
 
-    const userData = await resp.json()
-    return typeof userData?.id === 'string' ? userData.id : null
+      const userData = await resp.json()
+      return typeof userData?.id === 'string' ? userData.id : null
+    } finally {
+      clearTimeout(timeout)
+    }
   } catch {
     return null
   }
@@ -229,29 +255,37 @@ export async function refreshSession(
 
     if (!supabaseUrl || !anonKey) return null
 
-    const resp = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: anonKey,
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    })
+    // 网络请求设置 5 秒超时，避免悬挂请求阻塞登录/刷新流程
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+    try {
+      const resp = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: anonKey,
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        signal: controller.signal,
+      })
 
-    if (!resp.ok) return null
+      if (!resp.ok) return null
 
-    const data = await resp.json()
-    if (!data.access_token || !data.refresh_token || !data.user?.id) {
-      return null
-    }
+      const data = await resp.json()
+      if (!data.access_token || !data.refresh_token || !data.user?.id) {
+        return null
+      }
 
-    return {
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      expires_at: data.expires_at ?? Math.floor(Date.now() / 1000) + (data.expires_in ?? 3600),
-      expires_in: data.expires_in ?? 3600,
-      token_type: data.token_type ?? 'bearer',
-      user: data.user,
+      return {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: data.expires_at ?? Math.floor(Date.now() / 1000) + (data.expires_in ?? 3600),
+        expires_in: data.expires_in ?? 3600,
+        token_type: data.token_type ?? 'bearer',
+        user: data.user,
+      }
+    } finally {
+      clearTimeout(timeout)
     }
   } catch {
     return null
