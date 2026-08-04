@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionUser } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
@@ -96,7 +97,8 @@ export async function POST(request: NextRequest) {
       'image/webp': 'webp',
     }
     const ext = extMap[file.type] || 'jpg'
-    const fileName = `${user.id}/${characterId}/avatar-${Date.now()}.${ext}`
+    // 安全加固（L-2）：随机 UUID 文件名，防止公开 bucket 路径枚举
+    const fileName = `character-avatars/${randomUUID()}/avatar-${randomUUID()}.${ext}`
 
     const arrayBuffer = await file.arrayBuffer()
     const { error: uploadError } = await admin.storage

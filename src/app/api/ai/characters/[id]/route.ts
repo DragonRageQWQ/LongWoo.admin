@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionUser } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { validateCharacterFields } from '@/lib/ai-character'
-import { isValidUUID } from '@/lib/order-utils'
+import { isValidUUID, validateUrl } from '@/lib/order-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -130,7 +130,14 @@ export async function PATCH(request: NextRequest) {
     if (typeof body.tone === 'string') updates.tone = body.tone.trim()
     if (typeof body.greeting === 'string') updates.greeting = body.greeting.trim()
     if (typeof body.user_nickname === 'string') updates.user_nickname = body.user_nickname.trim()
-    if (typeof body.avatar_url === 'string') updates.avatar_url = body.avatar_url.trim()
+    if (typeof body.avatar_url === 'string') {
+      // 安全加固（L-2）：仅接受空串或 http/https 协议 URL
+      const avatarUrl = body.avatar_url.trim()
+      if (avatarUrl !== '' && !validateUrl(avatarUrl)) {
+        return NextResponse.json({ success: false, error: '头像地址无效' }, { status: 400 })
+      }
+      updates.avatar_url = avatarUrl
+    }
 
     const { data, error } = await admin
       .from('ai_characters')

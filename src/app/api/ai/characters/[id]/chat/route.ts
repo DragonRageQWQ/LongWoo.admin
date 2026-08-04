@@ -177,9 +177,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, userMessage: userMsg, assistantMessage: assistantMsg })
   } catch (err) {
     console.error('[龙灵工坊] 对话失败:', err)
-    const message = err instanceof Error ? err.message : '对话失败'
-    // AI 服务错误返回 502，其他返回 500
-    const status = message.includes('AI') ? 502 : 500
-    return NextResponse.json({ success: false, error: message }, { status })
+    // 安全加固（M-5）：不向客户端回传内部错误细节，统一通用文案
+    const aiFailure =
+      err instanceof Error && err.message.includes('AI')
+    return NextResponse.json(
+      { success: false, error: aiFailure ? 'AI 服务暂时不可用，请稍后重试' : '对话失败，请稍后重试' },
+      { status: aiFailure ? 502 : 500 }
+    )
   }
 }
