@@ -31,13 +31,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
  *   并将刷新后的 session 写入 response cookie，实现无感续期。
  */
 export async function middleware(request: NextRequest) {
-  // ===== 调试端点：仅开发环境可用 =====
-  if (request.nextUrl.searchParams.get('debug') === '1') {
-    if (process.env.NODE_ENV === 'production') {
-      return new NextResponse(null, { status: 404 })
-    }
-    return handleDebugRequest(request)
-  }
+  // 安全加固（L-1）：移除调试端点，避免误配置泄露会话信息
 
   let response = NextResponse.next({ request })
 
@@ -195,44 +189,6 @@ async function getProfileAccess(
   } catch {
     return null
   }
-}
-
-/**
- * 调试端点处理（仅开发环境）
- */
-async function handleDebugRequest(request: NextRequest) {
-  const allCookies = request.cookies.getAll()
-  const cookieInfo = allCookies.map(c => ({
-    name: c.name,
-    valueLength: c.value.length,
-    hasBase64Prefix: c.value.startsWith('base64-'),
-  }))
-
-  const cookieValue = readSessionCookieValue(request.cookies)
-  const decoded = cookieValue ? decodeSessionCookie(cookieValue) : null
-
-  const session = decoded as {
-    access_token: string
-    refresh_token: string
-    expires_at: number
-    user: { id: string; email?: string }
-  } | null
-
-  const now = Math.floor(Date.now() / 1000)
-  const isExpired = session?.expires_at ? session.expires_at < now : null
-
-  return NextResponse.json({
-    pathname: request.nextUrl.pathname,
-    cookieCount: allCookies.length,
-    cookies: cookieInfo,
-    session: session ? {
-      userId: session.user?.id,
-      userEmail: session.user?.email,
-      expiresAt: session.expires_at,
-      isExpired,
-      tokenExpired: isExpired,
-    } : null,
-  })
 }
 
 export const config = {

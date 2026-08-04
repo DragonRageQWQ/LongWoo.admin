@@ -27,16 +27,18 @@ export async function GET(request: Request) {
 
     const supabase = await createClient()
 
-    // 列表 + 未读数并行查询（RLS 自动限定当前用户）
+    // 列表 + 未读数并行查询（显式按用户过滤，RLS 作兜底）
     const [listResult, unreadResult] = await Promise.all([
       supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(limit),
       supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
         .eq('is_read', false),
     ])
 

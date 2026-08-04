@@ -52,14 +52,16 @@ export async function updateDisplayName(
 
     if (updateError) {
       console.error('[updateDisplayName] Update failed:', updateError.message)
-      return { success: false, error: '更新失败，请稍后重试', debug: `UpdateError:${updateError.message}` }
+      // 安全加固（M-5）：不向客户端回传数据库错误细节
+      return { success: false, error: '更新失败，请稍后重试' }
     }
 
     revalidatePath('/profile')
     return { success: true }
   } catch (error) {
     console.error('[updateDisplayName] Exception:', error)
-    return { success: false, error: '操作时发生未知错误', debug: `Exception:${String(error)}` }
+    // 安全加固（M-5）：不向客户端回传内部异常细节
+    return { success: false, error: '操作时发生未知错误' }
   }
 }
 

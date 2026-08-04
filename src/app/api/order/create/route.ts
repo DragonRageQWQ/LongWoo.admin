@@ -4,6 +4,8 @@ import { getSessionUser } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { isValidUUID, validateOrderInput } from '@/lib/order-utils'
+import { generateUploadToken } from '@/lib/attachment-token'
+import { extractClientIpFromRequest } from '@/lib/server-utils'
 import { RATE_LIMIT_ORDER_MAX, RATE_LIMIT_ORDER_WINDOW } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
@@ -28,11 +30,11 @@ export const dynamic = 'force-dynamic'
  *   serviceTypeId   string  可选  服务类型 id
  *
  * 返回（JSON）：
- *   成功 { success: true, orderNo: string, orderId: string }
+ *   成功 { success: true, orderNo: string, orderId: string, uploadToken: string }
  *   失败 { success: false, error: string }
  *
- * 附件：订单创建后，前端用返回的 orderId 调用
- * POST /api/order/upload-attachment 上传设定图片。
+ * 附件：订单创建后，前端用返回的 orderId + uploadToken 调用
+ * POST /api/order/upload-attachment 上传设定图片（uploadToken 用于归属校验）。
  */
 export async function POST(request: NextRequest) {
   // CSRF 保护：校验 Origin/Referer 头，确保请求来自本站
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const ip = extractClientIpFromRequest(request)
   const rateLimit = await checkRateLimit(
     `createorder:${ip}`,
     RATE_LIMIT_ORDER_MAX,
@@ -175,7 +177,16 @@ export async function POST(request: NextRequest) {
       console.error('记录操作日志失败:', logError)
     }
 
-    return NextResponse.json({ success: true, orderNo, orderId: order.id })
+    return NextResponse.json({
+      success: true,
+      orderNo,
+      orderId: order.id,
+      // 安全加固（M-1）：一次性上传凭证，用于后续附件上传的订单归属校验
+      uploadToken: generateUploadToken(
+        order.id,
+        process.env.UPLOAD_TOKEN_SECRET ?? ''
+      ),
+    })
   } catch (error) {
     console.error('创建订单异常:', error)
     return NextResponse.json(

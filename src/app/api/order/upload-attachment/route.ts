@@ -11,6 +11,8 @@ import {
   buildAttachmentUploadPath,
   ATTACHMENT_MAX_SIZE,
 } from '@/lib/attachment-utils'
+import { verifyUploadToken } from '@/lib/attachment-token'
+import { extractClientIpFromRequest } from '@/lib/server-utils'
 import { RATE_LIMIT_ORDER_MAX, RATE_LIMIT_ORDER_WINDOW } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
@@ -27,9 +29,10 @@ const ATTACHMENT_BUCKET = 'order-attachments'
  * 使管理员后台订单详情可查看图片。
  *
  * 请求体（JSON）：
- *   orderId   string  必填  已创建订单的 id（order/create 返回）
- *   fileName  string  可选  原始文件名（仅展示用）
- *   dataUrl   string  必填  图片 base64 Data URL（data:image/xxx;base64,...）
+ *   orderId      string  必填  已创建订单的 id（order/create 返回）
+ *   uploadToken  string  必填  上传凭证（order/create 返回，用于归属校验）
+ *   fileName     string  可选  原始文件名（仅展示用）
+ *   dataUrl      string  必填  图片 base64 Data URL（data:image/xxx;base64,...）
  *
  * 返回（JSON）：
  *   成功 { success: true, attachment: { id, file_name, file_path, file_type } }
@@ -55,6 +58,8 @@ export async function POST(request: NextRequest) {
 
   // 3) 参数解析
   const orderId = typeof body.orderId === 'string' ? body.orderId.trim() : ''
+  const uploadToken =
+    typeof body.uploadToken === 'string' ? body.uploadToken.trim() : ''
   const fileName =
     typeof body.fileName === 'string' ? body.fileName.trim().slice(0, 255) : ''
   const dataUrl = typeof body.dataUrl === 'string' ? body.dataUrl : ''
@@ -63,6 +68,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { success: false, error: '无效的订单' },
       { status: 400 }
+    )
+  }
+
+  // 4) 归属校验（M-1 安全加固）：校验上传凭证与订单匹配，
+  //    防止任意人向任意订单挂附件（IDOR）
+  const tokenSecret = process.env.UPLOAD_TOKEN_SECRET ?? ''
+  if (!verifyUploadToken(orderId, uploadToken, tokenSecret)) {
+    return NextResponse.json(
+      { success: false, error: '无权上传该订单的附件' },
+      { status: 403 }
     )
   }
 
@@ -113,8 +128,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 7) 速率限制
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const ip = extractClientIpFromRequest(request)
   const rateLimit = await checkRateLimit(
     `uploadattachment:${ip}`,
     RATE_LIMIT_ORDER_MAX,

@@ -35,6 +35,7 @@ export async function POST(request: Request) {
       .from('notifications')
       .update({ is_read: true, read_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('user_id', user.id) // 显式按用户限定，防越权标记他人通知
       .eq('is_read', false)
 
     if (error) {

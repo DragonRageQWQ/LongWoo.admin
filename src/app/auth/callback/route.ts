@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { getOrCreateProfile } from '@/lib/profile'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { SECURE_COOKIE_OPTIONS } from '@/lib/supabase/cookie-utils'
 
 /**
  * OAuth 回调处理路由
@@ -53,7 +54,12 @@ export async function GET(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
+            // 安全加固（H-2）：强制合并 SECURE_COOKIE_OPTIONS，覆盖 SDK
+            // 默认的 httpOnly:false / 无 secure / 400 天有效期
+            response.cookies.set(name, value, {
+              ...options,
+              ...SECURE_COOKIE_OPTIONS,
+            })
           })
         },
       },
@@ -113,10 +119,11 @@ export async function GET(request: NextRequest) {
     // 需要保留之前设置的 cookies
     const finalResponse = NextResponse.redirect(`${origin}${redirectTo}`)
 
-    // 复制所有 cookies 到最终响应
+    // 复制所有 cookies 到最终响应（同样强制安全选项）
     response.cookies.getAll().forEach((cookie) => {
       finalResponse.cookies.set(cookie.name, cookie.value, {
         ...cookie,
+        ...SECURE_COOKIE_OPTIONS,
       })
     })
 

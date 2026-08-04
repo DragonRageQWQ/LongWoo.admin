@@ -11,6 +11,7 @@ import {
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { fetchWithRetry } from '@/lib/network-utils'
+import { extractClientIpFromRequest } from '@/lib/server-utils'
 import { RATE_LIMIT_OTP_WINDOW } from '@/lib/constants'
 
 // Vercel Hobby 计划默认超时 10 秒，认证流程含 5+ API 调用需要更长时间
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
   }
 
   // 获取客户端 IP（用于速率限制）
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const ip = extractClientIpFromRequest(request)
 
   try {
     const body = await request.json()

@@ -28,6 +28,7 @@ export async function POST(request: Request) {
     const { error } = await supabase
       .from('notifications')
       .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('user_id', user.id) // 安全加固（M-7）：显式按用户过滤，不依赖 RLS 兜底
       .eq('is_read', false)
 
     if (error) {

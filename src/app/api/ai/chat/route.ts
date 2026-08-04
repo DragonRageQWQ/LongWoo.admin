@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getSessionUser } from '@/lib/supabase/server'
+import { extractClientIpFromRequest } from '@/lib/server-utils'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Vercel Hobby 计划允许的最大超时（DeepSeek 推理可能较慢）
@@ -13,7 +15,7 @@ export const maxDuration = 60 // Vercel Hobby 计划允许的最大超时（Deep
  * 安全设计（核心要求：API key 绝不暴露给前端）：
  * 1. DEEPSEEK_API_KEY 仅在服务端 process.env 中读取，从不返回给客户端
  * 2. CSRF 校验：验证 Origin/Referer，防止跨站请求伪造
- * 3. 数据库速率限制：每个 IP 每分钟最多 10 次对话，防止刷爆 API 额度
+ * 3. 数据库速率限制：登录用户每分钟 10 次（按用户），匿名用户每分钟 3 次（按 IP），防止刷爆 API 额度
  * 4. 请求体大小限制：最多 100KB
  * 5. 消息白名单：只接受 user/assistant 角色，最多 20 条，单条最多 2000 字符
  * 6. system 提示词固定在服务端，忽略前端传入的 system 消息（防提示注入）
@@ -65,13 +67,25 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // ===== 数据库速率限制（兼容 Vercel Serverless 多实例） =====
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    'unknown'
+  // ===== 速率限制（登录用户按用户限流；匿名收紧配额） =====
+  const ip = extractClientIpFromRequest(request)
+  let user: { id: string } | null = null
+  try {
+    user = await getSessionUser()
+  } catch {
+    user = null
+  }
+
+  const isAnonymous = !user
+  // 登录用户每分钟 10 次；匿名用户每分钟 3 次（防刷 API 额度）
+  const rateLimitMax = isAnonymous ? 3 : RATE_LIMIT_MAX
+  const rateLimitKey = isAnonymous
+    ? `ai:chat:${ip}`
+    : `ai:chat:user:${user!.id}`
+
   const rateLimitResult = await checkRateLimit(
-    `ai:chat:${ip}`,
-    RATE_LIMIT_MAX,
+    rateLimitKey,
+    rateLimitMax,
     RATE_LIMIT_WINDOW_MS
   )
   if (!rateLimitResult.allowed) {

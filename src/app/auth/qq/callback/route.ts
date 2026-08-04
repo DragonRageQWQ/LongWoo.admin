@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { getOrCreateProfile } from '@/lib/profile'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { SECURE_COOKIE_OPTIONS } from '@/lib/supabase/cookie-utils'
 
 /**
  * QQ OAuth 回调处理路由
@@ -113,7 +114,10 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state || !storedState || state !== storedState) {
     console.error('QQ 回调验证失败: state 不匹配或缺少参数')
-    return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+    const failResp = NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+    // 安全加固（L-3）：失败路径也清除 state cookie，防止重放
+    failResp.cookies.delete('qq_oauth_state')
+    return failResp
   }
 
   const clientId = process.env.QQ_CLIENT_ID!
@@ -135,7 +139,12 @@ export async function GET(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
+            // 安全加固（H-2）：强制合并 SECURE_COOKIE_OPTIONS，覆盖 SDK
+            // 默认的 httpOnly:false / 无 secure / 400 天有效期
+            response.cookies.set(name, value, {
+              ...options,
+              ...SECURE_COOKIE_OPTIONS,
+            })
           })
         },
       },
@@ -246,11 +255,12 @@ export async function GET(request: NextRequest) {
     // 管理员 → /admin/dashboard，普通用户 → /profile
     const redirectTo = role === 'admin' ? '/admin/dashboard' : '/profile'
 
-    // 构建最终重定向响应，保留所有已设置的 cookie
+    // 构建最终重定向响应，保留所有已设置的 cookie（同样强制安全选项）
     const finalResponse = NextResponse.redirect(`${origin}${redirectTo}`)
     response.cookies.getAll().forEach((cookie) => {
       finalResponse.cookies.set(cookie.name, cookie.value, {
         ...cookie,
+        ...SECURE_COOKIE_OPTIONS,
       })
     })
 

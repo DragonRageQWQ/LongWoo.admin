@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" class="light" data-theme="light">
 <head>
     <meta charset="UTF-8">
@@ -828,13 +828,14 @@
             var designRefName = '';
             try { designRefName = sessionStorage.getItem('longwoo_design_ref_name') || ''; } catch (e) {}
 
-            if (result.orderId && designRefImage) {
+            if (result.orderId && result.uploadToken && designRefImage) {
               try {
                 await fetch('/api/order/upload-attachment', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     orderId: result.orderId,
+                    uploadToken: result.uploadToken,
                     fileName: designRefName,
                     dataUrl: designRefImage
                   })

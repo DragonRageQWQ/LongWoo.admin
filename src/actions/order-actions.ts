@@ -1,4 +1,4 @@
-﻿'use server'
+'use server'
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -203,7 +203,9 @@ export async function getOrderById(
     const orderError = orderResult.error
 
     if (orderError || !order) {
-      return { success: false, error: orderError?.message || '未找到委托单' }
+      // 安全加固（M-5）：不向客户端回传数据库错误细节
+      console.error('[getOrderById] 查询订单失败:', orderError?.message)
+      return { success: false, error: '未找到委托单' }
     }
 
     const attachments = attachmentsResult.data

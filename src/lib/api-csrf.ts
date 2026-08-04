@@ -18,30 +18,32 @@ export function validateOrigin(
   referer: string | null,
   host: string | null
 ): string | null {
+  // 安全加固（L-4）：Host 头缺失时 fail-closed，不跳过校验
+  // （异常代理配置下可能缺失 Host，放行会导致 CSRF 校验被绕过）
+  if (!host) {
+    return '缺少请求来源信息'
+  }
+
   // 优先检查 Origin 头
   if (origin) {
-    if (host) {
-      try {
-        if (new URL(origin).host !== host) {
-          return '跨站请求被拒绝'
-        }
-      } catch {
-        return '无效的请求来源'
+    try {
+      if (new URL(origin).host !== host) {
+        return '跨站请求被拒绝'
       }
+    } catch {
+      return '无效的请求来源'
     }
     return null
   }
 
   // 没有 Origin 头时，检查 Referer 头
   if (referer) {
-    if (host) {
-      try {
-        if (new URL(referer).host !== host) {
-          return '跨站请求被拒绝'
-        }
-      } catch {
-        return '无效的请求来源'
+    try {
+      if (new URL(referer).host !== host) {
+        return '跨站请求被拒绝'
       }
+    } catch {
+      return '无效的请求来源'
     }
     return null
   }

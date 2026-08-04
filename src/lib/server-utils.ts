@@ -4,12 +4,51 @@ import { createAdminClient } from '@/lib/supabase/admin'
 /**
  * 从请求头提取客户端 IP
  *
- * 优先读取 x-forwarded-for 的第一个地址（客户端真实 IP），
+ * 安全策略（审计 M-6）：
+ * - x-forwarded-for 的头部地址可由客户端伪造，Vercel/可信代理会
+ *   在**末尾**追加真实客户端 IP，因此取数组**最后一项**。
+ * - 优先使用平台提供的真实 IP 头（cf-connecting-ip / x-real-ip）。
  * 无法获取时返回 'unknown'。
  */
 export async function getClientIp(): Promise<string> {
   const headersList = await headers()
-  return headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+
+  const realIp =
+    headersList.get('cf-connecting-ip') ||
+    headersList.get('x-real-ip')
+  if (realIp) {
+    return realIp.trim() || 'unknown'
+  }
+
+  const forwarded = headersList.get('x-forwarded-for')
+  if (!forwarded) {
+    return 'unknown'
+  }
+  // 取最后一项：由可信代理追加，客户端无法伪造
+  const parts = forwarded.split(',').map((p) => p.trim()).filter(Boolean)
+  return parts.length > 0 ? parts[parts.length - 1] : 'unknown'
+}
+
+/**
+ * 从 Route Handler 的 Request 提取客户端 IP（同步版）
+ *
+ * 与 getClientIp 相同的安全策略：优先平台真实 IP 头，
+ * x-forwarded-for 取最后一项（可信代理追加，客户端无法伪造）。
+ */
+export function extractClientIpFromRequest(request: Request): string {
+  const realIp =
+    request.headers.get('cf-connecting-ip') ||
+    request.headers.get('x-real-ip')
+  if (realIp) {
+    return realIp.trim() || 'unknown'
+  }
+
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (!forwarded) {
+    return 'unknown'
+  }
+  const parts = forwarded.split(',').map((p) => p.trim()).filter(Boolean)
+  return parts.length > 0 ? parts[parts.length - 1] : 'unknown'
 }
 
 /**
