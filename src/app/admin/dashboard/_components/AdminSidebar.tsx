@@ -19,6 +19,10 @@ import { logoutUser } from "@/actions/auth-actions";
 
 export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "notifications" | "settings";
 
+// 站点版本号（仅管理员后台可见，便于确认部署版本）
+const APP_VERSION = "v1.1.1(805)";
+const BUILD_NUMBER = "805";
+
 interface NavItem {
   key: AdminTab;
   label: string;
@@ -136,6 +140,10 @@ export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
             <span>{loggingOut ? "正在退出..." : "退出登录"}</span>
           </button>
         </div>
+        {/* 部署版本号（仅管理员可见） */}
+        <p className="text-[10px] text-gray-300 text-center pt-3 select-none">
+          Web Test Version: {APP_VERSION} - build:{BUILD_NUMBER}
+        </p>
       </div>
     </div>
   );
