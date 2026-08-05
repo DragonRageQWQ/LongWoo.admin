@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作品详情 | LongWoo Studio</title>
+    <meta name="description" content="LongWoo龙坞专业兽装定制工作室作品展示。">
+    <meta name="robots" content="index, follow">
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+  <div class="page-wrapper">
+
+    <!-- 1. Top Bar -->
+    <header class="top-bar">
+      <button class="back-btn" aria-label="返回" onclick="history.back()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#101010" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <span class="logo-text">LongWoo</span>
+      <span style="width:24px;"></span>
+    </header>
+
+    <main>
+
+      <!-- 2. 作品大图 -->
+      <section class="detail-hero">
+        <div class="detail-hero-img" id="detailHero">
+          <picture id="detailPicture">
+            <source id="detailSourceWebp" srcset="" type="image/webp">
+            <img id="detailImg" src="" alt="作品图片" width="480" height="480" />
+          </picture>
+          <div class="zoom-hint">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            点击查看大图
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 作品信息 -->
+      <section class="detail-info">
+        <div class="detail-title-row">
+          <h1 class="detail-title" id="detailTitle">作品</h1>
+          <span class="detail-tag" id="detailTag">全装定制案例</span>
+        </div>
+        <p class="detail-desc" id="detailDesc"></p>
+      </section>
+
+      <!-- 4. 规格信息 -->
+      <section class="detail-specs">
+        <div class="spec-item">
+          <span class="spec-label">定制类型</span>
+          <span class="spec-value">全装定制</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">交付周期</span>
+          <span class="spec-value">预计 4-6 周</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">制作工艺</span>
+          <span class="spec-value">立体剪裁 · 手工缝制</span>
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- 5. 更多作品 -->
+      <section class="more-section">
+        <h2 class="section-title">更多作品</h2>
+        <div class="showcase-scroll" id="moreWorks">
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 6. Bottom Navigation -->
+    <nav class="bottom-nav">
+
+      <!-- 购买兽装 -->
+      <a href="order-step1.html" class="nav-item active">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#101010" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V6L18 2H6Z"/>
+            <path d="M3 6H21"/>
+            <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">购买兽装</span>
+      </a>
+
+      <!-- 龙灵工坊 -->
+      <a href="/ai/characters" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 13.6 2.35 15.12 3 16.48L2.5 21.5L7.52 21C8.88 21.65 10.4 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z"/>
+            <path d="M8 9H8.01"/>
+            <path d="M12 9H12.01"/>
+            <path d="M16 9H16.01"/>
+            <path d="M8 13C9.2 14.5 10.6 15.2 12 15.2C13.4 15.2 14.8 14.5 16 13"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">龙灵工坊</span>
+      </a>
+
+      <!-- 购买掉落 -->
+      <a href="preorder-step1.html" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L12 16"/>
+            <path d="M12 16L7 11"/>
+            <path d="M12 16L17 11"/>
+            <path d="M4 19H20"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">购买掉落</span>
+      </a>
+
+      <!-- 查询进度&售后 -->
+      <a href="under-construction.html?feature=进度与售后" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 7V12L15 15"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">进度&售后</span>
+      </a>
+
+      <!-- 个人中心 -->
+      <a href="/profile" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">个人中心</span>
+      </a>
+
+    </nav>
+
+  </div>
+
+  <!-- 图片放大浮层 -->
+  <div class="lightbox" id="lightbox" style="display:none;">
+    <button class="lightbox-close" aria-label="关闭">&times;</button>
+    <img id="lightboxImg" src="" alt="作品大图" />
+  </div>
+
+  <style>
+    body {
+      font-family: var(--font-family);
+      background-color: var(--color-background);
+      color: var(--color-primary);
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .page-wrapper {
+      max-width: var(--content-max-width);
+      margin: 0 auto;
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: var(--content-max-width);
+      height: var(--nav-height);
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--color-border-light);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-md);
+      box-sizing: border-box;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      color: var(--color-primary);
+    }
+
+    .logo-text {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--color-primary);
+    }
+
+    /* Detail Hero */
+    .detail-hero {
+      margin-top: var(--nav-height);
+      background: var(--color-surface);
+    }
+
+    .detail-hero-img {
+      position: relative;
+      cursor: zoom-in;
+    }
+
+    .detail-hero-img img {
+      width: 100%;
+      max-height: 70vh;
+      object-fit: cover;
+      display: block;
+    }
+
+    .zoom-hint {
+      position: absolute;
+      bottom: var(--space-md);
+      right: var(--space-md);
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font-size: var(--font-size-xs);
+      border-radius: var(--radius-full);
+      padding: 5px 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      user-select: none;
+    }
+
+    /* Detail Info */
+    .detail-info {
+      padding: var(--space-lg) var(--space-md) var(--space-sm);
+      box-sizing: border-box;
+    }
+
+    .detail-title-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-sm);
+    }
+
+    .detail-title {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--color-primary);
+      margin: 0;
+      letter-spacing: -0.3px;
+    }
+
+    .detail-tag {
+      font-size: var(--font-size-xs);
+      font-weight: 500;
+      color: var(--color-primary);
+      background: var(--color-primary-lightest2);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-full);
+      padding: 3px 10px;
+      flex-shrink: 0;
+    }
+
+    .detail-desc {
+      font-size: var(--font-size-base);
+      color: var(--color-primary-light);
+      line-height: var(--line-height);
+      margin: 0;
+    }
+
+    /* Specs */
+    .detail-specs {
+      padding: var(--space-md);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .spec-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+    }
+
+    .spec-label {
+      font-size: var(--font-size-sm);
+      color: var(--color-primary-light);
+    }
+
+    .spec-value {
+      font-size: var(--font-size-sm);
+      font-weight: 500;
+      color: var(--color-primary);
+    }
+
+    /* More Works */
+    .more-section {
+      padding: var(--space-lg) var(--space-md);
+      padding-bottom: calc(var(--bottom-nav-height) + var(--space-3xl));
+      box-sizing: border-box;
+    }
+
+    .showcase-scroll {
+      display: flex;
+      gap: var(--space-md);
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: var(--space-sm);
+      margin: 0 calc(var(--space-md) * -1);
+      padding-left: var(--space-md);
+      padding-right: var(--space-md);
+    }
+
+    .showcase-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .product-card {
+      min-width: 160px;
+      max-width: 160px;
+      scroll-snap-align: start;
+      flex-shrink: 0;
+      background: var(--color-background);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--color-border-light);
+      transition: box-shadow 0.2s ease;
+      text-decoration: none;
+      display: block;
+    }
+
+    .product-card:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    .product-card img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .product-card-body {
+      padding: var(--space-sm) var(--space-md) var(--space-md);
+      box-sizing: border-box;
+    }
+
+    .product-card-title {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--color-primary);
+      margin: 0 0 var(--space-xs) 0;
+    }
+
+    .product-card-desc {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-light);
+      line-height: var(--line-height);
+      margin: 0;
+    }
+
+    /* Section Title */
+    .section-title {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--color-primary);
+      margin: 0 0 var(--space-lg) 0;
+      letter-spacing: -0.3px;
+    }
+
+    /* Divider */
+    .section-divider {
+      height: 8px;
+      background: var(--color-surface);
+    }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.92);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-lg);
+    }
+
+    .lightbox img {
+      max-width: 100%;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+    }
+
+    .lightbox-close {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: #fff;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lightbox-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  </style>
+
+  <script>
+  // ==================== 作品数据 ====================
+  var WORKS = {
+    banli: {
+      id: 'banli',
+      title: '板栗',
+      tag: '全装定制案例',
+      img: 'assets/image_2_wv337u.jpg',
+      imgWebp: 'assets/image_2_wv337u.webp',
+      desc: '以栗色为主色调的全装定制作品，立体化剪裁搭配精细绒毛工艺，整体造型还原角色气质，细节表现丰富。',
+      type: '全装定制',
+      delivery: '预计 4-6 周',
+      craft: '立体剪裁 · 手工缝制'
+    },
+    huiqi: {
+      id: 'huiqi',
+      title: '灰崎',
+      tag: '全装定制案例',
+      img: 'assets/image_3_wv337u.jpg',
+      imgWebp: 'assets/image_3_wv337u.webp',
+      desc: '灰色系全装定制作品，注重面部神态与整体线条的刻画，沉稳配色中展现角色独有的气质与细节质感。',
+      type: '全装定制',
+      delivery: '预计 4-6 周',
+      craft: '立体剪裁 · 手工缝制'
+    },
+    redian: {
+      id: 'redian',
+      title: '热点',
+      tag: '全装定制案例',
+      img: 'assets/image_4_wv337u.jpg',
+      imgWebp: 'assets/image_4_wv337u.webp',
+      desc: '暖色调全装定制作品，造型活泼富有张力，色彩层次过渡自然，将角色的个性与活力完整呈现。',
+      type: '全装定制',
+      delivery: '预计 4-6 周',
+      craft: '立体剪裁 · 手工缝制'
+    },
+    shantong: {
+      id: 'shantong',
+      title: '山桐',
+      tag: '全装定制案例',
+      img: 'assets/image_5_8ofe40.jpg',
+      imgWebp: 'assets/image_5_8ofe40.webp',
+      desc: '以自然色调为主题的全装定制作品，线条流畅、轮廓清晰，通过材质与工艺的结合呈现简洁耐看的视觉效果。',
+      type: '全装定制',
+      delivery: '预计 4-6 周',
+      craft: '立体剪裁 · 手工缝制'
+    },
+    yusan: {
+      id: 'yusan',
+      title: '渔弎',
+      tag: '全装定制案例',
+      img: 'assets/image_6_wv337u.jpg',
+      imgWebp: 'assets/image_6_wv337u.webp',
+      desc: '色彩层次丰富的全装定制作品，造型独特、细节考究，展现角色鲜明个性的同时保证穿着的舒适与耐用。',
+      type: '全装定制',
+      delivery: '预计 4-6 周',
+      craft: '立体剪裁 · 手工缝制'
+    }
+  };
+
+  // ==================== 页面渲染 ====================
+  (function() {
+    // 解析 URL 参数 id
+    var params = new URLSearchParams(window.location.search);
+    var id = params.get('id');
+    var work = WORKS[id] || WORKS.banli;
+
+    // 填充主图
+    document.getElementById('detailSourceWebp').srcset = work.imgWebp;
+    document.getElementById('detailImg').src = work.img;
+    document.getElementById('detailImg').alt = '兽装作品 - ' + work.title;
+
+    // 填充标题与描述
+    document.getElementById('detailTitle').textContent = work.title;
+    document.getElementById('detailTag').textContent = work.tag;
+    document.getElementById('detailDesc').textContent = work.desc;
+
+    // 填充规格
+    var specValues = document.querySelectorAll('.spec-value');
+    if (specValues.length >= 3) {
+      specValues[0].textContent = work.type;
+      specValues[1].textContent = work.delivery;
+      specValues[2].textContent = work.craft;
+    }
+
+    // 页面标题
+    document.title = work.title + ' | LongWoo Studio';
+
+    // 更多作品（其他作品）
+    var moreContainer = document.getElementById('moreWorks');
+    var others = Object.keys(WORKS).filter(function(k) { return k !== work.id; });
+    moreContainer.innerHTML = others.map(function(k) {
+      var w = WORKS[k];
+      return '<a class="product-card" href="works-detail.html?id=' + w.id + '">'
+        + '<picture>'
+        +   '<source srcset="' + w.imgWebp + '" type="image/webp">'
+        +   '<img src="' + w.img + '" alt="兽装作品 - ' + w.title + '" loading="lazy" decoding="async" width="160" height="160" />'
+        + '</picture>'
+        + '<div class="product-card-body">'
+        +   '<h3 class="product-card-title">' + w.title + '</h3>'
+        +   '<p class="product-card-desc">' + w.tag + '</p>'
+        + '</div>'
+        + '</a>';
+    }).join('');
+
+    // ==================== 图片放大 ====================
+    var hero = document.getElementById('detailHero');
+    var lightbox = document.getElementById('lightbox');
+    var lightboxImg = document.getElementById('lightboxImg');
+
+    hero.addEventListener('click', function() {
+      lightboxImg.src = work.img;
+      lightbox.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    });
+
+    function closeLightbox() {
+      lightbox.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    lightbox.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', function(e) {
+      if (e.target === lightbox) closeLightbox();
+    });
+  })();
+  </script>
+  <script src="/js/common.js" defer></script>
+</body>
+</html>
