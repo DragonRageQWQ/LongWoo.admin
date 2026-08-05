@@ -431,74 +431,72 @@
   </style>
 
   <script>
-  // ==================== 作品数据 ====================
-  var WORKS = {
-    banli: {
-      id: 'banli',
-      title: '板栗',
-      tag: '全装定制案例',
-      img: 'assets/image_2_wv337u.jpg',
-      imgWebp: 'assets/image_2_wv337u.webp',
-      desc: '以栗色为主色调的全装定制作品，立体化剪裁搭配精细绒毛工艺，整体造型还原角色气质，细节表现丰富。',
-      type: '全装定制',
-      delivery: '预计 4-6 周',
-      craft: '立体剪裁 · 手工缝制'
-    },
-    huiqi: {
-      id: 'huiqi',
-      title: '灰崎',
-      tag: '全装定制案例',
-      img: 'assets/image_3_wv337u.jpg',
-      imgWebp: 'assets/image_3_wv337u.webp',
-      desc: '灰色系全装定制作品，注重面部神态与整体线条的刻画，沉稳配色中展现角色独有的气质与细节质感。',
-      type: '全装定制',
-      delivery: '预计 4-6 周',
-      craft: '立体剪裁 · 手工缝制'
-    },
-    redian: {
-      id: 'redian',
-      title: '热点',
-      tag: '全装定制案例',
-      img: 'assets/image_4_wv337u.jpg',
-      imgWebp: 'assets/image_4_wv337u.webp',
-      desc: '暖色调全装定制作品，造型活泼富有张力，色彩层次过渡自然，将角色的个性与活力完整呈现。',
-      type: '全装定制',
-      delivery: '预计 4-6 周',
-      craft: '立体剪裁 · 手工缝制'
-    },
-    shantong: {
-      id: 'shantong',
-      title: '山桐',
-      tag: '全装定制案例',
-      img: 'assets/image_5_8ofe40.jpg',
-      imgWebp: 'assets/image_5_8ofe40.webp',
-      desc: '以自然色调为主题的全装定制作品，线条流畅、轮廓清晰，通过材质与工艺的结合呈现简洁耐看的视觉效果。',
-      type: '全装定制',
-      delivery: '预计 4-6 周',
-      craft: '立体剪裁 · 手工缝制'
-    },
-    yusan: {
-      id: 'yusan',
-      title: '渔弎',
-      tag: '全装定制案例',
-      img: 'assets/image_6_wv337u.jpg',
-      imgWebp: 'assets/image_6_wv337u.webp',
-      desc: '色彩层次丰富的全装定制作品，造型独特、细节考究，展现角色鲜明个性的同时保证穿着的舒适与耐用。',
-      type: '全装定制',
-      delivery: '预计 4-6 周',
-      craft: '立体剪裁 · 手工缝制'
+  // ==================== 作品数据（动态加载） ====================
+  // 优先从 /api/works 获取；失败时回退到本地静态数据
+
+  // 本地回退数据（与数据库初始数据一致）
+  var FALLBACK_WORKS = [
+    { id: 'banli', title: '板栗', tag: '全装定制案例', img: 'assets/image_2_wv337u.jpg', imgWebp: 'assets/image_2_wv337u.webp', desc: '以栗色为主色调的全装定制作品，立体化剪裁搭配精细绒毛工艺，整体造型还原角色气质，细节表现丰富。', type: '全装定制', delivery: '预计 4-6 周', craft: '立体剪裁 · 手工缝制' },
+    { id: 'huiqi', title: '灰崎', tag: '全装定制案例', img: 'assets/image_3_wv337u.jpg', imgWebp: 'assets/image_3_wv337u.webp', desc: '灰色系全装定制作品，注重面部神态与整体线条的刻画，沉稳配色中展现角色独有的气质与细节质感。', type: '全装定制', delivery: '预计 4-6 周', craft: '立体剪裁 · 手工缝制' },
+    { id: 'redian', title: '热点', tag: '全装定制案例', img: 'assets/image_4_wv337u.jpg', imgWebp: 'assets/image_4_wv337u.webp', desc: '暖色调全装定制作品，造型活泼富有张力，色彩层次过渡自然，将角色的个性与活力完整呈现。', type: '全装定制', delivery: '预计 4-6 周', craft: '立体剪裁 · 手工缝制' },
+    { id: 'shantong', title: '山桐', tag: '全装定制案例', img: 'assets/image_5_8ofe40.jpg', imgWebp: 'assets/image_5_8ofe40.webp', desc: '以自然色调为主题的全装定制作品，线条流畅、轮廓清晰，通过材质与工艺的结合呈现简洁耐看的视觉效果。', type: '全装定制', delivery: '预计 4-6 周', craft: '立体剪裁 · 手工缝制' },
+    { id: 'yusan', title: '渔弎', tag: '全装定制案例', img: 'assets/image_6_wv337u.jpg', imgWebp: 'assets/image_6_wv337u.webp', desc: '色彩层次丰富的全装定制作品，造型独特、细节考究，展现角色鲜明个性的同时保证穿着的舒适与耐用。', type: '全装定制', delivery: '预计 4-6 周', craft: '立体剪裁 · 手工缝制' }
+  ];
+
+  // API 作品 → 展示对象（兼容字段）
+  function normalizeWork(item) {
+    var img = item.image_url || '';
+    var imgWebp = '';
+    // 本地静态图片推导 webp 版本（assets/xxx.jpg → assets/xxx.webp）
+    var m = img.match(/^([^?]+)\.(jpg|jpeg|png)$/i);
+    if (m) imgWebp = m[1] + '.webp';
+    return {
+      id: item.id,
+      code: item.code || '',
+      title: item.title || '作品',
+      tag: item.tag || '全装定制案例',
+      img: img,
+      imgWebp: imgWebp,
+      desc: item.description || '',
+      type: item.work_type || '全装定制',
+      delivery: item.delivery || '预计 4-6 周',
+      craft: item.craft || '立体剪裁 · 手工缝制'
+    };
+  }
+
+  var workItems = FALLBACK_WORKS.slice();
+  var usingApi = false;
+
+  async function loadWorks() {
+    try {
+      var res = await fetch('/api/works', { cache: 'no-store' });
+      var data = await res.json();
+      if (data.success && Array.isArray(data.items) && data.items.length > 0) {
+        workItems = data.items.map(normalizeWork);
+        usingApi = true;
+      }
+    } catch (e) {
+      // 加载失败使用回退数据
     }
-  };
+    renderDetail();
+  }
 
   // ==================== 页面渲染 ====================
-  (function() {
-    // 解析 URL 参数 id
+  function renderDetail() {
+    // 解析 URL 参数 id（数据库 id 或回退语义 id）
     var params = new URLSearchParams(window.location.search);
     var id = params.get('id');
-    var work = WORKS[id] || WORKS.banli;
+    var work = null;
+    for (var i = 0; i < workItems.length; i++) {
+      if (workItems[i].id === id) { work = workItems[i]; break; }
+    }
+    if (!work) work = workItems[0];
 
     // 填充主图
-    document.getElementById('detailSourceWebp').srcset = work.imgWebp;
+    if (work.imgWebp) {
+      var src = document.getElementById('detailSourceWebp');
+      if (src) src.srcset = work.imgWebp;
+    }
     document.getElementById('detailImg').src = work.img;
     document.getElementById('detailImg').alt = '兽装作品 - ' + work.title;
 
@@ -520,12 +518,11 @@
 
     // 更多作品（其他作品）
     var moreContainer = document.getElementById('moreWorks');
-    var others = Object.keys(WORKS).filter(function(k) { return k !== work.id; });
-    moreContainer.innerHTML = others.map(function(k) {
-      var w = WORKS[k];
-      return '<a class="product-card" href="works-detail.html?id=' + w.id + '">'
+    var others = workItems.filter(function(w) { return w.id !== work.id; });
+    moreContainer.innerHTML = others.map(function(w) {
+      return '<a class="product-card" href="works-detail.html?id=' + encodeURIComponent(w.id) + '">'
         + '<picture>'
-        +   '<source srcset="' + w.imgWebp + '" type="image/webp">'
+        +   (w.imgWebp ? '<source srcset="' + w.imgWebp + '" type="image/webp">' : '')
         +   '<img src="' + w.img + '" alt="兽装作品 - ' + w.title + '" loading="lazy" decoding="async" width="160" height="160" />'
         + '</picture>'
         + '<div class="product-card-body">'
@@ -540,22 +537,27 @@
     var lightbox = document.getElementById('lightbox');
     var lightboxImg = document.getElementById('lightboxImg');
 
-    hero.addEventListener('click', function() {
-      lightboxImg.src = work.img;
-      lightbox.style.display = 'flex';
-      document.body.style.overflow = 'hidden';
-    });
+    if (!hero.dataset.bound) {
+      hero.dataset.bound = '1';
+      hero.addEventListener('click', function() {
+        lightboxImg.src = work.img;
+        lightbox.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      });
 
-    function closeLightbox() {
-      lightbox.style.display = 'none';
-      document.body.style.overflow = '';
+      function closeLightbox() {
+        lightbox.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+
+      lightbox.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
+      lightbox.addEventListener('click', function(e) {
+        if (e.target === lightbox) closeLightbox();
+      });
     }
+  }
 
-    lightbox.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
-    lightbox.addEventListener('click', function(e) {
-      if (e.target === lightbox) closeLightbox();
-    });
-  })();
+  loadWorks();
   </script>
   <script src="/js/common.js" defer></script>
 </body>

@@ -14,10 +14,11 @@ import {
   Home,
   Briefcase,
   Bell,
+  Image as ImageIcon,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 
-export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "notifications" | "settings";
+export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "notifications" | "settings" | "works";
 
 // 站点版本号（仅管理员后台可见，便于确认部署版本）
 const APP_VERSION = "v1.1.1(805)";
@@ -28,6 +29,7 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   disabled?: boolean;
+  superAdminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -36,14 +38,16 @@ const navItems: NavItem[] = [
   { key: "orders", label: "委托管理", icon: ClipboardList },
   { key: "users", label: "用户管理", icon: Users },
   { key: "notifications", label: "通知管理", icon: Bell },
+  { key: "works", label: "作品管理", icon: ImageIcon, superAdminOnly: true },
   { key: "settings", label: "系统设置", icon: Settings, disabled: true },
 ];
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
+  isSuperAdmin?: boolean;
 }
 
-export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
+export default function AdminSidebar({ activeTab, isSuperAdmin = false }: AdminSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -90,7 +94,9 @@ export default function AdminSidebar({ activeTab }: AdminSidebarProps) {
 
       {/* 导航项 */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {navItems
+          .filter((item) => !item.superAdminOnly || isSuperAdmin)
+          .map((item) => {
           const isActive = activeTab === item.key;
           const Icon = item.icon;
           return (

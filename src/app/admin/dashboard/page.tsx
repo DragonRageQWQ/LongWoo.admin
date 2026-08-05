@@ -5,10 +5,11 @@ import StatsOverview from "./_components/StatsOverview";
 import OrderList from "./_components/OrderList";
 import UserManagement from "./_components/UserManagement";
 import NotificationManagement from "./_components/NotificationManagement";
+import WorksManagement from "./_components/WorksManagement";
 import { getCurrentUser, ZERO_USER_UID } from "@/lib/auth";
 
 // 支持的有效标签页
-const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "notifications", "settings"];
+const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "notifications", "settings", "works"];
 
 // 解析当前标签页
 function resolveTab(tabParam: string | undefined): AdminTab {
@@ -57,6 +58,8 @@ function DashboardContent({
       return <UserManagement />;
     case "notifications":
       return <NotificationManagement isSuperAdmin={isSuperAdmin} />;
+    case "works":
+      return <WorksManagement isSuperAdmin={isSuperAdmin} />;
     case "settings":
       return <PlaceholderPanel title="系统设置" />;
     default:
@@ -87,7 +90,7 @@ export default async function AdminDashboardPage({
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* 左侧侧边栏 */}
-      <AdminSidebar activeTab={activeTab} />
+      <AdminSidebar activeTab={activeTab} isSuperAdmin={currentUser.uid === ZERO_USER_UID} />
 
       {/* 右侧内容区 */}
       <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-x-hidden lg:pl-10">

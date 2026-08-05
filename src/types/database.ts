@@ -91,6 +91,35 @@ export type CaseItem = {
   created_at: string
 }
 
+/** 作品（我们的作品展示） */
+export type Work = {
+  id: string
+  /** 图片编码序号（'01','02'...，增删后自动重排） */
+  code: string
+  title: string
+  tag: string
+  description: string
+  work_type: string
+  delivery: string
+  craft: string
+  image_url: string
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** 作品创建/更新入参 */
+export type WorkInput = {
+  title: string
+  tag: string
+  description: string
+  work_type: string
+  delivery: string
+  craft: string
+  image_url: string
+}
+
 // ===== 龙灵工坊：AI 角色扮演对话 =====
 
 /**
