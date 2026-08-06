@@ -21,8 +21,8 @@ import { logoutUser } from "@/actions/auth-actions";
 export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "notifications" | "settings" | "works";
 
 // 站点版本号（仅管理员后台可见，便于确认部署版本）
-const APP_VERSION = "v1.1.1(805)";
-const BUILD_NUMBER = "805";
+const APP_VERSION = "v1.1.2(806)";
+const BUILD_NUMBER = "806";
 
 interface NavItem {
   key: AdminTab;
