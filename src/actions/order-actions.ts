@@ -969,3 +969,57 @@ export async function getServiceTypes(): Promise<{
     return { success: false, error: '获取服务类型时发生未知错误' }
   }
 }
+
+// ==================== 我的订单（个人中心） ====================
+
+/**
+ * 获取当前登录用户的订单列表（按下单邮箱匹配）
+ * 普通用户查看自己名下订单，无需手动输入单号+手机号
+ */
+export async function listMyOrders(limit = 20): Promise<{
+  success: boolean
+  data?: Order[]
+  error?: string
+}> {
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return { success: false, error: '请先登录' }
+  }
+
+  const supabase = await createClient()
+
+  try {
+    const safeLimit = Math.min(limit, MAX_PAGE_LIMIT)
+
+    // 客户订单：按下单邮箱匹配（orders.customer_email = profile.email）
+    // 同时包含分配给当前用户的订单（studio_user_id = userId），兼容工作台场景
+    const email = currentUser.profile?.email
+    let query = supabase
+      .from('orders')
+      .select('*, service_types(*)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .limit(safeLimit)
+
+    if (email && currentUser.userId) {
+      query = query.or(`customer_email.eq.${escapePostgrestKeyword(email)},studio_user_id.eq.${currentUser.userId}`)
+    } else if (currentUser.userId) {
+      query = query.eq('studio_user_id', currentUser.userId)
+    } else if (email) {
+      query = query.eq('customer_email', email)
+    } else {
+      return { success: true, data: [] }
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('查询我的订单失败:', error.message)
+      return { success: false, error: '查询失败，请稍后重试' }
+    }
+
+    return { success: true, data: (data || []) as Order[] }
+  } catch (error) {
+    console.error('查询我的订单异常:', error)
+    return { success: false, error: '查询我的订单时发生未知错误' }
+  }
+}

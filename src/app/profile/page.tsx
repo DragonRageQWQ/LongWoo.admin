@@ -28,7 +28,9 @@ import {
   updateAvatar,
   updatePassword,
 } from "@/actions/profile-actions";
-import type { Profile } from "@/types/database";
+import { listMyOrders } from "@/actions/order-actions";
+import { formatDate, statusLabels } from "@/lib/utils";
+import type { Profile, Order } from "@/types/database";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -56,6 +58,11 @@ export default function ProfilePage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
+  // 我的订单状态
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -85,6 +92,34 @@ export default function ProfilePage() {
       mounted = false;
     };
   }, [router]);
+
+  // 加载我的订单
+  useEffect(() => {
+    let mounted = true;
+
+    const loadOrders = async () => {
+      setOrdersLoading(true);
+      try {
+        const result = await listMyOrders(20);
+        if (!mounted) return;
+        if (result.success) {
+          setOrders((result.data || []) as Order[]);
+          setOrdersError(null);
+        } else {
+          setOrdersError(result.error || "加载订单失败");
+        }
+      } catch {
+        if (mounted) setOrdersError("加载订单时发生未知错误");
+      } finally {
+        if (mounted) setOrdersLoading(false);
+      }
+    };
+
+    loadOrders();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const refreshProfile = async () => {
     const refreshed = await getSession();
@@ -534,6 +569,97 @@ export default function ProfilePage() {
               <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-lw-accent mt-2 transition-colors" />
             </Link>
           </div>
+        </section>
+
+        {/* 我的订单 */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-400">我的订单</h3>
+            <Link
+              href="/order/query"
+              className="text-xs text-lw-accent hover:underline flex items-center gap-0.5"
+            >
+              查询更多
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {ordersLoading ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-8 flex items-center justify-center">
+              <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+            </div>
+          ) : ordersError ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-8 text-center">
+              <p className="text-sm text-red-500 mb-3">{ordersError}</p>
+              <Link
+                href="/order/query"
+                className="inline-flex items-center gap-1 text-sm text-lw-accent hover:underline"
+              >
+                前往查询订单
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-8 text-center">
+              <div className="w-12 h-12 mx-auto rounded-full bg-gray-50 flex items-center justify-center mb-3">
+                <Package className="w-6 h-6 text-gray-300" />
+              </div>
+              <p className="text-sm text-gray-500 mb-1">暂无订单</p>
+              <p className="text-xs text-gray-400 mb-4">完成首笔定制，开启您的专属兽装之旅</p>
+              <Link
+                href="/order-step1.html"
+                className="inline-flex items-center gap-1 text-sm font-medium text-lw-accent hover:underline"
+              >
+                去购买自设兽装
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {orders.map((order) => (
+                <div
+                  key={order.id}
+                  className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4 hover:border-lw-accent/40 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-medium text-lw-black truncate">
+                          {order.order_no}
+                        </span>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+                            {
+                              pending: "bg-yellow-100 text-yellow-800",
+                              estimated: "bg-blue-100 text-blue-800",
+                              accepted: "bg-green-100 text-green-800",
+                              rejected: "bg-red-100 text-red-800",
+                              processing: "bg-purple-100 text-purple-800",
+                              delivered: "bg-indigo-100 text-indigo-800",
+                              completed: "bg-gray-100 text-gray-800",
+                            }[order.status] || "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {statusLabels[order.status] || order.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1 truncate">
+                        {order.service_types?.name || "自设兽装定制"} ·{" "}
+                        {formatDate(order.created_at)}
+                      </p>
+                    </div>
+                    <Link
+                      href="/order/query"
+                      className="text-xs text-gray-400 hover:text-lw-accent flex-shrink-0 flex items-center gap-0.5"
+                    >
+                      查看进度
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* 账号信息 */}

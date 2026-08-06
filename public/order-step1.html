@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" class="light" data-theme="light">
 <head>
     <meta charset="UTF-8">
@@ -155,7 +155,7 @@
     </a>
 
     <!-- 查询进度&售后 -->
-    <a href="under-construction.html?feature=进度与售后" class="nav-item">
+    <a href="/order/query" class="nav-item">
       <div class="nav-item-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="9"/>
@@ -634,17 +634,33 @@
         resetUpload();
       });
 
+      // 从 sessionStorage 恢复已上传的设定图（返回本页/刷新时保留，避免重新上传）
+      function restoreFromStorage() {
+        try {
+          var imgData = sessionStorage.getItem('longwoo_design_ref_image');
+          var imgName = sessionStorage.getItem('longwoo_design_ref_name');
+          var imgSize = sessionStorage.getItem('longwoo_design_ref_size');
+          if (!imgData) return;
+          previewImage.src = imgData;
+          uploadPlaceholder.style.display = 'none';
+          uploadPreview.style.display = 'flex';
+          uploadZone.classList.add('uploaded');
+          uploadStatus.style.display = 'flex';
+          if (imgName) fileName.textContent = imgName;
+          if (imgSize) fileSize.textContent = imgSize;
+          fileInfo.style.display = 'block';
+          nextStepBtn.disabled = false;
+        } catch (err) {}
+      }
+
+      // 页面加载时恢复（不重置，保证从后续步骤返回时不丢失已上传图片）
+      restoreFromStorage();
+
       // 下一步跳转
       nextStepBtn.addEventListener('click', function() {
         if (!nextStepBtn.disabled) {
           window.location.href = 'order-step2.html';
         }
-      });
-
-      // 页面加载时确保重置（不保留上次的上传状态）
-      window.addEventListener('pageshow', function(event) {
-        // 如果是从 bfcache 恢复，也重置
-        resetUpload();
       });
     })();
   </script>
