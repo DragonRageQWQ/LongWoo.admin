@@ -15,6 +15,7 @@ import {
   Briefcase,
   Bell,
   Image as ImageIcon,
+  FlaskConical,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 
@@ -25,11 +26,12 @@ const APP_VERSION = "v1.1.2(806)";
 const BUILD_NUMBER = "806";
 
 interface NavItem {
-  key: AdminTab;
+  key: AdminTab | "gray-test";
   label: string;
   icon: React.ElementType;
   disabled?: boolean;
   superAdminOnly?: boolean;
+  href?: string;
 }
 
 const navItems: NavItem[] = [
@@ -39,6 +41,7 @@ const navItems: NavItem[] = [
   { key: "users", label: "用户管理", icon: Users },
   { key: "notifications", label: "通知管理", icon: Bell },
   { key: "works", label: "作品管理", icon: ImageIcon, superAdminOnly: true },
+  { key: "gray-test", label: "灰度测试", icon: FlaskConical, superAdminOnly: true, href: "/gray-test" },
   { key: "settings", label: "系统设置", icon: Settings, disabled: true },
 ];
 
@@ -53,12 +56,15 @@ export default function AdminSidebar({ activeTab, isSuperAdmin = false }: AdminS
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleNavigate = (tab: AdminTab) => {
+  const handleNavigate = (item: NavItem) => {
     setMobileOpen(false);
-    if (tab === "overview") {
+    if (item.disabled) return;
+    if (item.href) {
+      router.push(item.href);
+    } else if (item.key === "overview") {
       router.push(`${pathname}`);
     } else {
-      router.push(`${pathname}?tab=${tab}`);
+      router.push(`${pathname}?tab=${item.key}`);
     }
   };
 
@@ -102,7 +108,7 @@ export default function AdminSidebar({ activeTab, isSuperAdmin = false }: AdminS
           return (
             <button
               key={item.key}
-              onClick={() => !item.disabled && handleNavigate(item.key)}
+              onClick={() => handleNavigate(item)}
               disabled={item.disabled}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 isActive

@@ -313,6 +313,9 @@ export default function WorksManagement({
         <p className="text-sm text-gray-400 mt-1">
           管理首页「我们的作品」展示内容（仅超级管理员可用）
         </p>
+        <p className="text-xs text-gray-400 mt-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-lg inline-block">
+          提示：作品图片将同步作为灰度测试页背景库，增删改即时生效
+        </p>
       </div>
 
       {/* 新增表单 */}

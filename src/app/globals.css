@@ -19,3 +19,15 @@ body {
   color: var(--color-lw-black);
   background: var(--color-lw-white);
 }
+
+/* 灰度测试页：调节器面板弹出动画 */
+@keyframes grayFadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
