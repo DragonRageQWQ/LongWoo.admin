@@ -5,6 +5,8 @@
   --color-lw-gray: #F3F3F3;
   --color-lw-white: #FFFFFF;
   --color-lw-accent: #2563EB;
+  /* 灰度测试页蒙版色（RGB 分量，供画布组件读取） */
+  --gray-test-mask-color: 15, 23, 42;
 }
 
 @theme inline {
@@ -30,4 +32,13 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* 灰度测试页：不透明度滑块焦点可见样式（无障碍） */
+input[type="range"]#gray-test-opacity {
+  accent-color: var(--color-lw-accent);
+}
+input[type="range"]#gray-test-opacity:focus-visible {
+  outline: 2px solid var(--color-lw-accent);
+  outline-offset: 2px;
 }

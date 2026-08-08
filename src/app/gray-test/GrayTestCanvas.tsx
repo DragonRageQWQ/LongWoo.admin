@@ -9,8 +9,16 @@
  * - 鼠标/触摸点附近蒙版局部增强（峰值约 75%，保证可读性）
  * - 底部小气泡调节器：不透明度滑块 + 随机切换背景按钮（10 秒冷却）
  * - PC 端 16:9 画布（letterbox 居中）；移动端全屏触控
+ *
+ * 优化记录（v2）：
+ * - prefers-reduced-motion 降级：禁用局部增强动画、缩短淡出
+ * - rAF 循环按需启停：指针无交互且收敛后暂停，省电
+ * - 背景图全量预加载，切换无黑屏
+ * - 触摸目标 ≥44px，面板响应式宽度
+ * - aria-expanded / autoFocus / Esc / 点击外部关闭
+ * - 蒙版色读取 CSS 变量（令牌化），面板去叠层 blur
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, startTransition } from "react";
 import { Shuffle, X, SlidersHorizontal } from "lucide-react";
 
 interface GrayTestCanvasProps {
@@ -27,9 +35,10 @@ const LOCAL_STORAGE_LAST_INDEX = "gray-test-last-index";
 const COOLDOWN_MS = 10_000; // 随机切换冷却 10 秒
 const ENHANCE_PEAK = 0.45; // 鼠标局部增强峰值增量
 const FADE_DURATION = 900; // 背景切换淡出时长 ms
+const FADE_DURATION_REDUCED = 250; // reduced-motion 时的淡出时长
 const ENHANCE_RADIUS_PC = 340; // PC 端增强半径 px
 const ENHANCE_RADIUS_MOBILE = 220; // 移动端增强半径 px
-const MASK_COLOR = "15,23,42"; // 蒙版底色（深蓝灰 RGB）
+const INACTIVE_POSITION = -9999; // 指针不活跃时的占位坐标
 
 export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
   const [bgIndex, setBgIndex] = useState<number | null>(null);
@@ -41,22 +50,52 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  // 客户端水合检测（SSR 返回 false，客户端返回 true）
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const enhanceRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
-  const pointerRef = useRef({ x: -9999, y: -9999, active: false });
-  const smoothRef = useRef({ x: -9999, y: -9999, strength: 0 });
+  const startLoopRef = useRef<() => void>(() => {});
+  const pointerRef = useRef({ x: INACTIVE_POSITION, y: INACTIVE_POSITION, active: false });
+  const smoothRef = useRef({ x: INACTIVE_POSITION, y: INACTIVE_POSITION, strength: 0 });
   const lastRandomTsRef = useRef(0);
   const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const opacityRef = useRef(DEFAULT_OPACITY);
+  const reducedMotionRef = useRef(false);
+  const isMobileRef = useRef(false);
+  const lastStyleRef = useRef("");
 
-  // 初始化：设备检测 + 读取本地偏好
+  // 读取 CSS 变量蒙版色（令牌化），带默认回退
+  const maskColorRef = useRef("15,23,42");
+  const [maskColor, setMaskColor] = useState("15,23,42");
+
+  // 初始化：设备检测 + 动效偏好 + 读取本地设置（一次性，非紧急更新）
   useEffect(() => {
-    setIsClient(true);
-    const mq = window.matchMedia("(pointer: coarse)");
-    setIsMobile(mq.matches);
+    const mqCoarse = window.matchMedia("(pointer: coarse)");
+    const mqReduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    isMobileRef.current = mqCoarse.matches;
+    reducedMotionRef.current = mqReduced.matches;
+    startTransition(() => {
+      setIsMobile(mqCoarse.matches);
+      setReducedMotion(mqReduced.matches);
+    });
+
+    // 令牌化蒙版色：尝试从 CSS 变量读取
+    try {
+      const styles = getComputedStyle(document.documentElement);
+      const raw = styles.getPropertyValue("--gray-test-mask-color").trim();
+      if (raw) {
+        maskColorRef.current = raw;
+        startTransition(() => setMaskColor(raw));
+      }
+    } catch { /* 忽略 */ }
 
     let saved = DEFAULT_OPACITY;
     try {
@@ -67,7 +106,15 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
       }
     } catch { /* 隐私模式忽略 */ }
     opacityRef.current = saved;
-    setOpacity(saved);
+    startTransition(() => setOpacity(saved));
+
+    // 监听动效偏好变化（系统设置切换时实时响应）
+    const onReducedChange = (e: MediaQueryListEvent) => {
+      reducedMotionRef.current = e.matches;
+      setReducedMotion(e.matches);
+    };
+    mqReduced.addEventListener("change", onReducedChange);
+    return () => mqReduced.removeEventListener("change", onReducedChange);
   }, []);
 
   // 首次打开：随机选一张背景（排除上次，避免连续相同）
@@ -81,12 +128,33 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
       }
     } catch { /* 忽略 */ }
     const pick = candidates[Math.floor(Math.random() * candidates.length)];
-    setBgIndex(pick);
-    setImgLoaded(false);
+    startTransition(() => {
+      setBgIndex(pick);
+      setImgLoaded(false);
+    });
     try {
       localStorage.setItem(LOCAL_STORAGE_LAST_INDEX, String(pick));
     } catch { /* 忽略 */ }
   }, [isClient, images, bgIndex]);
+
+  // 全量预加载背景库（消除切换黑屏）
+  useEffect(() => {
+    if (images.length === 0) return;
+    let cancelled = false;
+    const preload = () => {
+      if (cancelled) return;
+      images.forEach((src) => {
+        const img = new Image();
+        img.src = src;
+      });
+    };
+    // 延迟到首次渲染完成后预加载，不抢占首屏带宽
+    const t = setTimeout(preload, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [images]);
 
   // 随机切换（气泡按钮触发，10 秒冷却）
   const handleRandom = useCallback(() => {
@@ -104,7 +172,7 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
     setPrevIndex(bgIndex);
     setFadePrev(true);
     setBgIndex(next);
-    setImgLoaded(false);
+    setImgLoaded(true); // 已预加载，直接显示避免闪烁
     setTransitioning(true);
     try {
       localStorage.setItem(LOCAL_STORAGE_LAST_INDEX, String(next));
@@ -125,19 +193,27 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
   }, [images.length, bgIndex, cooldownLeft, transitioning]);
 
   // 淡出动画：先显示旧图（opacity 1），下一帧触发 transition 到 0
+  const fadeDuration = reducedMotion ? FADE_DURATION_REDUCED : FADE_DURATION;
   useEffect(() => {
     if (!transitioning) return;
+    if (reducedMotionRef.current) {
+      // 降级模式：无动画，直接完成切换
+      setPrevIndex(null);
+      setFadePrev(false);
+      setTransitioning(false);
+      return;
+    }
     const raf = requestAnimationFrame(() => setFadePrev(false));
     const t = setTimeout(() => {
       setPrevIndex(null);
       setFadePrev(false);
       setTransitioning(false);
-    }, FADE_DURATION);
+    }, fadeDuration);
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(t);
     };
-  }, [transitioning, bgIndex]);
+  }, [transitioning, bgIndex, fadeDuration]);
 
   // 不透明度持久化
   const handleOpacityChange = useCallback((v: number) => {
@@ -149,25 +225,31 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
     } catch { /* 忽略 */ }
   }, []);
 
-  // 指针位置追踪
+  // 指针位置追踪（唤醒动画循环）
   const updatePointer = useCallback((x: number, y: number) => {
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     pointerRef.current = { x: x - rect.left, y: y - rect.top, active: true };
+    // 唤醒 rAF 循环（若已暂停）
+    startLoopRef.current();
   }, []);
 
   const clearPointer = useCallback(() => {
     pointerRef.current.active = false;
   }, []);
 
-  // rAF 平滑动画循环（蒙版局部增强跟随指针）
+  // rAF 平滑动画循环（按需启停：无交互且收敛后暂停，指针移动时唤醒）
   useEffect(() => {
+    if (reducedMotion) return; // 降级模式：完全禁用跟随动画
+
+    let running = true;
     const loop = () => {
+      if (!running) return;
       const s = smoothRef.current;
       const p = pointerRef.current;
-      const targetX = p.active ? p.x : -9999;
-      const targetY = p.active ? p.y : -9999;
+      const targetX = p.active ? p.x : INACTIVE_POSITION;
+      const targetY = p.active ? p.y : INACTIVE_POSITION;
       const targetStrength = p.active ? 1 : 0;
 
       // lerp 平滑插值
@@ -177,19 +259,53 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
 
       const el = enhanceRef.current;
       if (el) {
-        const radius = isMobile ? ENHANCE_RADIUS_MOBILE : ENHANCE_RADIUS_PC;
+        const radius = isMobileRef.current ? ENHANCE_RADIUS_MOBILE : ENHANCE_RADIUS_PC;
         const base = Math.min(0.6, opacityRef.current);
         // 局部增强：基础不透明度 + 峰值增量，总峰值 ≈ 0.75（绝不接近 100%）
         const alpha = Math.min(0.8, base + ENHANCE_PEAK * s.strength);
-        el.style.background = `radial-gradient(circle ${radius}px at ${s.x.toFixed(1)}px ${s.y.toFixed(1)}px, rgba(${MASK_COLOR},${alpha.toFixed(3)}) 0%, rgba(${MASK_COLOR},${base.toFixed(3)}) 55%, rgba(${MASK_COLOR},${(base * 0.92).toFixed(3)}) 100%)`;
+        const css = `radial-gradient(circle ${radius}px at ${s.x.toFixed(1)}px ${s.y.toFixed(1)}px, rgba(${maskColorRef.current},${alpha.toFixed(3)}) 0%, rgba(${maskColorRef.current},${base.toFixed(3)}) 55%, rgba(${maskColorRef.current},${(base * 0.92).toFixed(3)}) 100%)`;
+        // 仅在值变化超过阈值时更新样式，避免无意义重写
+        if (css !== lastStyleRef.current) {
+          el.style.background = css;
+          lastStyleRef.current = css;
+        }
       }
+
+      // 按需暂停：指针不活跃且位置/强度已收敛到静止
+      const idle =
+        !p.active &&
+        Math.abs(targetX - s.x) < 0.5 &&
+        Math.abs(targetY - s.y) < 0.5 &&
+        s.strength < 0.002;
+      if (idle) {
+        rafRef.current = null;
+        // 收敛后清空增强层，释放绘制压力
+        if (el) {
+          el.style.background = "transparent";
+          lastStyleRef.current = "";
+        }
+        return; // 不调度下一帧，循环暂停
+      }
+
       rafRef.current = requestAnimationFrame(loop);
     };
-    rafRef.current = requestAnimationFrame(loop);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+    // 注册唤醒函数：指针移动时若已暂停则重启循环
+    startLoopRef.current = () => {
+      if (running && rafRef.current === null) {
+        rafRef.current = requestAnimationFrame(loop);
+      }
     };
-  }, [isMobile]);
+
+    // 启动循环
+    rafRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      running = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [reducedMotion]);
 
   // 卸载清理
   useEffect(() => {
@@ -197,6 +313,32 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
       if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
     };
   }, []);
+
+  // 面板：Esc 关闭 + 点击外部关闭
+  useEffect(() => {
+    if (!panelOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPanelOpen(false);
+    };
+    const onClickOutside = (e: MouseEvent) => {
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(e.target as Node)
+      ) {
+        setPanelOpen(false);
+      }
+    };
+    // 延迟绑定点击，避免打开瞬间立即触发关闭
+    const t = setTimeout(() => {
+      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("mousedown", onClickOutside);
+    }, 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onClickOutside);
+    };
+  }, [panelOpen]);
 
   // 未挂载或无可展示背景
   if (!isClient || images.length === 0 || bgIndex === null) {
@@ -239,7 +381,9 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
         alt=""
         draggable={false}
         onLoad={() => setImgLoaded(true)}
-        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+        className={`absolute inset-0 w-full h-full object-cover ${
+          reducedMotion ? "" : "transition-opacity duration-500"
+        }`}
         style={{ opacity: imgLoaded ? 1 : 0 }}
       />
       {/* 上一张背景（上层，淡出中） */}
@@ -248,18 +392,18 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
           src={prevImg}
           alt=""
           draggable={false}
-          className="absolute inset-0 w-full h-full object-cover ease-in-out"
+          className="absolute inset-0 w-full h-full object-cover"
           style={{
             opacity: fadePrev ? 1 : 0,
-            transition: `opacity ${FADE_DURATION}ms ease-in-out`,
+            transition: `opacity ${fadeDuration}ms ease-in-out`,
           }}
         />
       )}
 
       {/* ===== 毛玻璃蒙版层（全局基础不透明度） ===== */}
       <div
-        className="absolute inset-0 backdrop-blur-xl"
-        style={{ backgroundColor: `rgba(${MASK_COLOR},${opacity})` }}
+        className={`absolute inset-0 ${reducedMotion ? "" : "backdrop-blur-xl"}`}
+        style={{ backgroundColor: `rgba(${maskColor},${opacity})` }}
       />
 
       {/* ===== 指针局部增强层（径向渐变，rAF 驱动） ===== */}
@@ -269,25 +413,32 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
       <div className="absolute bottom-4 right-4 sm:bottom-5 sm:right-5 z-20 flex flex-col items-end gap-2">
         {panelOpen && (
           <div
-            className="bg-white/85 backdrop-blur-md rounded-2xl shadow-lg border border-white/40 p-4 w-64 sm:w-72"
+            ref={panelRef}
+            role="dialog"
+            aria-label="背景调节器"
+            className="bg-white/95 rounded-2xl shadow-lg border border-white/40 p-4 w-[calc(100vw-2rem)] max-w-72"
             style={{ animation: "grayFadeSlideUp 0.25s ease-out" }}
           >
             {/* 不透明度调节 */}
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-600">蒙版不透明度</span>
+              <label htmlFor="gray-test-opacity" className="text-xs font-medium text-slate-600">
+                蒙版不透明度
+              </label>
               <span className="text-xs font-semibold text-slate-800 tabular-nums">
                 {Math.round(opacity * 100)}%
               </span>
             </div>
             <input
+              id="gray-test-opacity"
               type="range"
               min={MIN_OPACITY * 100}
               max={MAX_OPACITY * 100}
               step={1}
               value={Math.round(opacity * 100)}
               onChange={(e) => handleOpacityChange(parseInt(e.target.value, 10) / 100)}
-              className="w-full h-1.5 appearance-none rounded-full bg-slate-200 accent-blue-600 cursor-pointer"
+              className="w-full h-6 appearance-none rounded-full bg-slate-200 accent-blue-600 cursor-pointer"
               aria-label="蒙版不透明度"
+              autoFocus
             />
 
             <div className="h-px bg-slate-200/70 my-3" />
@@ -296,7 +447,7 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
             <button
               onClick={handleRandom}
               disabled={cooldownLeft > 0 || images.length <= 1}
-              className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-all
+              className={`w-full min-h-[44px] flex items-center justify-center gap-2 rounded-xl text-sm font-medium transition-all
                 ${
                   cooldownLeft > 0 || images.length <= 1
                     ? "bg-slate-100 text-slate-400 cursor-not-allowed"
@@ -317,11 +468,13 @@ export default function GrayTestCanvas({ images }: GrayTestCanvasProps) {
         <button
           onClick={() => setPanelOpen((o) => !o)}
           aria-label={panelOpen ? "收起调节器" : "展开调节器"}
+          aria-expanded={panelOpen}
+          aria-controls="gray-test-panel"
           className={`group flex items-center justify-center rounded-full shadow-md transition-all duration-300
             ${
               panelOpen
-                ? "w-10 h-10 bg-slate-800 text-white rotate-180"
-                : "w-11 h-11 bg-white/70 backdrop-blur-md text-slate-600 border border-white/50 hover:bg-white/90 hover:shadow-lg hover:scale-105"
+                ? "w-11 h-11 bg-slate-800 text-white rotate-180"
+                : "w-11 h-11 bg-white/85 text-slate-600 border border-white/50 hover:bg-white/95 hover:shadow-lg hover:scale-105"
             }`}
         >
           {panelOpen ? (
