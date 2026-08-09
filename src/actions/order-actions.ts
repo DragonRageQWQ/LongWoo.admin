@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentUser, canUserAccessOrder, requireAdmin } from '@/lib/auth'
+import { getCurrentUser, canViewOrderDetail, requireAdmin } from '@/lib/auth'
 import { escapeHtml, escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
 import { validateUrl, isValidUUID } from '@/lib/order-utils'
 import { maskPhone, maskEmail } from '@/lib/utils'
@@ -164,8 +164,9 @@ export async function getOrderById(
     return { success: false, error: '请先登录' }
   }
 
-  // 授权校验：检查用户是否有权访问此订单
-  const hasAccess = await canUserAccessOrder(id, currentUser.userId, currentUser.role)
+  // 授权校验（安全加固 SEC-03）：查看完整详情要求已分配本人或管理员
+  // 未分配订单（接单池）不得查看客户隐私/附件/内部日志，防止 IDOR
+  const hasAccess = await canViewOrderDetail(id, currentUser.userId, currentUser.role)
   if (!hasAccess) {
     return { success: false, error: '无权查看此委托单' }
   }
@@ -542,6 +543,17 @@ export async function replySite(
       return { success: false, error: adminCheck.error }
     }
     const currentUser = adminCheck.user
+
+    // 安全加固（SEC-11）：站内回复限速，防滥用刷站内消息（与 replyEmail 一致）
+    const ip = await getClientIp()
+    const replyRateLimit = await checkRateLimit(
+      `sitereply:${ip}`,
+      RATE_LIMIT_EMAIL_REPLY_MAX,
+      RATE_LIMIT_EMAIL_REPLY_WINDOW
+    )
+    if (!replyRateLimit.allowed) {
+      return { success: false, error: '操作过于频繁，请稍后再试' }
+    }
 
     // 输入验证
     const trimmedContent = content.trim()

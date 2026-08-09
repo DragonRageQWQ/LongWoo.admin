@@ -54,19 +54,49 @@ describe('getImageExtension', () => {
 })
 
 describe('validateMagicBuffer', () => {
-  it('JPEG 魔数（FF D8 FF）→ true', () => {
-    const buf = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00])
-    expect(validateMagicBuffer(buf, 'image/jpeg')).toBe(true)
+  // 合法 JPEG：魔数头 + 中间数据 + EOI 结束标记（FF D9）
+  const validJpeg = Buffer.concat([
+    Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]),
+    Buffer.from(Array(8).fill(0x00)),
+    Buffer.from([0xff, 0xd9]),
+  ])
+  // 合法 PNG：魔数 + IHDR chunk（长度13 + "IHDR" + 宽1高1 + 位深/色型/压缩/滤波/隔行 7字节）
+  const validPng = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.from([0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52]),
+    Buffer.from([0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01]),
+    Buffer.from([0x08, 0x06, 0x00, 0x00, 0x00]),
+  ])
+
+  it('合法 JPEG（含 EOI 标记）→ true', () => {
+    expect(validateMagicBuffer(validJpeg, 'image/jpeg')).toBe(true)
   })
 
-  it('PNG 魔数 → true', () => {
-    const buf = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00])
-    expect(validateMagicBuffer(buf, 'image/png')).toBe(true)
+  it('合法 PNG（IHDR 尺寸非零）→ true', () => {
+    expect(validateMagicBuffer(validPng, 'image/png')).toBe(true)
+  })
+
+  it('JPEG 无 EOI 结束标记 → false（SEC-09 结构校验）', () => {
+    const buf = Buffer.concat([
+      Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]),
+      Buffer.from(Array(8).fill(0x00)),
+      Buffer.from([0x00, 0x00]), // 非 FF D9
+    ])
+    expect(validateMagicBuffer(buf, 'image/jpeg')).toBe(false)
+  })
+
+  it('PNG 声明零尺寸 → false（SEC-09 结构校验）', () => {
+    const buf = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.from([0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52]),
+      Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), // 宽=0 高=0
+      Buffer.from([0x08, 0x06, 0x00, 0x00, 0x00]),
+    ])
+    expect(validateMagicBuffer(buf, 'image/png')).toBe(false)
   })
 
   it('伪造 mime：内容为 JPEG 但声明 PNG → false', () => {
-    const buf = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00])
-    expect(validateMagicBuffer(buf, 'image/png')).toBe(false)
+    expect(validateMagicBuffer(validJpeg, 'image/png')).toBe(false)
   })
 
   it('缓冲区过短 → false', () => {

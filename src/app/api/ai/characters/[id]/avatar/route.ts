@@ -31,9 +31,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '无效的角色 ID' }, { status: 400 })
   }
 
-  // 速率限制
+  // 速率限制（安全加固 SEC-07：组合 用户+IP 键，防轮换 IP 绕过、避免 NAT 用户互相拖累）
   const ip = await getClientIp()
-  const rateLimit = await checkRateLimit(`ai-avatar:${ip}`, RATE_LIMIT_AVATAR_MAX, RATE_LIMIT_AVATAR_WINDOW)
+  const rateLimit = await checkRateLimit(
+    `ai-avatar:${user.id}:${ip}`,
+    RATE_LIMIT_AVATAR_MAX,
+    RATE_LIMIT_AVATAR_WINDOW
+  )
   if (!rateLimit.allowed) {
     return NextResponse.json({ success: false, error: '操作过于频繁，请稍后再试' }, { status: 429 })
   }

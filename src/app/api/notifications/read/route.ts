@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
+import { isValidUUID } from '@/lib/order-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +27,8 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     const { id } = body as { id?: string }
-    if (!id || typeof id !== 'string') {
+    // 安全加固（SEC-06）：严格校验 UUID 格式，拒绝任意字符串查询
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
       return NextResponse.json({ success: false, error: '参数错误' }, { status: 400 })
     }
 

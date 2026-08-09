@@ -8,11 +8,15 @@ import {
   getSupabaseCookieName,
   SECURE_COOKIE_OPTIONS,
 } from '@/lib/supabase/cookie-utils'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit, peekRateLimit } from '@/lib/rate-limit'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { fetchWithRetry } from '@/lib/network-utils'
 import { extractClientIpFromRequest } from '@/lib/server-utils'
-import { RATE_LIMIT_OTP_WINDOW } from '@/lib/constants'
+import {
+  RATE_LIMIT_OTP_WINDOW,
+  RATE_LIMIT_LOGIN_MAX_FAILS,
+  RATE_LIMIT_LOGIN_LOCK_MS,
+} from '@/lib/constants'
 
 // Vercel Hobby 计划默认超时 10 秒，认证流程含 5+ API 调用需要更长时间
 export const maxDuration = 60
@@ -83,6 +87,16 @@ export async function POST(request: Request) {
         )
       }
 
+      // 安全加固（SEC-12）：连续失败锁定检查——15 分钟内失败达到 5 次即锁定
+      const lockKey = `passwordlogin:lock:${normalizedEmail}`
+      const lockCheck = await peekRateLimit(lockKey, RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS)
+      if (!lockCheck.allowed) {
+        return NextResponse.json(
+          { success: false, error: '登录失败次数过多，账户已临时锁定，请15分钟后再试' },
+          { status: 429 }
+        )
+      }
+
       const [ipLimit, emailLimit] = await Promise.all([
         checkRateLimit(`passwordlogin:ip:${ip}`, 10, RATE_LIMIT_OTP_WINDOW),
         checkRateLimit(`passwordlogin:email:${normalizedEmail}`, 5, RATE_LIMIT_OTP_WINDOW),
@@ -108,6 +122,8 @@ export async function POST(request: Request) {
       )
 
       if (!passwordResponse.ok) {
+        // 安全加固（SEC-12）：记录失败次数（15 分钟窗口），达到阈值触发锁定
+        await checkRateLimit(lockKey, RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS)
         return NextResponse.json(
           { success: false, error: '邮箱或密码错误' },
           { status: 401 }

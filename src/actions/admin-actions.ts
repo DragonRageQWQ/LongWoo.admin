@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireZeroUser, requireAdmin, ZERO_USER_UID } from '@/lib/auth'
 import { validateCsrf } from '@/lib/csrf'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/server-utils'
 import { MAX_PAGE_LIMIT } from '@/lib/constants'
 import { escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
 import { buildUserListMeta, type UserListMeta } from '@/lib/admin-meta'
@@ -44,6 +46,17 @@ export async function grantAdminRole(targetUid: number): Promise<AdminActionResu
   const authResult = await requireZeroUser()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
+  }
+
+  // 安全加固（SEC-11）：权限授予限速（防滥用/防账号被盗后批量提权）
+  const ip = await getClientIp()
+  const rateLimit = await checkRateLimit(
+    `grantadmin:${ip}`,
+    10,
+    60 * 1000
+  )
+  if (!rateLimit.allowed) {
+    return { success: false, error: '操作过于频繁，请稍后再试' }
   }
 
   const operator = authResult.user
@@ -125,6 +138,17 @@ export async function revokeAdminRole(targetUid: number): Promise<AdminActionRes
   const authResult = await requireZeroUser()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
+  }
+
+  // 安全加固（SEC-11）：权限撤销限速（防滥用）
+  const ip = await getClientIp()
+  const rateLimit = await checkRateLimit(
+    `revokeadmin:${ip}`,
+    10,
+    60 * 1000
+  )
+  if (!rateLimit.allowed) {
+    return { success: false, error: '操作过于频繁，请稍后再试' }
   }
 
   const operator = authResult.user

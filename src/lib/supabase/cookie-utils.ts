@@ -217,6 +217,122 @@ export async function verifyAccessToken(accessToken: string): Promise<string | n
   }
 }
 
+/**
+ * 验证 access_token 并返回【签名验证过】的受信用户信息
+ *
+ * 安全加固（SEC-08）：cookie 外层 JSON（base64url，无签名）可被攻击者
+ * 任意改写 user.email 等字段。此函数仅返回 JWT payload（已验签）或
+ * Supabase /auth/v1/user 响应（网络验证）中的受信字段，杜绝伪造。
+ *
+ * @returns 验证通过返回 { id, email, role, user_metadata }，失败返回 null
+ */
+export async function verifyAccessTokenWithUser(
+  accessToken: string
+): Promise<{ id: string; email?: string; role?: string; user_metadata?: Record<string, unknown> } | null> {
+  // 1) 本地 JWT 验证（payload 已验签，字段受信）
+  const localUser = await verifyTokenLocallyWithUser(accessToken)
+  if (localUser) return localUser
+
+  // 2) 网络验证（回退路径）
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !anonKey) return null
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 3000)
+    try {
+      const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+
+      if (!resp.ok) return null
+
+      const userData = await resp.json()
+      if (typeof userData?.id !== 'string') return null
+      return {
+        id: userData.id,
+        email: typeof userData.email === 'string' ? userData.email : undefined,
+        role: typeof userData.role === 'string' ? userData.role : undefined,
+        user_metadata:
+          userData.user_metadata && typeof userData.user_metadata === 'object'
+            ? userData.user_metadata as Record<string, unknown>
+            : undefined,
+      }
+    } finally {
+      clearTimeout(timeout)
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 本地 JWT 验证并返回受信 user 信息（payload 已验签）
+ */
+async function verifyTokenLocallyWithUser(
+  accessToken: string
+): Promise<{ id: string; email?: string; role?: string; user_metadata?: Record<string, unknown> } | null> {
+  // 1) ES256
+  const es256KeyPromiseResult = getEs256Key()
+  if (es256KeyPromiseResult) {
+    try {
+      const { payload } = await jwtVerify(accessToken, await es256KeyPromiseResult, {
+        algorithms: ['ES256'],
+      })
+      if (typeof payload.sub === 'string' && payload.sub) {
+        return extractTrustedUser(payload)
+      }
+    } catch {
+      // 签名/过期校验失败 → 尝试其他路径
+    }
+  }
+
+  // 2) HS256
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET
+  if (jwtSecret) {
+    try {
+      const { payload } = await jwtVerify(
+        accessToken,
+        new TextEncoder().encode(jwtSecret),
+        { algorithms: ['HS256'] }
+      )
+      if (typeof payload.sub === 'string' && payload.sub) {
+        return extractTrustedUser(payload)
+      }
+    } catch {
+      // 失败 → 回退网络验证
+    }
+  }
+
+  return null
+}
+
+/**
+ * 从已验签的 JWT payload 提取受信用户字段
+ */
+function extractTrustedUser(payload: { sub?: string; email?: string; role?: string; user_metadata?: unknown }): {
+  id: string
+  email?: string
+  role?: string
+  user_metadata?: Record<string, unknown>
+} {
+  return {
+    id: payload.sub!,
+    email: typeof payload.email === 'string' ? payload.email : undefined,
+    role: typeof payload.role === 'string' ? payload.role : undefined,
+    user_metadata:
+      payload.user_metadata && typeof payload.user_metadata === 'object'
+        ? payload.user_metadata as Record<string, unknown>
+        : undefined,
+  }
+}
+
 // ES256 公钥导入缓存（模块级，避免每个请求重复 importJWK）
 let es256KeyPromise: Promise<CryptoKey | Uint8Array> | null = null
 

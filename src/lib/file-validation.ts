@@ -3,6 +3,11 @@
  *
  * 通过读取文件头部魔数（magic number）验证实际文件类型，
  * 而非依赖客户端提供的 MIME 类型（可被伪造）。
+ *
+ * 安全加固（SEC-09）：在魔数校验基础上增加结构完整性检查，
+ * 降低"合法魔数头 + HTML/JS 载荷"polyglot 文件的绕过风险：
+ * - JPEG：校验文件尾部存在 EOI 结束标记（FF D9）
+ * - PNG：校验 IHDR chunk 声明了合理（非零）的尺寸
  */
 
 /**
@@ -44,6 +49,10 @@ export async function validateFileMagicNumber(
         if (webpTag !== 'WEBP') continue
       }
 
+      // 安全加固（SEC-09）：结构完整性二次检查
+      const structureValid = await validateImageStructure(file, mimeType)
+      if (!structureValid) return false
+
       return true
     }
 
@@ -51,4 +60,42 @@ export async function validateFileMagicNumber(
   } catch {
     return false
   }
+}
+
+/**
+ * 图片结构完整性检查（SEC-09）
+ *
+ * 魔数只能证明文件头是合法图片标记，无法阻止 polyglot 文件
+ * （合法图片头 + 附加恶意载荷）。此处对 JPEG/PNG 做轻量结构校验：
+ * - JPEG：文件末尾必须存在 EOI 标记 FF D9（有效 JPEG 的结束标志）
+ * - PNG：IHDR 块（偏移 16-24）声明的宽度/高度必须非零
+ *
+ * @param file - 上传的 File 对象
+ * @param mime - 匹配的 MIME 类型
+ * @returns 结构合理返回 true
+ */
+async function validateImageStructure(
+  file: File,
+  mime: string
+): Promise<boolean> {
+  if (mime === 'image/jpeg') {
+    // 读取文件尾部 2 字节，应为 EOI 标记 0xFF 0xD9
+    const fileSize = file.size
+    if (fileSize < 3) return false
+    const tail = new Uint8Array(await file.slice(fileSize - 2, fileSize).arrayBuffer())
+    return tail[0] === 0xff && tail[1] === 0xd9
+  }
+
+  if (mime === 'image/png') {
+    // 读取 IHDR chunk 头（偏移 16-24）：宽/高字段
+    if (file.size < 24) return false
+    const ihdr = new Uint8Array(await file.slice(16, 24).arrayBuffer())
+    // 大端序读取 width/height，非零即合理
+    const width = (ihdr[0] << 24) | (ihdr[1] << 16) | (ihdr[2] << 8) | ihdr[3]
+    const height = (ihdr[4] << 24) | (ihdr[5] << 16) | (ihdr[6] << 8) | ihdr[7]
+    return width > 0 && height > 0
+  }
+
+  // GIF / WebP 不做额外结构校验（魔数已足够）
+  return true
 }

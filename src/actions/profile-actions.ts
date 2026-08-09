@@ -28,6 +28,17 @@ export async function updateDisplayName(
       return { success: false, error: '未登录', debug: 'NoUser' }
     }
 
+    // 安全加固（SEC-11）：昵称修改限速（用户+IP 组合键，防刷）
+    const ip = await getClientIp()
+    const rateLimit = await checkRateLimit(
+      `displayname:${user.id}:${ip}`,
+      10,
+      60 * 1000
+    )
+    if (!rateLimit.allowed) {
+      return { success: false, error: '操作过于频繁，请稍后再试' }
+    }
+
     const name = displayName.trim()
     if (!name || name.length > 20) {
       return { success: false, error: '昵称长度需在1-20个字符之间', debug: 'InvalidName' }

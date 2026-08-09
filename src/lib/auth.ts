@@ -150,3 +150,40 @@ export async function canUserAccessOrder(
   // 订单尚未分配（pending/estimated 状态），允许用户操作
   return order.status === 'pending' || order.status === 'estimated'
 }
+
+/**
+ * 验证当前用户是否有权【查看】指定订单的完整详情（含附件/回复/操作日志）
+ *
+ * 安全加固（SEC-03）：将"可接单/估价"与"可查看完整详情"权限分离。
+ * 未分配订单（pending/estimated）对所有登录用户开放操作（接单池），
+ * 但完整详情（客户隐私、设计稿附件、内部回复与日志）仅限：
+ * - admin 角色
+ * - 该订单已分配的工作室成员（studio_user_id 匹配）
+ *
+ * 防止任意登录用户枚举订单 UUID 窃取客户隐私数据（IDOR）。
+ */
+export async function canViewOrderDetail(
+  orderId: string,
+  userId: string,
+  role: UserRole
+): Promise<boolean> {
+  if (role === 'admin') return true
+
+  const supabase = await createClient()
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('status, studio_user_id')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) return false
+
+  // 仅已分配给本人的订单可查看完整详情
+  if (order.studio_user_id) {
+    return order.studio_user_id === userId
+  }
+
+  // 未分配订单：不得查看完整详情（避免客户隐私泄露）
+  return false
+}

@@ -9,6 +9,41 @@ type SupabaseLike = {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
+ * 安全计算新用户 uid（安全加固 SEC-05）
+ *
+ * 查询当前最大 uid 并 +1，下限 10002——确保新用户绝不占用零号用户 uid=10001
+ * （该 uid 被 rbac 迁移强制提升为超级管理员，若被普通用户占用即权限提升）。
+ *
+ * @param supabase - Supabase 客户端
+ * @param excludeUid - 需避开的 uid（重试场景：上次冲突的候选值）
+ * @returns 安全的新 uid
+ */
+async function computeSafeUid(
+  supabase: SupabaseLike,
+  excludeUid?: number
+): Promise<number> {
+  const { data: maxRow } = await supabase
+    .from('profiles')
+    .select('uid')
+    .order('uid', { ascending: false })
+    .limit(50)
+
+  let maxUid = 10001 // 默认下限基础（最终结果 ≥ 10002）
+  const uids = Array.isArray(maxRow) ? maxRow : []
+  for (const row of uids) {
+    const v = typeof row?.uid === 'number' ? row.uid : 0
+    if (v > maxUid) maxUid = v
+  }
+
+  let candidate = Math.max(maxUid + 1, 10002)
+  // 重试时避开上次冲突的候选值
+  if (excludeUid !== undefined && candidate === excludeUid) {
+    candidate = excludeUid + 1
+  }
+  return candidate
+}
+
+/**
  * 获取或创建用户 Profile（公共工具函数）
  *
  * 供 auth-actions.ts 和 QQ OAuth 回调共用，消除重复逻辑。
@@ -72,7 +107,7 @@ export async function getOrCreateProfile(
     }
 
     // 自动创建 profile 记录，默认 role 为 user
-    // uid 和 has_password 由数据库默认值/触发器处理
+    // uid 由数据库触发器/应用层生成（安全加固 SEC-05：显式计算，避开零号用户 10001）
     const now = new Date().toISOString()
     const email = options?.email?.trim().toLowerCase() ?? ''
     if (!email) {
@@ -81,8 +116,16 @@ export async function getOrCreateProfile(
     const defaultDisplayName = options?.displayName?.trim()
       || email.split('@')[0]?.slice(0, 20)
       || '新朋友'
+
+    // 安全加固（SEC-05）：显式计算 uid，确保新用户绝不占用零号用户 uid=10001。
+    // 数据库触发器默认从序列 10001 开始分配，若数据库未预置管理员，
+    // 首个注册用户可能拿到 10001 并被 rbac 迁移提升为超级管理员（权限提升）。
+    // 此处查询当前最大 uid 并 +1（下限 10002），并发冲突时由唯一约束兜底重试。
+    const uid = await computeSafeUid(supabase)
+
     const newProfile = {
       id: userId,
+      uid,
       email,
       role: 'user',
       phone: options?.phone ?? null,
@@ -109,6 +152,16 @@ export async function getOrCreateProfile(
           .eq('id', userId)
           .single()
         if (!raceError && racedProfile) return racedProfile as Profile
+      }
+      // uid 唯一键冲突（并发注册拿到相同 uid）：重试一次
+      if (insertError.code === '23505' && insertError.message?.includes('profiles_uid_unique')) {
+        const retryUid = await computeSafeUid(supabase, uid)
+        const { data: retryCreated, error: retryError } = await supabase
+          .from('profiles')
+          .insert({ ...newProfile, uid: retryUid })
+          .select()
+          .single()
+        if (!retryError && retryCreated) return retryCreated as Profile
       }
       throw new Error(`创建 profile 失败: ${insertError.message}`)
     }

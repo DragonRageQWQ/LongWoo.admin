@@ -37,4 +37,30 @@ describe('verifyUploadToken', () => {
   it('畸形 token → false', () => {
     expect(verifyUploadToken('order-123', 'not-a-valid-token', SECRET)).toBe(false)
   })
+
+  it('过期 token（超过 24h）→ false', () => {
+    const issuedAt = Date.now() - 25 * 60 * 60 * 1000 // 25 小时前
+    const token = generateUploadToken('order-123', SECRET, issuedAt)
+    expect(verifyUploadToken('order-123', token, SECRET)).toBe(false)
+  })
+
+  it('24h 内 token → true', () => {
+    const issuedAt = Date.now() - 23 * 60 * 60 * 1000 // 23 小时前
+    const token = generateUploadToken('order-123', SECRET, issuedAt)
+    expect(verifyUploadToken('order-123', token, SECRET)).toBe(true)
+  })
+
+  it('未来时间戳 token → false', () => {
+    const issuedAt = Date.now() + 60 * 60 * 1000 // 1 小时后
+    const token = generateUploadToken('order-123', SECRET, issuedAt)
+    expect(verifyUploadToken('order-123', token, SECRET)).toBe(false)
+  })
+
+  it('篡改签发时间 → false', () => {
+    const issuedAt = Date.now()
+    const token = generateUploadToken('order-123', SECRET, issuedAt)
+    // 篡改时间戳部分（hmac 不匹配）
+    const tampered = `${token.split('.')[0]}.${issuedAt + 1000}`
+    expect(verifyUploadToken('order-123', tampered, SECRET)).toBe(false)
+  })
 })

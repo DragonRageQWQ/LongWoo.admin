@@ -99,6 +99,8 @@ async function fallbackRateLimit(
 
   const currentCount = count ?? 0
 
+  // 注：insert-first 模式下计数已包含当前请求，`>` 语义与 RPC（先计数后插入，`>=`）
+  // 完全等价——均精确允许 maxCount 个请求（第 maxCount+1 个被拒绝）。
   if (currentCount > maxCount) {
     return { allowed: false, remaining: 0, resetAt: now + windowMs }
   }

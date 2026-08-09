@@ -101,6 +101,19 @@ export function validateMagicBuffer(buf: Buffer, mime: string): boolean {
     if (tag !== 'WEBP') return false
   }
 
+  // 安全加固（SEC-09）：结构完整性二次检查（降低 polyglot 绕过风险）
+  if (mime === 'image/jpeg') {
+    // JPEG：文件末尾必须存在 EOI 结束标记 FF D9
+    if (buf.length < 3) return false
+    if (buf[buf.length - 2] !== 0xff || buf[buf.length - 1] !== 0xd9) return false
+  } else if (mime === 'image/png') {
+    // PNG：IHDR chunk（偏移 16-24）声明的宽/高必须非零
+    if (buf.length < 24) return false
+    const width = buf.readUInt32BE(16)
+    const height = buf.readUInt32BE(20)
+    if (width === 0 || height === 0) return false
+  }
+
   return true
 }
 

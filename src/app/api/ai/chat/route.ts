@@ -97,12 +97,28 @@ export async function POST(request: NextRequest) {
 
   // ===== 解析与清洗请求体 =====
   let body: { messages?: unknown }
+  let rawBody: string
   try {
-    body = await request.json()
-  } catch {
+    // 安全加固（SEC-10）：读取原始文本并校验实际字节大小。
+    // 依赖 content-length 头可能被 chunked 编码绕过，必须按真实 body 校验。
+    rawBody = await request.text()
+    if (rawBody.length > MAX_BODY_SIZE) {
+      return NextResponse.json(
+        { success: false, error: '请求内容过大' },
+        { status: 413 }
+      )
+    }
+    body = JSON.parse(rawBody)
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { success: false, error: '请求体不是有效的 JSON' },
+        { status: 400 }
+      )
+    }
     return NextResponse.json(
-      { success: false, error: '请求体不是有效的 JSON' },
-      { status: 400 }
+      { success: false, error: '请求内容过大或无效' },
+      { status: 413 }
     )
   }
 
