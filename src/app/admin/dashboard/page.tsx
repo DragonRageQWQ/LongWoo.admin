@@ -6,7 +6,7 @@ import StatsOverview from "./_components/StatsOverview";
 import { getCurrentUser, ZERO_USER_UID } from "@/lib/auth";
 
 // 支持的有效标签页
-const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "notifications", "feedback", "settings", "works"];
+const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "notifications", "feedback", "settings", "works", "drops"];
 
 // ===== 管理面板按需加载（性能优化） =====
 // 5 个客户端面板合计 2600+ 行，静态导入会全部打进 /admin/dashboard 首屏 JS。
@@ -26,6 +26,9 @@ const FeedbackManagement = dynamic(() => import("./_components/FeedbackManagemen
   loading: () => <PanelSkeleton />,
 });
 const WorksManagement = dynamic(() => import("./_components/WorksManagement"), {
+  loading: () => <PanelSkeleton />,
+});
+const DropItemsManagement = dynamic(() => import("./_components/DropItemsManagement"), {
   loading: () => <PanelSkeleton />,
 });
 
@@ -95,6 +98,8 @@ function DashboardContent({
       return <FeedbackManagement />;
     case "works":
       return <WorksManagement isSuperAdmin={isSuperAdmin} />;
+    case "drops":
+      return <DropItemsManagement />;
     case "settings":
       return <PlaceholderPanel title="系统设置" />;
     default:

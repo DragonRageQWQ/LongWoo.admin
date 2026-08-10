@@ -49,61 +49,18 @@
     </div>
   </div>
 
-  <!-- Product Cards List -->
-  <div class="product-list">
-
-    <!-- Product 1: 百丈冰 -->
-    <div class="product-card">
-      <picture>
-        <source srcset="assets/image_7_yi19x4.webp" type="image/webp">
-        <img class="product-card-image" src="assets/image_7_yi19x4.jpg" alt="百丈冰" loading="lazy" decoding="async" width="280" height="280">
-      </picture>
-      <div class="product-card-body">
-        <div class="product-card-price">RMB 35,000 / 百丈冰</div>
-        <div class="product-card-info">含 双视图/标准全装/定制外衣/定制道具</div>
-        <div class="product-card-copyright">全部版权&copy;&️转让/可商用*</div>
-        <div class="product-card-delivery">
-          成品部分（含头/手）立即交付<br>
-          剩余部分预计 4-6 周后交付*
-        </div>
-      </div>
-      <button class="select-btn" onclick="window.location.href='preorder-step2.html'">选择</button>
+  <!-- Product Cards List（动态渲染：/api/drop-items） -->
+  <div class="product-list" id="product-list">
+    <!-- 加载中状态（JS 渲染完成前显示） -->
+    <div class="product-loading" id="product-loading">
+      <div class="loading-spinner"></div>
+      <p>正在加载掉落信息...</p>
     </div>
+  </div>
 
-    <!-- Product 2: 千钧破 -->
-    <div class="product-card">
-      <picture>
-        <source srcset="assets/image_8_yi19x4.webp" type="image/webp">
-        <img class="product-card-image" src="assets/image_8_yi19x4.jpg" alt="千钧破" loading="lazy" decoding="async" width="280" height="280">
-      </picture>
-      <div class="product-card-body">
-        <div class="product-card-price">RMB 32,000 / 千钧破</div>
-        <div class="product-card-info">含 双视图/标准全装/定制外衣/定制道具</div>
-        <div class="product-card-copyright">部分版权&copy;&️转让/不可商用*</div>
-        <div class="product-card-delivery">
-          成品部分立即交付 剩余部分预计 4-6 周后交付*
-        </div>
-      </div>
-      <button class="select-btn" onclick="window.location.href='preorder-step2.html'">选择</button>
-    </div>
-
-    <!-- Product 3: 万里凝 -->
-    <div class="product-card">
-      <picture>
-        <source srcset="assets/image_9_yi19x4.webp" type="image/webp">
-        <img class="product-card-image" src="assets/image_9_yi19x4.jpg" alt="万里凝" loading="lazy" decoding="async" width="280" height="280">
-      </picture>
-      <div class="product-card-body">
-        <div class="product-card-price">RMB 32,000 / 万里凝</div>
-        <div class="product-card-info">含 双视图/标准全装/定制外衣/定制道具</div>
-        <div class="product-card-copyright">全部版权&copy;&️转让/不可商用*</div>
-        <div class="product-card-delivery">
-          成品部分立即交付 剩余部分预计 4-6 周后交付*
-        </div>
-      </div>
-      <button class="select-btn" onclick="window.location.href='preorder-step2.html'">选择</button>
-    </div>
-
+  <!-- 空状态（无掉落时显示） -->
+  <div class="product-empty" id="product-empty" style="display:none;">
+    <p>暂无掉落信息，敬请期待</p>
   </div>
 
   <!-- Bottom Spacer -->
@@ -404,8 +361,475 @@
       height: calc(var(--bottom-nav-height) + var(--space-lg));
     }
 
+    /* ===== 动态加载状态 ===== */
+    .product-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-3xl) 0;
+      gap: var(--space-sm);
+    }
+    .product-loading p {
+      font-size: var(--font-size-sm);
+      color: var(--color-primary-lighter);
+    }
+    .loading-spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: drop-spin 0.8s linear infinite;
+    }
+    @keyframes drop-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* 空状态 */
+    .product-empty {
+      text-align: center;
+      padding: var(--space-3xl) var(--space-md);
+      color: var(--color-primary-lighter);
+      font-size: var(--font-size-sm);
+    }
+
+    /* ===== 状态徽章 ===== */
+    .status-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 9999px;
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      margin-bottom: var(--space-xs);
+    }
+    .status-on-sale { background: rgba(34,197,94,0.12); color: #16A34A; }
+    .status-preparing { background: rgba(245,158,11,0.12); color: #D97706; }
+    .status-adopted { background: rgba(37,99,235,0.12); color: #2563EB; }
+
+    /* 掉落标题 + 价格行 */
+    .product-card-title {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    /* 禁用态购买按钮（准备/领养） */
+    .select-btn-disabled {
+      background-color: var(--color-border);
+      color: var(--color-primary-lighter);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* ===== 管理员编辑模式 ===== */
+    .edit-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      margin: 0 var(--space-md) var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      background-color: rgba(37,99,235,0.08);
+      border: 1px solid rgba(37,99,235,0.2);
+      border-radius: var(--radius-md);
+    }
+    .edit-banner-text {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+    .edit-banner-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .edit-btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.2s ease;
+    }
+    .edit-btn:hover { opacity: 0.85; }
+    .edit-btn-primary { background-color: var(--color-primary); color: #FFFFFF; }
+    .edit-btn-outline { background: transparent; color: var(--color-primary); border: 1px solid rgba(37,99,235,0.4); }
+    .edit-btn-danger { background-color: #EF4444; color: #FFFFFF; }
+    .edit-btn-small { padding: 4px 10px; font-size: var(--font-size-xs); }
+    .edit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* 编辑卡片表单 */
+    .edit-form { padding: var(--space-md); }
+    .edit-field { margin-bottom: var(--space-sm); }
+    .edit-field label {
+      display: block;
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      color: var(--color-primary);
+      margin-bottom: 4px;
+    }
+    .edit-field input,
+    .edit-field textarea,
+    .edit-field select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      font-size: var(--font-size-sm);
+      font-family: inherit;
+      color: var(--color-primary);
+      background: var(--color-background);
+      box-sizing: border-box;
+    }
+    .edit-field textarea { resize: vertical; min-height: 56px; }
+    .edit-field input:focus,
+    .edit-field textarea:focus,
+    .edit-field select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+    .edit-image-preview {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--space-xs);
+      background: var(--color-surface);
+    }
+    .edit-form-actions {
+      display: flex;
+      gap: var(--space-sm);
+      margin-top: var(--space-sm);
+    }
+    .edit-form-actions .edit-btn { flex: 1; }
+
+    /* 编辑模式下的卡片边框强调 */
+    .product-card.edit-mode {
+      border: 2px solid rgba(37,99,235,0.5);
+    }
+
     /* Bottom Navigation - 公共规则已抽取至 theme.css */
   </style>
 <script src="/js/common.js" defer></script>
+
+<!-- 掉落动态渲染 + 管理员编辑模式 -->
+<script>
+(function () {
+  'use strict';
+
+  // ===== 常量 =====
+  var IS_EDIT = new URLSearchParams(window.location.search).get('edit') === '1';
+  var ZERO_USER_UID = 10001; // 与后端 ZERO_USER_UID 一致（仅超级管理员可编辑）
+
+  // 本地兜底数据（API 拉取失败时使用，保证页面可用）
+  var FALLBACK_ITEMS = [
+    { id: 'fallback-1', title: '百丈冰', price: 35000, status: 'on_sale', image_url: 'assets/image_7_yi19x4.jpg', includes: '双视图/标准全装/定制外衣/定制道具', copyright: '全部版权转让/可商用*', delivery: '成品部分（含头/手）立即交付\n剩余部分预计 4-6 周后交付*', description: '含 双视图/标准全装/定制外衣/定制道具' },
+    { id: 'fallback-2', title: '千钧破', price: 32000, status: 'on_sale', image_url: 'assets/image_8_yi19x4.jpg', includes: '双视图/标准全装/定制外衣/定制道具', copyright: '部分版权转让/不可商用*', delivery: '成品部分立即交付 剩余部分预计 4-6 周后交付*', description: '含 双视图/标准全装/定制外衣/定制道具' },
+    { id: 'fallback-3', title: '万里凝', price: 32000, status: 'on_sale', image_url: 'assets/image_9_yi19x4.jpg', includes: '双视图/标准全装/定制外衣/定制道具', copyright: '全部版权转让/不可商用*', delivery: '成品部分立即交付 剩余部分预计 4-6 周后交付*', description: '含 双视图/标准全装/定制外衣/定制道具' }
+  ];
+
+  var STATUS_META = {
+    on_sale:   { label: '发售', cls: 'status-on-sale' },
+    preparing: { label: '准备', cls: 'status-preparing' },
+    adopted:   { label: '领养', cls: 'status-adopted' }
+  };
+
+  var items = [];
+  var isSuperAdmin = false;
+  var listEl = document.getElementById('product-list');
+  var loadingEl = document.getElementById('product-loading');
+  var emptyEl = document.getElementById('product-empty');
+
+  // ===== 工具 =====
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function formatPrice(p) {
+    var n = Number(p);
+    if (!isFinite(n)) return '--';
+    return n.toLocaleString('zh-CN');
+  }
+  function nl2br(str) {
+    return escapeHtml(str).replace(/\n/g, '<br>');
+  }
+
+  // ===== 渲染：普通模式卡片 =====
+  function renderViewCard(item) {
+    var meta = STATUS_META[item.status] || STATUS_META.preparing;
+    var btn;
+    if (item.status === 'on_sale') {
+      btn = '<a class="select-btn" href="preorder-step2.html">选择</a>';
+    } else if (item.status === 'adopted') {
+      btn = '<button class="select-btn select-btn-disabled" disabled>已被领养</button>';
+    } else {
+      btn = '<button class="select-btn select-btn-disabled" disabled>准备中 · 敬请期待</button>';
+    }
+    return '' +
+      '<div class="product-card">' +
+        '<picture>' +
+          '<source srcset="' + escapeHtml(item.image_url) + '" type="image/webp">' +
+          '<img class="product-card-image" src="' + escapeHtml(item.image_url) + '" alt="' + escapeHtml(item.title) + '" loading="lazy" decoding="async" width="280" height="280">' +
+        '</picture>' +
+        '<div class="product-card-body">' +
+          '<span class="status-badge ' + meta.cls + '">' + meta.label + '</span>' +
+          '<div class="product-card-title">' + escapeHtml(item.title) + '</div>' +
+          '<div class="product-card-price">RMB ' + formatPrice(item.price) + '</div>' +
+          '<div class="product-card-info">' + nl2br(item.includes || item.description || '') + '</div>' +
+          '<div class="product-card-copyright">' + escapeHtml(item.copyright || '') + '</div>' +
+          '<div class="product-card-delivery">' + nl2br(item.delivery || '') + '</div>' +
+        '</div>' +
+        btn +
+      '</div>';
+  }
+
+  // ===== 渲染：编辑模式卡片（完整表单） =====
+  function renderEditCard(item, isNew) {
+    var statusOptions = Object.keys(STATUS_META).map(function (s) {
+      var sel = item.status === s ? ' selected' : '';
+      return '<option value="' + s + '"' + sel + '>' + STATUS_META[s].label + '（' +
+        (s === 'on_sale' ? '可购买' : s === 'preparing' ? '仅查看' : '交付中') + '）</option>';
+    }).join('');
+
+    return '' +
+      '<div class="product-card edit-mode">' +
+        '<div class="edit-form">' +
+          '<div class="edit-field"><label>介绍图片 *</label>' +
+            '<img class="edit-image-preview" src="' + escapeHtml(item.image_url) + '" alt="预览">' +
+            '<label class="edit-btn edit-btn-outline edit-btn-small" style="display:inline-block;">上传图片<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" data-upload="' + escapeHtml(item.id) + '"></label>' +
+          '</div>' +
+          '<div class="edit-field"><label>掉落标题 *</label><input type="text" data-field="title" value="' + escapeHtml(item.title) + '" maxlength="50"></div>' +
+          '<div class="edit-field"><label>价格（RMB）*</label><input type="number" data-field="price" value="' + escapeHtml(item.price) + '" min="0" step="1"></div>' +
+          '<div class="edit-field"><label>掉落状态 *</label><select data-field="status">' + statusOptions + '</select></div>' +
+          '<div class="edit-field"><label>包含内容</label><input type="text" data-field="includes" value="' + escapeHtml(item.includes || '') + '" maxlength="200" placeholder="如：双视图/标准全装/定制外衣/定制道具"></div>' +
+          '<div class="edit-field"><label>版权说明</label><input type="text" data-field="copyright" value="' + escapeHtml(item.copyright || '') + '" maxlength="100" placeholder="如：全部版权转让/可商用*"></div>' +
+          '<div class="edit-field"><label>交付说明</label><textarea data-field="delivery" maxlength="300" placeholder="如：成品部分立即交付，剩余预计 4-6 周">' + escapeHtml(item.delivery || '') + '</textarea></div>' +
+          '<div class="edit-field"><label>介绍信息</label><textarea data-field="description" maxlength="500">' + escapeHtml(item.description || '') + '</textarea></div>' +
+          '<div class="edit-form-actions">' +
+            '<button class="edit-btn edit-btn-primary" data-save="' + escapeHtml(item.id) + '">' + (isNew ? '新增掉落' : '保存修改') + '</button>' +
+            (isNew ? '' : '<button class="edit-btn edit-btn-danger" data-delete="' + escapeHtml(item.id) + '">删除</button>') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  // ===== 渲染列表 =====
+  function renderList() {
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    if (items.length === 0) {
+      if (emptyEl) emptyEl.style.display = 'block';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    items.forEach(function (item) {
+      var div = document.createElement('div');
+      div.innerHTML = IS_EDIT ? renderEditCard(item, false) : renderViewCard(item);
+      listEl.appendChild(div.firstChild);
+    });
+  }
+
+  // ===== 数据加载 =====
+  function loadItems() {
+    return fetch('/api/drop-items', { cache: 'no-store', credentials: 'include' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.success && Array.isArray(data.items) && data.items.length > 0) {
+          items = data.items;
+        } else {
+          items = FALLBACK_ITEMS.slice();
+        }
+      })
+      .catch(function () {
+        items = FALLBACK_ITEMS.slice();
+      });
+  }
+
+  // ===== 会话校验（编辑模式鉴权） =====
+  function checkSession() {
+    return fetch('/api/session-check', { credentials: 'include' })
+      .then(function (res) { return res.json(); })
+      .catch(function () { return { loggedIn: false }; });
+  }
+
+  // ===== 编辑模式初始化 =====
+  function initEditMode() {
+    // 插入编辑横幅
+    var banner = document.createElement('div');
+    banner.className = 'edit-banner';
+    banner.innerHTML =
+      '<span class="edit-banner-text">编辑模式：修改后保存将同步到普通用户可见的购买掉落界面</span>' +
+      '<span class="edit-banner-actions">' +
+        '<button class="edit-btn edit-btn-primary edit-btn-small" id="edit-add-btn">+ 新增掉落</button>' +
+        '<a class="edit-btn edit-btn-outline edit-btn-small" href="/preorder-step1.html" style="text-decoration:none;">退出编辑</a>' +
+      '</span>';
+    var infoSection = document.querySelector('.info-section');
+    if (infoSection && infoSection.parentNode) {
+      infoSection.parentNode.insertBefore(banner, infoSection.nextSibling);
+    }
+
+    // 新增掉落：临时卡片
+    document.addEventListener('click', function (e) {
+      var addBtn = e.target.closest('#edit-add-btn');
+      if (!addBtn) return;
+      var newItem = { id: 'new-' + Date.now(), title: '', price: '', status: 'preparing', image_url: '', includes: '', copyright: '', delivery: '', description: '' };
+      items.unshift(newItem);
+      renderList();
+    });
+
+    // 保存
+    document.addEventListener('click', function (e) {
+      var saveBtn = e.target.closest('[data-save]');
+      if (!saveBtn) return;
+      var card = saveBtn.closest('.product-card');
+      var id = saveBtn.getAttribute('data-save');
+      var isNew = id.indexOf('new-') === 0;
+      var payload = collectForm(card);
+      if (!payload) return;
+      saveBtn.disabled = true;
+      saveBtn.textContent = '保存中...';
+
+      var request = isNew
+        ? fetch('/api/drop-items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+          })
+        : fetch('/api/drop-items/' + encodeURIComponent(id), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+          });
+
+      request
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.success) {
+            alert('保存成功，普通用户界面已同步更新');
+            return loadItems().then(renderList);
+          }
+          alert('保存失败：' + (data.error || '未知错误'));
+          saveBtn.disabled = false;
+          saveBtn.textContent = isNew ? '新增掉落' : '保存修改';
+        })
+        .catch(function () {
+          alert('保存失败，请稍后重试');
+          saveBtn.disabled = false;
+          saveBtn.textContent = isNew ? '新增掉落' : '保存修改';
+        });
+    });
+
+    // 删除
+    document.addEventListener('click', function (e) {
+      var delBtn = e.target.closest('[data-delete]');
+      if (!delBtn) return;
+      var id = delBtn.getAttribute('data-delete');
+      if (!window.confirm('确定删除该掉落吗？删除后立即从前端掉落界面消失，此操作不可恢复。')) return;
+      delBtn.disabled = true;
+      fetch('/api/drop-items/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.success) {
+            alert('删除成功');
+            return loadItems().then(renderList);
+          }
+          alert('删除失败：' + (data.error || '未知错误'));
+          delBtn.disabled = false;
+        })
+        .catch(function () {
+          alert('删除失败，请稍后重试');
+          delBtn.disabled = false;
+        });
+    });
+
+    // 图片上传（事件委托）
+    document.addEventListener('change', function (e) {
+      var input = e.target;
+      if (!input || !input.hasAttribute('data-upload')) return;
+      var file = input.files && input.files[0];
+      if (!file) return;
+      var card = input.closest('.product-card');
+      var id = input.getAttribute('data-upload');
+
+      var formData = new FormData();
+      formData.append('file', file);
+      input.disabled = true;
+      fetch('/api/drop-items/upload', { method: 'POST', body: formData, credentials: 'include' })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.success && data.image_url) {
+            var preview = card.querySelector('.edit-image-preview');
+            if (preview) preview.src = data.image_url;
+            card.dataset.uploadedUrl = data.image_url;
+            alert('图片上传成功，保存后生效');
+          } else {
+            alert('图片上传失败：' + (data.error || '未知错误'));
+          }
+        })
+        .catch(function () { alert('图片上传失败，请稍后重试'); })
+        .finally(function () { input.disabled = false; input.value = ''; });
+    });
+  }
+
+  // ===== 收集表单数据 =====
+  function collectForm(card) {
+    var get = function (field) {
+      var el = card.querySelector('[data-field="' + field + '"]');
+      return el ? el.value : '';
+    };
+    var imageUrl = card.dataset.uploadedUrl || card.querySelector('.edit-image-preview').src;
+    var price = Number(get('price'));
+    if (!get('title').trim()) { alert('请填写掉落标题'); return null; }
+    if (!imageUrl) { alert('请上传介绍图片'); return null; }
+    if (!isFinite(price) || price < 0) { alert('请填写有效价格'); return null; }
+    return {
+      title: get('title').trim(),
+      description: get('description').trim(),
+      image_url: imageUrl,
+      price: price,
+      status: get('status') || 'preparing',
+      copyright: get('copyright').trim(),
+      delivery: get('delivery').trim(),
+      includes: get('includes').trim()
+    };
+  }
+
+  // ===== 初始化 =====
+  function init() {
+    // 编辑模式鉴权：仅超级管理员（uid===10001 且 role=admin）
+    if (IS_EDIT) {
+      checkSession().then(function (session) {
+        var p = session.profile;
+        isSuperAdmin = session.loggedIn && p && p.role === 'admin' && Number(p.uid) === ZERO_USER_UID;
+        if (!isSuperAdmin) {
+          alert('无编辑权限，仅超级管理员可编辑掉落信息');
+          window.location.replace('/preorder-step1.html');
+          return;
+        }
+        initEditMode();
+        loadItems().then(renderList);
+      });
+    } else {
+      loadItems().then(renderList);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
 </body>
 </html>

@@ -120,6 +120,64 @@ export type WorkInput = {
   image_url: string
 }
 
+// ===== 购买掉落：预设兽装掉落管理 =====
+
+/** 掉落状态：on_sale 发售（可购买）/ preparing 准备（仅查看）/ adopted 领养（交付中） */
+export type DropItemStatus = 'on_sale' | 'preparing' | 'adopted'
+
+/** 掉落状态中文标签（前端展示用） */
+export const DROP_STATUS_LABELS: Record<DropItemStatus, string> = {
+  on_sale: '发售',
+  preparing: '准备',
+  adopted: '领养',
+}
+
+/** 掉落状态说明（管理后台提示用） */
+export const DROP_STATUS_DESCRIPTIONS: Record<DropItemStatus, string> = {
+  on_sale: '发售：用户可以购买',
+  preparing: '准备：只能查看，不能购买',
+  adopted: '领养：已被其他用户购买，交付中',
+}
+
+/**
+ * 掉落条目（drop_items 表）
+ * title      - 掉落标题
+ * description- 介绍信息
+ * image_url  - 介绍图片
+ * price      - 价格（RMB）
+ * status     - 掉落状态（on_sale / preparing / adopted）
+ * copyright  - 版权说明
+ * delivery   - 交付说明
+ * includes   - 包含内容
+ */
+export type DropItem = {
+  id: string
+  title: string
+  description: string
+  image_url: string
+  price: number
+  status: DropItemStatus
+  copyright: string
+  delivery: string
+  includes: string
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** 掉落创建/更新入参 */
+export type DropItemInput = {
+  title: string
+  description: string
+  image_url: string
+  price: number
+  status: DropItemStatus
+  copyright: string
+  delivery: string
+  includes: string
+}
+
 // ===== 龙灵工坊：AI 角色扮演对话 =====
 
 /**

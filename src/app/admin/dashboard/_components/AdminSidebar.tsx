@@ -17,10 +17,11 @@ import {
   Image as ImageIcon,
   FlaskConical,
   MessageSquare,
+  ShoppingBag,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 
-export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "notifications" | "feedback" | "settings" | "works";
+export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "notifications" | "feedback" | "settings" | "works" | "drops";
 
 // 站点版本号（仅管理员后台可见，便于确认部署版本）
 const APP_VERSION = "v1.1.3(810)";
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { key: "notifications", label: "通知管理", icon: Bell },
   { key: "feedback", label: "反馈管理", icon: MessageSquare },
   { key: "works", label: "作品管理", icon: ImageIcon, superAdminOnly: true },
+  { key: "drops", label: "掉落管理", icon: ShoppingBag, superAdminOnly: true },
   { key: "gray-test", label: "灰度测试", icon: FlaskConical, superAdminOnly: true, href: "/gray-test" },
   { key: "settings", label: "系统设置", icon: Settings, disabled: true },
 ];
