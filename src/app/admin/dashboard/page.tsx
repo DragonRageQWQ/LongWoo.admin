@@ -5,11 +5,12 @@ import StatsOverview from "./_components/StatsOverview";
 import OrderList from "./_components/OrderList";
 import UserManagement from "./_components/UserManagement";
 import NotificationManagement from "./_components/NotificationManagement";
+import FeedbackManagement from "./_components/FeedbackManagement";
 import WorksManagement from "./_components/WorksManagement";
 import { getCurrentUser, ZERO_USER_UID } from "@/lib/auth";
 
 // 支持的有效标签页
-const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "notifications", "settings", "works"];
+const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "notifications", "feedback", "settings", "works"];
 
 // 解析当前标签页
 function resolveTab(tabParam: string | undefined): AdminTab {
@@ -58,6 +59,8 @@ function DashboardContent({
       return <UserManagement />;
     case "notifications":
       return <NotificationManagement isSuperAdmin={isSuperAdmin} />;
+    case "feedback":
+      return <FeedbackManagement />;
     case "works":
       return <WorksManagement isSuperAdmin={isSuperAdmin} />;
     case "settings":

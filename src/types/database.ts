@@ -172,3 +172,34 @@ export type Notification = {
   read_at: string | null
   created_at: string
 }
+
+// ===== 建议与反馈 =====
+
+/** 反馈类别：bug=问题反馈 suggestion=建议 other=其他 */
+export type FeedbackCategory = 'bug' | 'suggestion' | 'other'
+
+/** 反馈状态：pending=待处理 replied=已回复 adopted=已采纳 */
+export type FeedbackStatus = 'pending' | 'replied' | 'adopted'
+
+/** 用户反馈（user_feedback 表） */
+export type UserFeedback = {
+  id: string
+  /** 提交人 */
+  user_id: string
+  category: FeedbackCategory
+  /** 简短标题 */
+  title: string
+  /** 详细内容 */
+  content: string
+  status: FeedbackStatus
+  /** 管理员回复内容（未回复时为空） */
+  reply: string | null
+  replied_by: string | null
+  replied_at: string | null
+  /** 用户是否已读管理员回复（红标统计依据） */
+  reply_read: boolean
+  created_at: string
+  updated_at: string
+  /** 关联提交人信息（管理员列表用） */
+  profiles?: Pick<Profile, 'id' | 'uid' | 'email' | 'display_name' | 'avatar_url'> | null
+}

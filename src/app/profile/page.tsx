@@ -31,6 +31,7 @@ import {
 import { listMyOrders } from "@/actions/order-actions";
 import { formatDate, statusLabels } from "@/lib/utils";
 import type { Profile, Order } from "@/types/database";
+import FeedbackSection from "@/components/profile/FeedbackSection";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -841,6 +842,9 @@ export default function ProfilePage() {
             </div>
           )}
         </section>
+
+        {/* 建议与反馈 */}
+        <FeedbackSection />
       </main>
     </div>
   );

@@ -16,14 +16,15 @@ import {
   Bell,
   Image as ImageIcon,
   FlaskConical,
+  MessageSquare,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 
-export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "notifications" | "settings" | "works";
+export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "notifications" | "feedback" | "settings" | "works";
 
 // 站点版本号（仅管理员后台可见，便于确认部署版本）
-const APP_VERSION = "v1.1.2(806)";
-const BUILD_NUMBER = "806";
+const APP_VERSION = "v1.1.3(810)";
+const BUILD_NUMBER = "810";
 
 interface NavItem {
   key: AdminTab | "gray-test";
@@ -40,6 +41,7 @@ const navItems: NavItem[] = [
   { key: "orders", label: "委托管理", icon: ClipboardList },
   { key: "users", label: "用户管理", icon: Users },
   { key: "notifications", label: "通知管理", icon: Bell },
+  { key: "feedback", label: "反馈管理", icon: MessageSquare },
   { key: "works", label: "作品管理", icon: ImageIcon, superAdminOnly: true },
   { key: "gray-test", label: "灰度测试", icon: FlaskConical, superAdminOnly: true, href: "/gray-test" },
   { key: "settings", label: "系统设置", icon: Settings, disabled: true },
