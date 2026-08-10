@@ -22,6 +22,28 @@ body {
   background: var(--color-lw-white);
 }
 
+/* ===== 图片版权保护（Next 页面）：禁止保存/拖拽/长按 ===== */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+picture, figure {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+[style*="background-image"] {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 /* 灰度测试页：调节器面板弹出动画 */
 @keyframes grayFadeSlideUp {
   from {

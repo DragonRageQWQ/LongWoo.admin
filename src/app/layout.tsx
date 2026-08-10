@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import ImageProtection from "@/components/ImageProtection";
 
 export const metadata: Metadata = {
   title: "LongWoo Studio - 专业兽装定制工作室",
@@ -22,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full">
+        <ImageProtection />
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>

@@ -6,6 +6,31 @@
    3. no-scrollbar         - 隐藏滚动条工具类
    ============================================================ */
 
+/* ===== 0. 图片版权保护（禁止保存/拖拽/长按） ===== */
+/* 所有图片禁止拖拽（防止拖到桌面/文件夹保存）、禁止选择、iOS 禁用长按保存菜单 */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+/* 包含图片的元素同样禁止拖拽与选择（如 picture/source 包裹的图片） */
+picture, figure {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+/* 背景图片（如按钮图标）禁止选择 */
+[style*="background-image"] {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 /* ===== 1. Theme Variables ===== */
 /* LongWoo Studio Design System */
 :root {
