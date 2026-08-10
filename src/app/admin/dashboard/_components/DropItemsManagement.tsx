@@ -37,6 +37,8 @@ interface DropFormState {
   copyright: string;
   delivery: string;
   includes: string;
+  focus_x: number;
+  focus_y: number;
 }
 
 const emptyForm: DropFormState = {
@@ -48,6 +50,8 @@ const emptyForm: DropFormState = {
   copyright: "",
   delivery: "",
   includes: "",
+  focus_x: 50,
+  focus_y: 50,
 };
 
 // 状态徽章配色
@@ -174,6 +178,8 @@ export default function DropItemsManagement() {
         copyright: form.copyright.trim(),
         delivery: form.delivery.trim(),
         includes: form.includes.trim(),
+        focus_x: form.focus_x,
+        focus_y: form.focus_y,
       };
       const result = await createDropItem(input);
       if (result.success) {
@@ -202,6 +208,8 @@ export default function DropItemsManagement() {
       copyright: item.copyright,
       delivery: item.delivery,
       includes: item.includes,
+      focus_x: typeof item.focus_x === "number" ? item.focus_x : 50,
+      focus_y: typeof item.focus_y === "number" ? item.focus_y : 50,
     });
   };
 
@@ -224,6 +232,8 @@ export default function DropItemsManagement() {
         copyright: editForm.copyright.trim(),
         delivery: editForm.delivery.trim(),
         includes: editForm.includes.trim(),
+        focus_x: editForm.focus_x,
+        focus_y: editForm.focus_y,
       };
       const result = await updateDropItem(editing.id, input);
       if (result.success) {
@@ -284,22 +294,29 @@ export default function DropItemsManagement() {
     window.open(`/preorder-step1.html${editMode ? "?edit=1" : ""}`, "_blank");
   };
 
-  // 图片选择框
+  // 图片选择框（含焦点框选）
   const renderUploadBox = (
     imageUrl: string,
     uploading: boolean,
-    onFile: (file: File) => void
+    onFile: (file: File) => void,
+    focus_x: number,
+    focus_y: number
   ) => (
     <div className="flex items-start gap-3">
       <div className="w-24 h-24 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center flex-shrink-0">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt="掉落图片预览" className="w-full h-full object-cover" />
+          <img
+            src={imageUrl}
+            alt="掉落图片预览"
+            className="w-full h-full object-cover"
+            style={{ objectPosition: `${focus_x}% ${focus_y}%` }}
+          />
         ) : (
           <ImageIcon className="w-8 h-8 text-gray-300" />
         )}
       </div>
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">
           {uploading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -320,9 +337,64 @@ export default function DropItemsManagement() {
           />
         </label>
         <p className="text-xs text-gray-400 mt-2">支持 JPG / PNG / GIF / WebP，不超过 8MB</p>
+        {imageUrl && (
+          <p className="text-xs text-gray-400 mt-1">
+            焦点：X {focus_x.toFixed(0)}% · Y {focus_y.toFixed(0)}%（点击下方图片选择角色焦点，长图可聚焦显示）
+          </p>
+        )}
       </div>
     </div>
   );
+
+  // 焦点框选组件：在完整图片上点击/拖拽选择展示焦点（防止长图/大图裁剪丢失角色）
+  const renderFocusPicker = (
+    imageUrl: string,
+    focus_x: number,
+    focus_y: number,
+    onFocusChange: (x: number, y: number) => void
+  ) => {
+    if (!imageUrl) return null;
+    return (
+      <div>
+        <p className="text-xs font-medium text-gray-500 mb-2">
+          选择展示焦点：点击或拖拽框选角色所在区域（卡片封面将聚焦显示该区域，点此图可查看完整原图）
+        </p>
+        <div className="relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50 select-none"
+          style={{ height: 240 }}
+          onMouseDown={(e) => {
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            onFocusChange(Math.max(0, Math.min(100, x)), Math.max(0, Math.min(100, y)));
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl}
+            alt="焦点选择"
+            className="w-full h-full object-contain"
+            draggable={false}
+          />
+          {/* 焦点十字标记 */}
+          <div
+            className="absolute w-5 h-5 -ml-2.5 -mt-2.5 pointer-events-none"
+            style={{ left: `${focus_x}%`, top: `${focus_y}%` }}
+          >
+            <div className="absolute inset-0 border-2 border-blue-500 rounded-full opacity-80" />
+            <div className="absolute left-1/2 top-1/2 w-px h-3 -ml-px -mt-1.5 bg-blue-500" />
+            <div className="absolute left-1/2 top-1/2 h-px w-3 -ml-1.5 -mt-px bg-blue-500" />
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onFocusChange(50, 50)}
+          className="mt-2 text-xs text-gray-400 hover:text-blue-600"
+        >
+          重置焦点（居中）
+        </button>
+      </div>
+    );
+  };
 
   // 表单字段
   const renderField = (
@@ -383,7 +455,7 @@ export default function DropItemsManagement() {
       <div>
         <h1 className="text-xl font-bold text-lw-black">掉落管理</h1>
         <p className="text-sm text-gray-400 mt-1">
-          管理「购买掉落」界面展示内容（仅超级管理员可用）
+          管理「购买掉落」界面展示内容（仅管理员可用）
         </p>
         <div className="flex flex-wrap gap-2 mt-2">
           <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600">发售：可以购买</span>
@@ -433,7 +505,10 @@ export default function DropItemsManagement() {
         <div className="mt-4">
           {renderField("介绍信息", form.description, (v) => setForm({ ...form, description: v }), "简要介绍该掉落", true)}
         </div>
-        <div className="mt-4">{renderUploadBox(form.image_url, uploading, handleUpload)}</div>
+        <div className="mt-4">{renderUploadBox(form.image_url, uploading, handleUpload, form.focus_x, form.focus_y)}</div>
+        {form.image_url && (
+          <div className="mt-4">{renderFocusPicker(form.image_url, form.focus_x, form.focus_y, (x, y) => setForm({ ...form, focus_x: x, focus_y: y }))}</div>
+        )}
         <div className="mt-5 flex justify-end">
           <button
             onClick={handleCreate}
@@ -468,7 +543,14 @@ export default function DropItemsManagement() {
               >
                 <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                  <img
+                    src={item.image_url}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    style={{
+                      objectPosition: `${typeof item.focus_x === "number" ? item.focus_x : 50}% ${typeof item.focus_y === "number" ? item.focus_y : 50}%`,
+                    }}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -539,7 +621,10 @@ export default function DropItemsManagement() {
               </div>
               {renderField("交付说明", editForm.delivery, (v) => setEditForm({ ...editForm, delivery: v }))}
               {renderField("介绍信息", editForm.description, (v) => setEditForm({ ...editForm, description: v }), "", true)}
-              <div>{renderUploadBox(editForm.image_url, editUploading, handleEditUpload)}</div>
+              <div>{renderUploadBox(editForm.image_url, editUploading, handleEditUpload, editForm.focus_x, editForm.focus_y)}</div>
+              {editForm.image_url && (
+                <div>{renderFocusPicker(editForm.image_url, editForm.focus_x, editForm.focus_y, (x, y) => setEditForm({ ...editForm, focus_x: x, focus_y: y }))}</div>
+              )}
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <button

@@ -44,7 +44,7 @@ const navItems: NavItem[] = [
   { key: "notifications", label: "通知管理", icon: Bell },
   { key: "feedback", label: "反馈管理", icon: MessageSquare },
   { key: "works", label: "作品管理", icon: ImageIcon, superAdminOnly: true },
-  { key: "drops", label: "掉落管理", icon: ShoppingBag, superAdminOnly: true },
+  { key: "drops", label: "掉落管理", icon: ShoppingBag },
   { key: "gray-test", label: "灰度测试", icon: FlaskConical, superAdminOnly: true, href: "/gray-test" },
   { key: "settings", label: "系统设置", icon: Settings, disabled: true },
 ];

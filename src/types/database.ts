@@ -149,6 +149,8 @@ export const DROP_STATUS_DESCRIPTIONS: Record<DropItemStatus, string> = {
  * copyright  - 版权说明
  * delivery   - 交付说明
  * includes   - 包含内容
+ * focus_x    - 图片焦点 X（0-100 百分比，默认 50=居中）
+ * focus_y    - 图片焦点 Y（0-100 百分比，默认 50=居中）
  */
 export type DropItem = {
   id: string
@@ -160,6 +162,8 @@ export type DropItem = {
   copyright: string
   delivery: string
   includes: string
+  focus_x: number
+  focus_y: number
   sort_order: number
   is_active: boolean
   created_at: string
@@ -176,6 +180,10 @@ export type DropItemInput = {
   copyright: string
   delivery: string
   includes: string
+  /** 图片焦点 X（0-100），缺省 50 */
+  focus_x?: number
+  /** 图片焦点 Y（0-100），缺省 50 */
+  focus_y?: number
 }
 
 // ===== 龙灵工坊：AI 角色扮演对话 =====

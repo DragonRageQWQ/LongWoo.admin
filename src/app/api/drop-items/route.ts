@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionUser } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
-import { ZERO_USER_UID } from '@/lib/constants'
 import type { DropItemInput, DropItemStatus } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
@@ -20,7 +19,7 @@ export async function GET() {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from('drop_items')
-      .select('id, title, description, image_url, price, status, copyright, delivery, includes, sort_order')
+      .select('id, title, description, image_url, price, status, copyright, delivery, includes, focus_x, focus_y, sort_order')
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
 
@@ -37,7 +36,7 @@ export async function GET() {
 }
 
 /**
- * 超管校验（API 层）：CSRF + 登录 + uid===ZERO_USER_UID 且 role=admin 且 is_active
+ * 管理员校验（API 层）：CSRF + 登录 + role=admin 且 is_active
  */
 async function requireSuperAdmin(request: NextRequest): Promise<{ error: NextResponse | null }> {
   const csrfError = validateApiCsrf(request)
@@ -51,14 +50,14 @@ async function requireSuperAdmin(request: NextRequest): Promise<{ error: NextRes
   const admin = createAdminClient()
   const { data: profile, error: profileError } = await admin
     .from('profiles')
-    .select('uid, role, is_active')
+    .select('role, is_active')
     .eq('id', user.id)
     .single()
   if (profileError || !profile) {
     return { error: NextResponse.json({ success: false, error: '未找到用户信息' }, { status: 401 }) }
   }
-  if (profile.uid !== ZERO_USER_UID || profile.role !== 'admin' || profile.is_active !== true) {
-    return { error: NextResponse.json({ success: false, error: '无权操作，仅超级管理员可执行此操作' }, { status: 403 }) }
+  if (profile.role !== 'admin' || profile.is_active !== true) {
+    return { error: NextResponse.json({ success: false, error: '无权操作，仅管理员可执行此操作' }, { status: 403 }) }
   }
   return { error: null }
 }
@@ -134,6 +133,8 @@ export async function POST(request: NextRequest) {
         copyright: body.copyright.trim(),
         delivery: body.delivery.trim(),
         includes: body.includes.trim(),
+        focus_x: body.focus_x ?? 50,
+        focus_y: body.focus_y ?? 50,
         sort_order: nextOrder,
       })
       .select('*')

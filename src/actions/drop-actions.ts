@@ -2,11 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireZeroUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { validateCsrf } from '@/lib/csrf'
 import type { DropItem, DropItemInput, DropItemStatus } from '@/types/database'
 
-// ==================== 购买掉落管理（仅超级管理员 uid=10001） ====================
+// ==================== 购买掉落管理（管理员 role=admin 可操作） ====================
 //
 // 功能：
 // - 新增掉落（标题/介绍/图片/价格/状态/版权/交付/包含内容）
@@ -14,7 +14,7 @@ import type { DropItem, DropItemInput, DropItemStatus } from '@/types/database'
 // - 删除掉落
 // - 修改掉落状态（on_sale 发售 / preparing 准备 / adopted 领养）
 //
-// 权限：所有写操作经 requireZeroUser() + validateCsrf() 双重校验，
+// 权限：所有写操作经 requireAdmin() + validateCsrf() 双重校验（role=admin 即可），
 //       公开读取走 /api/drop-items（anon + RLS is_active=true）
 // ====================
 
@@ -54,6 +54,17 @@ function validateDropInput(input: DropItemInput): string | null {
   if (typeof input.includes !== 'string' || input.includes.trim().length > 200) {
     return '包含内容不能超过 200 个字符'
   }
+  // 焦点坐标（可选，0-100 百分比）
+  if (input.focus_x !== undefined) {
+    if (typeof input.focus_x !== 'number' || !Number.isFinite(input.focus_x) || input.focus_x < 0 || input.focus_x > 100) {
+      return '图片焦点 X 坐标不正确（0-100）'
+    }
+  }
+  if (input.focus_y !== undefined) {
+    if (typeof input.focus_y !== 'number' || !Number.isFinite(input.focus_y) || input.focus_y < 0 || input.focus_y > 100) {
+      return '图片焦点 Y 坐标不正确（0-100）'
+    }
+  }
   return null
 }
 
@@ -62,7 +73,7 @@ function validateDropInput(input: DropItemInput): string | null {
  * 仅超级管理员可调用
  */
 export async function listDropItems(): Promise<DropActionResult> {
-  const authResult = await requireZeroUser()
+  const authResult = await requireAdmin()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
   }
@@ -90,7 +101,7 @@ export async function createDropItem(input: DropItemInput): Promise<DropActionRe
   const csrfError = await validateCsrf()
   if (csrfError) return { success: false, error: csrfError }
 
-  const authResult = await requireZeroUser()
+  const authResult = await requireAdmin()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
   }
@@ -119,6 +130,8 @@ export async function createDropItem(input: DropItemInput): Promise<DropActionRe
         copyright: input.copyright.trim(),
         delivery: input.delivery.trim(),
         includes: input.includes.trim(),
+        focus_x: input.focus_x ?? 50,
+        focus_y: input.focus_y ?? 50,
         sort_order: nextOrder,
       })
       .select('*')
@@ -145,7 +158,7 @@ export async function updateDropItem(id: string, input: DropItemInput): Promise<
   const csrfError = await validateCsrf()
   if (csrfError) return { success: false, error: csrfError }
 
-  const authResult = await requireZeroUser()
+  const authResult = await requireAdmin()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
   }
@@ -168,6 +181,8 @@ export async function updateDropItem(id: string, input: DropItemInput): Promise<
         copyright: input.copyright.trim(),
         delivery: input.delivery.trim(),
         includes: input.includes.trim(),
+        focus_x: input.focus_x ?? 50,
+        focus_y: input.focus_y ?? 50,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -195,7 +210,7 @@ export async function updateDropStatus(id: string, status: DropItemStatus): Prom
   const csrfError = await validateCsrf()
   if (csrfError) return { success: false, error: csrfError }
 
-  const authResult = await requireZeroUser()
+  const authResult = await requireAdmin()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
   }
@@ -227,13 +242,13 @@ export async function updateDropStatus(id: string, status: DropItemStatus): Prom
 
 /**
  * 删除掉落
- * 仅超级管理员可调用
+ * 仅管理员可调用
  */
 export async function deleteDropItem(id: string): Promise<DropActionResult> {
   const csrfError = await validateCsrf()
   if (csrfError) return { success: false, error: csrfError }
 
-  const authResult = await requireZeroUser()
+  const authResult = await requireAdmin()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
   }

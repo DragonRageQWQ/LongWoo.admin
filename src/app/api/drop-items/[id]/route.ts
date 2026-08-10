@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionUser } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
-import { ZERO_USER_UID } from '@/lib/constants'
 import type { DropItemInput, DropItemStatus } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +9,7 @@ export const dynamic = 'force-dynamic'
 const DROP_STATUSES: DropItemStatus[] = ['on_sale', 'preparing', 'adopted']
 
 /**
- * 超管校验（API 层）：CSRF + 登录 + uid===ZERO_USER_UID 且 role=admin 且 is_active
+ * 管理员校验（API 层）：CSRF + 登录 + role=admin 且 is_active
  */
 async function requireSuperAdmin(request: NextRequest): Promise<{ error: NextResponse | null }> {
   const csrfError = validateApiCsrf(request)
@@ -24,14 +23,14 @@ async function requireSuperAdmin(request: NextRequest): Promise<{ error: NextRes
   const admin = createAdminClient()
   const { data: profile, error: profileError } = await admin
     .from('profiles')
-    .select('uid, role, is_active')
+    .select('role, is_active')
     .eq('id', user.id)
     .single()
   if (profileError || !profile) {
     return { error: NextResponse.json({ success: false, error: '未找到用户信息' }, { status: 401 }) }
   }
-  if (profile.uid !== ZERO_USER_UID || profile.role !== 'admin' || profile.is_active !== true) {
-    return { error: NextResponse.json({ success: false, error: '无权操作，仅超级管理员可执行此操作' }, { status: 403 }) }
+  if (profile.role !== 'admin' || profile.is_active !== true) {
+    return { error: NextResponse.json({ success: false, error: '无权操作，仅管理员可执行此操作' }, { status: 403 }) }
   }
   return { error: null }
 }
@@ -125,6 +124,8 @@ export async function PATCH(request: NextRequest) {
         copyright: input.copyright.trim(),
         delivery: input.delivery.trim(),
         includes: input.includes.trim(),
+        focus_x: input.focus_x ?? 50,
+        focus_y: input.focus_y ?? 50,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
