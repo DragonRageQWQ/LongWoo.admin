@@ -597,7 +597,7 @@
     }).join('');
 
     return '' +
-      '<div class="product-card edit-mode">' +
+      '<div class="product-card edit-mode" data-original-image="' + escapeHtml(item.image_url) + '">' +
         '<div class="edit-form">' +
           '<div class="edit-field"><label>介绍图片 *</label>' +
             '<img class="edit-image-preview" src="' + escapeHtml(item.image_url) + '" alt="预览">' +
@@ -787,7 +787,10 @@
       var el = card.querySelector('[data-field="' + field + '"]');
       return el ? el.value : '';
     };
-    var imageUrl = card.dataset.uploadedUrl || card.querySelector('.edit-image-preview').src;
+    // 图片：优先用本次上传的新图；否则保留原始存储值（避免相对路径被解析为绝对地址）
+    var imageUrl = card.dataset.uploadedUrl ||
+      card.getAttribute('data-original-image') ||
+      card.querySelector('.edit-image-preview').src;
     var price = Number(get('price'));
     if (!get('title').trim()) { alert('请填写掉落标题'); return null; }
     if (!imageUrl) { alert('请上传介绍图片'); return null; }
