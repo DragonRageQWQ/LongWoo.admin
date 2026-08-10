@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import BottomNav from "@/components/layout/BottomNav";
 import Button from "@/components/ui/Button";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { queryOrderByNo } from "@/actions/order-actions";
@@ -70,7 +71,7 @@ export default function OrderQueryPage() {
     <div className="min-h-screen flex flex-col bg-lw-gray">
       <Header />
 
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-[calc(64px+3rem)]">
         {/* 页面标题 */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-lw-black">查询委托</h1>
@@ -287,6 +288,9 @@ export default function OrderQueryPage() {
       </main>
 
       <Footer />
+
+      {/* 底部固定导航栏（与首页一致） */}
+      <BottomNav />
     </div>
   );
 }

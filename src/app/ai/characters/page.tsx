@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { AiCharacter } from '@/types/database'
+import BottomNav from '@/components/layout/BottomNav'
 
 // ===== 内联 SVG 图标 =====
 const BackIcon = () => (
@@ -124,7 +125,7 @@ export default function CharactersPage() {
   const isEmpty = !characters || characters.length === 0
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper" style={{ paddingBottom: 'calc(64px + 1.5rem)' }}>
       <TopBar />
 
       {isEmpty ? (
@@ -181,6 +182,9 @@ export default function CharactersPage() {
           </div>
         </>
       )}
+
+      {/* 底部固定导航栏（与首页一致） */}
+      <BottomNav />
     </div>
   )
 }

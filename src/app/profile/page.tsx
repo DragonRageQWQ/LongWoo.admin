@@ -32,6 +32,7 @@ import { listMyOrders } from "@/actions/order-actions";
 import { formatDate, statusLabels } from "@/lib/utils";
 import type { Profile, Order } from "@/types/database";
 import FeedbackSection from "@/components/profile/FeedbackSection";
+import BottomNav from "@/components/layout/BottomNav";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -352,7 +353,7 @@ export default function ProfilePage() {
       </header>
 
       {/* 主要内容 */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-[calc(64px+3rem)] space-y-6">
         {/* 用户信息卡片 */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-50 p-6">
           <div className="flex items-center gap-4">
@@ -846,6 +847,9 @@ export default function ProfilePage() {
         {/* 建议与反馈 */}
         <FeedbackSection />
       </main>
+
+      {/* 底部固定导航栏（与首页一致） */}
+      <BottomNav />
     </div>
   );
 }
