@@ -788,19 +788,22 @@ export async function queryOrderByNo(
       return { success: false, error: '未找到匹配的委托单，请确认单号和手机号' }
     }
 
-    // 查询附件
-    const { data: attachments } = await supabase
-      .from('order_attachments')
-      .select('*')
-      .eq('order_id', order.id)
-      .order('created_at', { ascending: true })
-
-    // 查询回复（仅返回显示名称和头像，不泄露内部用户信息）
-    const { data: replies } = await supabase
-      .from('order_replies')
-      .select('*, profiles(display_name, avatar_url)')
-      .eq('order_id', order.id)
-      .order('sent_at', { ascending: true })
+    // 性能优化：附件与回复查询相互独立，改为并行执行（Promise.all），
+    // 原串行实现多花费 1 个 RTT（约 40-100ms）
+    const [attachmentResult, repliesResult] = await Promise.all([
+      supabase
+        .from('order_attachments')
+        .select('*')
+        .eq('order_id', order.id)
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('order_replies')
+        .select('*, profiles(display_name, avatar_url)')
+        .eq('order_id', order.id)
+        .order('sent_at', { ascending: true }),
+    ])
+    const attachments = attachmentResult.data
+    const replies = repliesResult.data
     return {
       success: true,
       data: {

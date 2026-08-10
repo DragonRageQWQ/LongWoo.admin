@@ -1,6 +1,19 @@
+import dynamic from 'next/dynamic'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
-import CharacterEditForm from '../../components/CharacterEditForm'
+
+// 性能优化：CharacterEditForm（448 行客户端组件）按需加载，避免阻塞首屏渲染
+const CharacterEditForm = dynamic(() => import('../../components/CharacterEditForm'), {
+  loading: () => (
+    <div className="space-y-4" aria-hidden="true">
+      <div className="h-10 w-40 bg-gray-100 rounded animate-pulse" />
+      <div className="h-12 bg-gray-100 rounded-lg animate-pulse" />
+      <div className="h-32 bg-gray-100 rounded-lg animate-pulse" />
+      <div className="h-12 bg-gray-100 rounded-lg animate-pulse" />
+      <div className="h-12 bg-lw-accent/20 rounded-lg animate-pulse" />
+    </div>
+  ),
+})
 
 /**
  * 龙灵工坊：创建新角色

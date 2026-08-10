@@ -45,26 +45,32 @@ export async function GET(request: NextRequest) {
   try {
     const admin = createAdminClient()
 
-    // 校验角色归属
-    const { data: character, error: charError } = await admin
-      .from('ai_characters')
-      .select('id')
-      .eq('id', characterId)
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // 性能优化：角色归属校验与消息查询相互独立（均只依赖 characterId），
+    // 并行执行省去 1 个 RTT（约 40-100ms）
+    const [charResult, msgResult] = await Promise.all([
+      admin
+        .from('ai_characters')
+        .select('id')
+        .eq('id', characterId)
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      admin
+        .from('ai_chat_messages')
+        .select('id, role, content, created_at')
+        .eq('character_id', characterId)
+        .order('created_at', { ascending: false })
+        .limit(100),
+    ])
+
+    const character = charResult.data
+    const charError = charResult.error
+    const messages = msgResult.data
+    const msgError = msgResult.error
+
     if (charError) throw charError
     if (!character) {
       return NextResponse.json({ success: false, error: '角色不存在' }, { status: 404 })
     }
-
-    // 查询最近 100 条消息
-    const { data: messages, error: msgError } = await admin
-      .from('ai_chat_messages')
-      .select('id, role, content, created_at')
-      .eq('character_id', characterId)
-      .order('created_at', { ascending: false })
-      .limit(100)
-
     if (msgError) throw msgError
 
     // 倒序翻转（时间正序返回）

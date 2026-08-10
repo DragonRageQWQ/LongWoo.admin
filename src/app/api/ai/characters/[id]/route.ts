@@ -34,27 +34,32 @@ export async function GET(request: NextRequest) {
 
   try {
     const admin = createAdminClient()
-    // 查询角色并校验归属
-    const { data: character, error: charError } = await admin
-      .from('ai_characters')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // 性能优化：角色归属校验与消息历史查询相互独立（均只依赖角色 id），
+    // 并行执行省去 1 个 RTT（约 40-100ms）
+    const [charResult, msgResult] = await Promise.all([
+      admin
+        .from('ai_characters')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      admin
+        .from('ai_chat_messages')
+        .select('id, role, content, created_at')
+        .eq('character_id', id)
+        .order('created_at', { ascending: true })
+        .limit(500),
+    ])
+
+    const character = charResult.data
+    const charError = charResult.error
+    const messages = msgResult.data
+    const msgError = msgResult.error
 
     if (charError) throw charError
     if (!character) {
       return NextResponse.json({ success: false, error: '角色不存在' }, { status: 404 })
     }
-
-    // 查询消息历史（按时间正序）
-    const { data: messages, error: msgError } = await admin
-      .from('ai_chat_messages')
-      .select('id, role, content, created_at')
-      .eq('character_id', id)
-      .order('created_at', { ascending: true })
-      .limit(500)
-
     if (msgError) throw msgError
 
     return NextResponse.json({ success: true, character, messages: messages ?? [] })

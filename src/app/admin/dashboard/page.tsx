@@ -1,16 +1,48 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import dynamic from "next/dynamic";
 import AdminSidebar, { type AdminTab } from "./_components/AdminSidebar";
 import StatsOverview from "./_components/StatsOverview";
-import OrderList from "./_components/OrderList";
-import UserManagement from "./_components/UserManagement";
-import NotificationManagement from "./_components/NotificationManagement";
-import FeedbackManagement from "./_components/FeedbackManagement";
-import WorksManagement from "./_components/WorksManagement";
 import { getCurrentUser, ZERO_USER_UID } from "@/lib/auth";
 
 // 支持的有效标签页
 const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "notifications", "feedback", "settings", "works"];
+
+// ===== 管理面板按需加载（性能优化） =====
+// 5 个客户端面板合计 2600+ 行，静态导入会全部打进 /admin/dashboard 首屏 JS。
+// 改为 next/dynamic 按 tab 懒加载：仅激活的面板才下载对应 chunk，
+// 首屏只加载当前 tab 所需代码（其余面板进入对应 tab 时才拉取）。
+// 注：StatsOverview 为服务端组件（RSC），保持静态导入（轻量，无客户端 JS）。
+const OrderList = dynamic(() => import("./_components/OrderList"), {
+  loading: () => <PanelSkeleton />,
+});
+const UserManagement = dynamic(() => import("./_components/UserManagement"), {
+  loading: () => <PanelSkeleton />,
+});
+const NotificationManagement = dynamic(() => import("./_components/NotificationManagement"), {
+  loading: () => <PanelSkeleton />,
+});
+const FeedbackManagement = dynamic(() => import("./_components/FeedbackManagement"), {
+  loading: () => <PanelSkeleton />,
+});
+const WorksManagement = dynamic(() => import("./_components/WorksManagement"), {
+  loading: () => <PanelSkeleton />,
+});
+
+// 面板加载占位
+function PanelSkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden="true">
+      <div className="h-8 w-48 bg-gray-100 rounded animate-pulse" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-28 bg-gray-100 rounded-lg animate-pulse" />
+        ))}
+      </div>
+      <div className="h-64 bg-gray-100 rounded-lg animate-pulse" />
+    </div>
+  );
+}
 
 // 解析当前标签页
 function resolveTab(tabParam: string | undefined): AdminTab {
@@ -35,7 +67,7 @@ function PlaceholderPanel({ title }: { title: string }) {
   );
 }
 
-// 主体内容区（根据 tab 渲染不同面板）
+// 主体内容区（根据 tab 渲染不同面板，面板已按需加载）
 function DashboardContent({
   activeTab,
   isSuperAdmin,

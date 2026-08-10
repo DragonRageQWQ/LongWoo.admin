@@ -68,11 +68,16 @@ export default function NotificationBell() {
     }
   }, [open, fetchNotifications]);
 
-  // 定时轮询（全局挂载即启动，轻量请求）
+  // 定时轮询（性能优化：仅在页面可见时拉取，后台标签页自动暂停，
+  // 避免用户切走时持续产生无效请求；挂载时拉取一次用于初始化未读徽标）
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchNotifications();
-    pollTimerRef.current = setInterval(fetchNotifications, POLL_INTERVAL_MS);
+    const poll = () => {
+      if (document.visibilityState === "visible") {
+        fetchNotifications();
+      }
+    };
+    poll();
+    pollTimerRef.current = setInterval(poll, POLL_INTERVAL_MS);
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
