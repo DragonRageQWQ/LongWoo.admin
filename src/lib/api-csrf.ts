@@ -7,23 +7,47 @@ import { NextResponse } from 'next/server'
  * 而是与服务器配置的固定站点域名严格比对，杜绝 Host 头伪造/DNS rebinding 绕过。
  *
  * 白名单来源（按优先级）：
- *   1. NEXT_PUBLIC_SITE_URL（生产/预发域名，如 https://www.longwoo.studio）
- *   2. localhost 开发地址（NODE_ENV !== 'production' 时加入）
+ *   1. NEXT_PUBLIC_SITE_URL（主生产域名，如 https://www.longwoo.studio）
+ *   2. NEXT_PUBLIC_ADDITIONAL_SITE_URLS（附加生产域名，逗号分隔，支持多站点部署，
+ *      如 https://longwoo.com.cn,https://www.longwoo.com.cn）
+ *   3. Vercel 部署域名（VERCEL_PROJECT_PRODUCTION_URL / VERCEL_URL /
+ *      VERCEL_BRANCH_URL 等，自动适配预览与生产环境）
+ *   4. localhost 开发地址（NODE_ENV !== 'production' 时加入）
  */
 function getAllowedOrigins(): string[] {
   const origins: string[] = []
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
-  if (siteUrl) {
+  const pushOrigin = (raw: string) => {
+    const val = raw.trim()
+    if (!val) return
     try {
-      const u = new URL(siteUrl)
+      const u = val.startsWith('http') ? new URL(val) : new URL(`https://${val}`)
       if (u.protocol === 'https:' || u.protocol === 'http:') {
         origins.push(u.origin)
       }
     } catch { /* 忽略非法配置 */ }
   }
 
-  // 开发环境放行 localhost（含常见端口），便于本地联调
+  // 1) 主生产域名
+  pushOrigin(process.env.NEXT_PUBLIC_SITE_URL ?? '')
+
+  // 2) 附加生产域名（逗号分隔，支持多站点）
+  const additional = (process.env.NEXT_PUBLIC_ADDITIONAL_SITE_URLS ?? '').split(',')
+  for (const item of additional) {
+    pushOrigin(item)
+  }
+
+  // 3) Vercel 部署环境自动放行（生产域名、预览域名、分支域名）
+  for (const key of [
+    'VERCEL_PROJECT_PRODUCTION_URL',
+    'VERCEL_URL',
+    'VERCEL_BRANCH_URL',
+    'VERCEL_PREVIEW_URL',
+  ]) {
+    pushOrigin(process.env[key] ?? '')
+  }
+
+  // 4) 开发环境放行 localhost（含常见端口），便于本地联调
   if (process.env.NODE_ENV !== 'production') {
     origins.push('http://localhost:3000')
     origins.push('http://localhost:3001')
@@ -56,6 +80,16 @@ export function validateOrigin(
   if (sourceHeader) {
     try {
       const sourceOrigin = new URL(sourceHeader).origin
+
+      // 开发环境降级放行：Origin 与 Host 一致视为同源请求。
+      // 覆盖局域网 IP / 自定义端口访问（如 http://192.168.x.x:3000、
+      // 手机真机联调），这些来源无法预先列入固定白名单。
+      if (process.env.NODE_ENV !== 'production' && host) {
+        const sourceHost = new URL(sourceHeader).host
+        if (sourceHost === host) {
+          return null
+        }
+      }
 
       // 1) 已配置固定白名单（生产/预发推荐路径）：严格比对，不匹配直接拒绝
       if (allowedOrigins.length > 0) {

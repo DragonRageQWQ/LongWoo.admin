@@ -152,7 +152,8 @@ Supabase 会话 Cookie 支持 base64url 编码和分片，单片最大 3180 字�
 | `NEXT_PUBLIC_SUPABASE_URL` | 是 | Supabase 项目 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 是 | 浏览器及普通服务端客户端使用的 anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | 是 | 服务端特权操作密钥 |
-| `NEXT_PUBLIC_SITE_URL` | 生产必需 | 网站公开地址；本地默认 `http://localhost:3000` |
+| `NEXT_PUBLIC_SITE_URL` | 生产必需 | 主站公开地址（CSRF 白名单主域名）；本地默认 `http://localhost:3000` |
+| `NEXT_PUBLIC_ADDITIONAL_SITE_URLS` | 否 | 附加生产域名（逗号分隔，如 `https://longwoo.com.cn,https://www.longwoo.com.cn`），一并加入 CSRF Origin 白名单 |
 | `QQ_CLIENT_ID` / `QQ_CLIENT_SECRET` | 否 | QQ 互联登录 |
 | `RESEND_API_KEY` | 否 | Resend 邮件发送 |
 | `RESEND_FROM_EMAIL` | 否 | 发件地址，默认 `noreply@longwoo.studio` |

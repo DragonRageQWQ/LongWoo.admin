@@ -227,7 +227,7 @@ export async function listAllFeedback(params: {
     const admin = createAdminClient()
     let query = admin
       .from('user_feedback')
-      .select('*, profiles:profiles!user_feedback_user_id_fkey(id, uid, email, display_name, avatar_url)', { count: 'exact' })
+      .select('*', { count: 'exact' })
 
     if (status !== 'all') {
       query = query.eq('status', status)
@@ -248,7 +248,24 @@ export async function listAllFeedback(params: {
       return { success: false, error: '加载反馈列表失败' }
     }
 
-    return { success: true, data: (data || []) as UserFeedback[], total: count ?? 0 }
+    // 关联提交人信息（user_feedback.user_id 外键指向 auth.users，
+    // PostgREST 无法直接 join profiles，故分两次查询后服务端组装）
+    type FeedbackAuthor = NonNullable<UserFeedback['profiles']>
+    const feedbackRows = (data || []) as UserFeedback[]
+    const userIds = [...new Set(feedbackRows.map((f) => f.user_id).filter(Boolean))]
+    const profilesMap: Record<string, FeedbackAuthor> = {}
+    if (userIds.length > 0) {
+      const { data: profiles } = await admin
+        .from('profiles')
+        .select('id, uid, email, display_name, avatar_url')
+        .in('id', userIds)
+      for (const p of (profiles as FeedbackAuthor[]) || []) {
+        profilesMap[p.id] = p
+      }
+    }
+    const enriched = feedbackRows.map((f) => ({ ...f, profiles: profilesMap[f.user_id] ?? null }))
+
+    return { success: true, data: enriched, total: count ?? 0 }
   } catch (error) {
     console.error('[listAllFeedback] Exception:', error)
     return { success: false, error: '操作时发生未知错误' }

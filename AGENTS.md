@@ -155,6 +155,8 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # 站点 URL（部署后填写实际域名）
 NEXT_PUBLIC_SITE_URL=https://www.longwoo.studio
+# 附加生产域名（逗号分隔，多站点部署；CSRF Origin 白名单一并放行）
+NEXT_PUBLIC_ADDITIONAL_SITE_URLS=https://longwoo.com.cn,https://www.longwoo.com.cn
 
 # QQ OAuth（可选）
 QQ_CLIENT_ID=
