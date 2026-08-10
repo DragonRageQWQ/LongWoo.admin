@@ -55,11 +55,12 @@ const NAV_ICONS = {
 } as const;
 
 const NAV_ITEMS = [
-  { key: "buy", label: "购买兽装", href: "/order-step1.html", icon: NAV_ICONS.bag },
-  { key: "ai", label: "龙灵工坊", href: "/ai/characters", icon: NAV_ICONS.chat },
-  { key: "drop", label: "购买掉落", href: "/preorder-step1.html", icon: NAV_ICONS.drop },
-  { key: "order", label: "进度&售后", href: "/order/query", icon: NAV_ICONS.clock },
-  { key: "profile", label: "个人中心", href: "/profile", icon: NAV_ICONS.user },
+  // 静态 HTML 页用 <a>（跨体系整页跳转，避免 Next RSC 预取 404）；Next 路由用 <Link>
+  { key: "buy", label: "购买兽装", href: "/order-step1.html", icon: NAV_ICONS.bag, external: true },
+  { key: "ai", label: "龙灵工坊", href: "/ai/characters", icon: NAV_ICONS.chat, external: false },
+  { key: "drop", label: "购买掉落", href: "/preorder-step1.html", icon: NAV_ICONS.drop, external: true },
+  { key: "order", label: "进度&售后", href: "/order/query", icon: NAV_ICONS.clock, external: false },
+  { key: "profile", label: "个人中心", href: "/profile", icon: NAV_ICONS.user, external: false },
 ] as const;
 
 export default function BottomNav() {
@@ -79,14 +80,11 @@ export default function BottomNav() {
     >
       {NAV_ITEMS.map((item) => {
         const active = isActive(item.href);
-        return (
-          <Link
-            key={item.key}
-            href={item.href}
-            className={`flex flex-col items-center justify-center gap-0.5 no-underline cursor-pointer p-2 min-w-[60px] ${
-              active ? "active" : ""
-            }`}
-          >
+        const classes = `flex flex-col items-center justify-center gap-0.5 no-underline cursor-pointer p-2 min-w-[60px] ${
+          active ? "active" : ""
+        }`;
+        const content = (
+          <>
             <span className="w-[22px] h-[22px]">
               <svg
                 viewBox="0 0 24 24"
@@ -110,6 +108,17 @@ export default function BottomNav() {
             >
               {item.label}
             </span>
+          </>
+        );
+        // 静态 HTML 目标用普通 <a>（避免 Next.js RSC prefetch 对静态页发起 404 请求）；
+        // Next 路由目标用 <Link> 享受 SPA 客户端导航
+        return item.external ? (
+          <a key={item.key} href={item.href} className={classes}>
+            {content}
+          </a>
+        ) : (
+          <Link key={item.key} href={item.href} className={classes}>
+            {content}
           </Link>
         );
       })}
