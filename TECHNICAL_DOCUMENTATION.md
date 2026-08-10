@@ -23,7 +23,7 @@ LongWoo（龙坞）是面向兽装定制工作室的委托管理平台。系统�
 | 样式 | Tailwind CSS | 4.x，动态页面与静态 HTML 均使用 |
 | 图标 | lucide-react | 1.26.x |
 | 后端服务 | Supabase | Auth、PostgreSQL、Storage、RLS |
-| 部署 | Vercel | 生产域名为 `www.longwoo.studio` |
+| 部署 | Vercel | 生产域名：`www.longwoo.studio` 与 `longwoo.com.cn`（双域名，CSRF 白名单均已覆盖） |
 | 代码质量 | ESLint | 9.x + eslint-config-next |
 
 ## 3. 系统架构
@@ -153,7 +153,7 @@ Supabase 会话 Cookie 支持 base64url 编码和分片，单片最大 3180 字�
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 是 | 浏览器及普通服务端客户端使用的 anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | 是 | 服务端特权操作密钥 |
 | `NEXT_PUBLIC_SITE_URL` | 生产必需 | 主站公开地址（CSRF 白名单主域名）；本地默认 `http://localhost:3000` |
-| `NEXT_PUBLIC_ADDITIONAL_SITE_URLS` | 否 | 附加生产域名（逗号分隔，如 `https://longwoo.com.cn,https://www.longwoo.com.cn`），一并加入 CSRF Origin 白名单 |
+| `NEXT_PUBLIC_ADDITIONAL_SITE_URLS` | 否 | 附加生产域名（逗号分隔，如 `https://longwoo.studio,https://longwoo.com.cn,https://www.longwoo.com.cn`），一并加入 CSRF Origin 白名单 |
 | `QQ_CLIENT_ID` / `QQ_CLIENT_SECRET` | 否 | QQ 互联登录 |
 | `RESEND_API_KEY` | 否 | Resend 邮件发送 |
 | `RESEND_FROM_EMAIL` | 否 | 发件地址，默认 `noreply@longwoo.studio` |

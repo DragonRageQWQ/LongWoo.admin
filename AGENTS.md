@@ -8,7 +8,7 @@
 
 **LongWoo 龙坞** 是一个兽装定制工作室的委托管理平台，提供在线委托提交、估价管理、工单追踪、交付管理等功能。
 
-- **域名**: https://www.longwoo.studio
+- **域名**: https://www.longwoo.studio / https://longwoo.com.cn（双生产域名，CSRF 白名单均已覆盖）
 - **部署平台**: Vercel
 - **后端服务**: Supabase (Auth + PostgreSQL + Storage)
 - **前端框架**: Next.js 16 + React 19
@@ -155,8 +155,9 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # 站点 URL（部署后填写实际域名）
 NEXT_PUBLIC_SITE_URL=https://www.longwoo.studio
-# 附加生产域名（逗号分隔，多站点部署；CSRF Origin 白名单一并放行）
-NEXT_PUBLIC_ADDITIONAL_SITE_URLS=https://longwoo.com.cn,https://www.longwoo.com.cn
+# 附加生产域名（逗号分隔，多站点部署；CSRF Origin 白名单一并放行；
+# 含无 www 与 www 变体，与 .env.local 保持一致）
+NEXT_PUBLIC_ADDITIONAL_SITE_URLS=https://longwoo.studio,https://longwoo.com.cn,https://www.longwoo.com.cn
 
 # QQ OAuth（可选）
 QQ_CLIENT_ID=
