@@ -152,29 +152,19 @@ export async function sendPasswordResetOtp(
     const otpCode = String(randomInt(100000, 1000000))
     await saveOtp(targetEmail, otpCode)
 
-    // 发送密码重置验证码邮件（临时诊断：内联调用 Resend，透出具体错误码）
+    // 发送密码重置验证码邮件
     if (process.env.RESEND_API_KEY) {
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@longwoo.studio'
-      const diagRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: fromEmail,
-          to: [targetEmail],
-          subject: '【LongWoo 龙坞】密码重置验证码',
-          html: passwordResetOtpEmailTemplate(otpCode),
-        }),
-      })
-      if (!diagRes.ok) {
-        const errText = await diagRes.text().catch(() => '')
-        console.error('Resend 密码重置邮件发送失败:', diagRes.status, errText.slice(0, 300))
-        return { success: false, error: `验证码邮件发送失败: HTTP ${diagRes.status} ${errText.slice(0, 100)}` }
+      const sent = await sendEmail(
+        targetEmail,
+        '【LongWoo 龙坞】密码重置验证码',
+        passwordResetOtpEmailTemplate(otpCode)
+      )
+      if (!sent) {
+        console.error('Resend 密码重置邮件发送失败')
+        return { success: false, error: '验证码邮件发送失败，请稍后重试或联系客服' }
       }
     } else {
-      return { success: false, error: '验证码邮件发送失败: 未配置 RESEND_API_KEY' }
+      console.log('[OTP] 密码重置验证码已生成（未配置邮件服务）')
     }
 
     return { success: true }
