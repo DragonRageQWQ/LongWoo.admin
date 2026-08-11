@@ -6,7 +6,7 @@ import StatsOverview from "./_components/StatsOverview";
 import { getCurrentUser, ZERO_USER_UID } from "@/lib/auth";
 
 // 支持的有效标签页
-const validTabs: AdminTab[] = ["all-orders", "overview", "orders", "users", "notifications", "feedback", "settings", "works", "drops"];
+const validTabs: AdminTab[] = ["all-orders", "overview", "users", "notifications", "feedback", "settings", "works", "drops"];
 
 // ===== 管理面板按需加载（性能优化） =====
 // 5 个客户端面板合计 2600+ 行，静态导入会全部打进 /admin/dashboard 首屏 JS。
@@ -88,8 +88,6 @@ function DashboardContent({
       );
     case "overview":
       return <StatsOverview />;
-    case "orders":
-      return <OrderList />;
     case "users":
       return <UserManagement />;
     case "notifications":

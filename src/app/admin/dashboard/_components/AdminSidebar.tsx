@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  ClipboardList,
   Users,
   Settings,
   LogOut,
@@ -21,7 +20,7 @@ import {
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 
-export type AdminTab = "all-orders" | "overview" | "orders" | "users" | "notifications" | "feedback" | "settings" | "works" | "drops";
+export type AdminTab = "all-orders" | "overview" | "users" | "notifications" | "feedback" | "settings" | "works" | "drops";
 
 // 站点版本号（仅管理员后台可见，便于确认部署版本）
 const APP_VERSION = "v1.1.3(810)";
@@ -39,7 +38,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { key: "all-orders", label: "全部订单", icon: Inbox },
   { key: "overview", label: "数据概览", icon: LayoutDashboard },
-  { key: "orders", label: "委托管理", icon: ClipboardList },
   { key: "users", label: "用户管理", icon: Users },
   { key: "notifications", label: "通知管理", icon: Bell },
   { key: "feedback", label: "反馈管理", icon: MessageSquare },
