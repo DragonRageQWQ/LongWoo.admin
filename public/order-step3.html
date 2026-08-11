@@ -186,15 +186,15 @@
     </div>
     <div class="price-row">
       <span class="price-row-label">附加选项</span>
-      <span class="price-row-value">RMB 2,500</span>
+      <span class="price-row-value" id="addonPrice">RMB 0</span>
     </div>
     <div class="price-row discount">
       <span class="price-row-label">折抵</span>
-      <span class="price-row-value">- RMB 3,000</span>
+      <span class="price-row-value" id="discountPrice">- RMB 0</span>
     </div>
     <div class="price-row total">
       <span class="price-row-label">合计</span>
-      <span class="price-row-value">RMB 17,500</span>
+      <span class="price-row-value" id="totalPrice">RMB 18,000</span>
     </div>
   </div>
 
@@ -621,6 +621,21 @@
       color: var(--color-error);
     }
 
+    /* 必填校验失败：红框 + 闪烁 */
+    .field-invalid {
+      border-color: var(--color-error) !important;
+      animation: field-flash 0.8s ease 3;
+    }
+
+    .field-invalid:focus {
+      outline-color: var(--color-error) !important;
+    }
+
+    @keyframes field-flash {
+      0%, 100% { border-color: var(--color-error); box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15); }
+      50% { border-color: transparent; box-shadow: none; }
+    }
+
     .form-tip {
       font-size: var(--font-size-xs);
       color: var(--color-error);
@@ -749,6 +764,63 @@
       var submitBtn = document.getElementById('submitBtn');
       var formTip = document.getElementById('formTip');
 
+      // ---- 价格自适应：基础 18,000 + 附加（step2 选配）- 折抵（step3 权益）= 合计 ----
+      function updatePriceSummary() {
+        try {
+          var addon = parseInt(sessionStorage.getItem('longwoo_step2_addon_amount') || '0', 10) || 0;
+          var discount = parseInt(sessionStorage.getItem('longwoo_step3_benefit_amount') || '0', 10) || 0;
+          var base = 18000;
+          var total = base + addon - discount;
+          var addonEl = document.getElementById('addonPrice');
+          var discountEl = document.getElementById('discountPrice');
+          var totalEl = document.getElementById('totalPrice');
+          if (addonEl) addonEl.textContent = 'RMB ' + addon.toLocaleString('en-US');
+          if (discountEl) discountEl.textContent = discount > 0 ? '- RMB ' + discount.toLocaleString('en-US') : 'RMB 0';
+          if (totalEl) totalEl.textContent = 'RMB ' + total.toLocaleString('en-US');
+        } catch (e) {}
+      }
+      updatePriceSummary();
+
+      // ---- 必填项校验：焦点定位 + 标红闪烁 ----
+      var REQUIRED_FIELDS = [
+        { id: 'contactName', message: '请输入姓名' },
+        { id: 'contactPhone', message: '请输入有效的手机号', validator: function(v) { return /^1[3-9]\d{9}$/.test(v); } },
+        { id: 'contactEmail', message: '请输入有效的邮箱', validator: function(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); } }
+      ];
+
+      function clearInvalid(el) {
+        if (el) el.classList.remove('field-invalid');
+      }
+
+      // 输入时清除错误态
+      REQUIRED_FIELDS.forEach(function(field) {
+        var el = document.getElementById(field.id);
+        if (el) el.addEventListener('input', function() { clearInvalid(el); });
+      });
+
+      function validateRequired() {
+        var firstInvalid = null;
+        for (var i = 0; i < REQUIRED_FIELDS.length; i++) {
+          var field = REQUIRED_FIELDS[i];
+          var el = document.getElementById(field.id);
+          if (!el) continue;
+          var value = (el.value || '').trim();
+          var ok = field.validator ? field.validator(value) : value.length > 0;
+          if (!ok) {
+            el.classList.remove('field-invalid');
+            // 强制重排以重新触发闪烁动画
+            void el.offsetWidth;
+            el.classList.add('field-invalid');
+            if (!firstInvalid) {
+              firstInvalid = field;
+              try { el.focus(); } catch (e) {}
+              try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+            }
+          }
+        }
+        return firstInvalid;
+      }
+
       function showTip(msg) {
         if (formTip) {
           formTip.textContent = msg;
@@ -766,9 +838,18 @@
         var designRefName = get('longwoo_design_ref_name');
         var addonOption = get('longwoo_step2_addon');
         var benefitOption = get('longwoo_step3_benefit');
+        var addonAmount = get('longwoo_step2_addon_amount');
+        var benefitAmount = get('longwoo_step3_benefit_amount');
         if (designRefName) lines.push('【设定图】' + designRefName);
         if (addonOption) lines.push('【选配内容】' + addonOption);
         if (benefitOption) lines.push('【折抵权益】' + benefitOption);
+        // 记录价格明细，便于人工估价核对
+        var priceLines = [];
+        priceLines.push('基础价格 RMB 18,000');
+        priceLines.push('附加选项 RMB ' + (parseInt(addonAmount, 10) || 0));
+        priceLines.push('折抵 RMB -' + (parseInt(benefitAmount, 10) || 0));
+        priceLines.push('合计 RMB ' + (18000 + (parseInt(addonAmount, 10) || 0) - (parseInt(benefitAmount, 10) || 0)));
+        lines.push('【价格明细】' + priceLines.join('，'));
         var body = [];
         var bh = get('longwoo_body_height'); if (bh) body.push('身高' + bh + 'CM');
         var bw = get('longwoo_body_weight'); if (bw) body.push('体重' + bw + 'KG');
@@ -784,13 +865,12 @@
 
       // 提交：校验 -> 创建订单 -> 保存订单号 -> 进入等待估价页
       submitBtn.addEventListener('click', async function() {
+        var invalid = validateRequired();
+        if (invalid) { showTip(invalid.message); return; }
+
         var name = (document.getElementById('contactName').value || '').trim();
         var phone = (document.getElementById('contactPhone').value || '').trim();
         var email = (document.getElementById('contactEmail').value || '').trim();
-
-        if (!name) { showTip('请输入姓名'); return; }
-        if (!phone || !/^1[3-9]\d{9}$/.test(phone)) { showTip('请输入有效的手机号'); return; }
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showTip('请输入有效的邮箱'); return; }
 
         // 保存全部字段到 sessionStorage
         FIELD_KEYS.forEach(function(pair) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Search,
   Loader2,
@@ -34,27 +34,26 @@ export default function OrderQueryPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<QueryResult | null>(null);
 
-  const handleQuery = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleQuery = useCallback(async (no: string, phoneNo: string) => {
     setError(null);
     setResult(null);
 
-    if (!orderNo.trim()) {
+    if (!no.trim()) {
       setError("请输入委托单号");
       return;
     }
-    if (!phone.trim()) {
+    if (!phoneNo.trim()) {
       setError("请输入手机号");
       return;
     }
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
+    if (!/^1[3-9]\d{9}$/.test(phoneNo)) {
       setError("请输入有效的手机号");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await queryOrderByNo(orderNo.trim(), phone.trim());
+      const res = await queryOrderByNo(no.trim(), phoneNo.trim());
       if (res.success && res.data) {
         setResult(res.data);
       } else {
@@ -65,6 +64,23 @@ export default function OrderQueryPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // 支持从个人中心"我的订单"携带单号+手机号跳转并自动查询
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const no = params.get("no") || "";
+    const phoneNo = params.get("phone") || "";
+    if (no && phoneNo) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      handleQuery(no, phoneNo);
+    }
+  }, [handleQuery]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleQuery(orderNo, phone);
   };
 
   return (
@@ -82,7 +98,7 @@ export default function OrderQueryPage() {
 
         {/* 查询表单 */}
         <form
-          onSubmit={handleQuery}
+          onSubmit={handleSubmit}
           className="bg-white rounded-2xl shadow-sm p-6 sm:p-8 mb-8"
         >
           <div className="space-y-5">

@@ -1016,7 +1016,10 @@ export async function listMyOrders(limit = 20): Promise<{
       .limit(safeLimit)
 
     if (email && currentUser.userId) {
-      query = query.or(`customer_email.eq.${escapePostgrestKeyword(email)},studio_user_id.eq.${currentUser.userId}`)
+      // 注意：email 中的 "." 不能转义（PostgREST or 过滤器里 \. 会导致匹配失败），
+      // 仅需防御转义 or 过滤器分隔符逗号（合法邮箱不含逗号，此为纵深防御）。
+      const safeEmail = email.replace(/,/g, '\\,')
+      query = query.or(`customer_email.eq.${safeEmail},studio_user_id.eq.${currentUser.userId}`)
     } else if (currentUser.userId) {
       query = query.eq('studio_user_id', currentUser.userId)
     } else if (email) {

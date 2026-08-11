@@ -105,25 +105,33 @@
       <h2 class="current-step-title">第二步：选配内容</h2>
 
       <div class="radio-group">
-        <div class="radio-option selected" onclick="selectOption(this, 'step2')">
+        <div class="radio-option selected" onclick="selectOption(this, 'step2')" data-price="0">
           <div class="radio-circle">
             <div class="radio-dot"></div>
           </div>
           <span class="radio-label">无</span>
         </div>
-        <div class="radio-option" onclick="selectOption(this, 'step2')">
-          <div class="radio-circle">
-            <div class="radio-dot"></div>
-          </div>
-          <span class="radio-label">Longwoo Vision 视觉增强套件</span>
-          <span class="radio-price">RMB 7,900</span>
-        </div>
-        <div class="radio-option" onclick="selectOption(this, 'step2')">
+        <div class="radio-option" onclick="selectOption(this, 'step2')" data-price="300">
           <div class="radio-circle">
             <div class="radio-dot"></div>
           </div>
           <span class="radio-label">Longwoo 便携式头包</span>
           <span class="radio-price">RMB 300</span>
+        </div>
+        <div class="radio-option" onclick="selectOption(this, 'step2')" data-price="750">
+          <div class="radio-circle">
+            <div class="radio-dot"></div>
+          </div>
+          <span class="radio-label">Longwoo室内脚</span>
+          <span class="radio-price">RMB 750</span>
+        </div>
+        <div class="radio-option disabled" data-price="8888" title="暂未上线">
+          <div class="radio-circle">
+            <div class="radio-dot"></div>
+          </div>
+          <span class="radio-label">Longwoo Vision 视觉增强套件</span>
+          <span class="radio-price">RMB 8,888</span>
+          <span class="radio-tag">暂未上线</span>
         </div>
       </div>
 
@@ -138,7 +146,7 @@
     </div>
     <div class="price-row">
       <span class="price-row-label">附加选项</span>
-      <span class="price-row-value">RMB 0</span>
+      <span class="price-row-value" id="addonPrice">RMB 0</span>
     </div>
     <div class="price-row">
       <span class="price-row-label">折抵</span>
@@ -146,7 +154,7 @@
     </div>
     <div class="price-row total">
       <span class="price-row-label">合计</span>
-      <span class="price-row-value">RMB 15,000 - 25,000</span>
+      <span class="price-row-value" id="totalPrice">RMB 15,000 - 25,000</span>
     </div>
   </div>
 
@@ -227,12 +235,15 @@
 
   <script>
     function selectOption(el, group) {
+      // 置灰（暂未上线）选项不可选择
+      if (el.classList.contains('disabled')) return;
       // Only allow interaction on step2 radio group
       const parent = el.parentElement;
       const options = parent.querySelectorAll('.radio-option');
       options.forEach(opt => opt.classList.remove('selected'));
       el.classList.add('selected');
       saveStep2Addon(el);
+      updatePriceSummary(el);
     }
 
     // 将选中的选配内容保存到 sessionStorage，供最终付款步骤提交
@@ -244,6 +255,25 @@
         var price = priceEl ? priceEl.textContent.trim() : '';
         var value = label + (price ? '（' + price + '）' : '');
         sessionStorage.setItem('longwoo_step2_addon', value);
+        // 保存选配金额（数字），供第四步价格自适应计算
+        var amount = parseInt(el.getAttribute('data-price') || '0', 10);
+        sessionStorage.setItem('longwoo_step2_addon_amount', String(isNaN(amount) ? 0 : amount));
+      } catch (e) {}
+    }
+
+    // 更新价格摘要：附加选项 = 选中项价格，合计 = 基础区间 + 附加
+    function updatePriceSummary(el) {
+      try {
+        var amount = parseInt(el.getAttribute('data-price') || '0', 10);
+        if (isNaN(amount)) amount = 0;
+        var addonEl = document.getElementById('addonPrice');
+        var totalEl = document.getElementById('totalPrice');
+        if (addonEl) addonEl.textContent = 'RMB ' + amount.toLocaleString('en-US');
+        if (totalEl) {
+          var low = 15000 + amount;
+          var high = 25000 + amount;
+          totalEl.textContent = 'RMB ' + low.toLocaleString('en-US') + ' - ' + high.toLocaleString('en-US');
+        }
       } catch (e) {}
     }
 
@@ -252,7 +282,24 @@
       try {
         if (!sessionStorage.getItem('longwoo_step2_addon')) {
           var selected = document.querySelector('.radio-option.selected');
-          if (selected) saveStep2Addon(selected);
+          if (selected) {
+            saveStep2Addon(selected);
+            updatePriceSummary(selected);
+          }
+        } else {
+          // 已有选配：恢复选中态并同步价格摘要
+          var addonText = sessionStorage.getItem('longwoo_step2_addon') || '';
+          var options = document.querySelectorAll('.radio-option');
+          options.forEach(function(opt) {
+            var labelEl = opt.querySelector('.radio-label');
+            var priceEl = opt.querySelector('.radio-price');
+            var label = labelEl ? labelEl.textContent.trim() : '';
+            var price = priceEl ? priceEl.textContent.trim() : '';
+            if (label + (price ? '（' + price + '）' : '') === addonText) {
+              opt.classList.add('selected');
+              updatePriceSummary(opt);
+            }
+          });
         }
       } catch (e) {}
     })();
@@ -530,6 +577,27 @@
 
     .radio-option:hover {
       background-color: var(--color-surface);
+    }
+
+    /* 暂未上线（置灰不可选） */
+    .radio-option.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: grayscale(60%);
+    }
+
+    .radio-option.disabled:hover {
+      background-color: transparent;
+    }
+
+    .radio-tag {
+      font-size: 10px;
+      color: var(--color-primary-lighter);
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin-left: auto;
+      white-space: nowrap;
     }
 
     .radio-circle {

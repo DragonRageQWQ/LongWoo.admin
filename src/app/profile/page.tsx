@@ -655,10 +655,10 @@ export default function ProfilePage() {
                       </p>
                     </div>
                     <Link
-                      href="/order/query"
+                      href={`/order/query?no=${encodeURIComponent(order.order_no)}&phone=${encodeURIComponent(order.customer_phone || '')}`}
                       className="text-xs text-gray-400 hover:text-lw-accent flex-shrink-0 flex items-center gap-0.5"
                     >
-                      查看进度
+                      查看详情
                       <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
