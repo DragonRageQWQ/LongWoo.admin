@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
     const orderNo = orderNoData as string
 
     // 插入 orders 表（与 createOrder 的字段完全一致，匹配现有数据库 schema）
+    // 已登录用户下单时写入 user_id（方案 A：订单关联账号，我的订单优先按 user_id 匹配）
     const { data: order, error: orderError } = await serviceSupabase
       .from('orders')
       .insert({
@@ -149,6 +150,7 @@ export async function POST(request: NextRequest) {
         customer_phone: customerPhone,
         customer_email: customerEmail,
         requirements,
+        user_id: userId,
       })
       .select()
       .single()

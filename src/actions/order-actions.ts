@@ -24,29 +24,35 @@ import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/d
 /**
  * 向订单客户发送站内通知
  *
- * @param order 订单（需含 id/order_no/customer_email）
+ * @param order 订单（需含 id/order_no/customer_email/user_id）
  * @param title 通知标题
  * @param content 通知内容（自动附加订单号）
  * @returns 是否成功（用户未注册/插入失败返回 false，不阻塞主流程）
  */
 export async function sendOrderNotification(
-  order: { id: string; order_no: string; customer_email: string | null },
+  order: {
+    id: string
+    order_no: string
+    customer_email: string | null
+    user_id?: string | null
+  },
   title: string,
   content: string
 ): Promise<boolean> {
   try {
-    const email = order.customer_email
-    if (!email) return false
-
     const admin = createAdminClient()
 
-    // 查找订单客户对应的注册用户（仅启用的账号）
-    const { data: user, error: userError } = await admin
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .eq('is_active', true)
-      .maybeSingle()
+    // 查找订单客户对应的注册用户（仅启用的账号）：
+    // 方案 A：优先按下单账号 user_id 匹配；旧订单/匿名订单兜底按邮箱匹配
+    let userQuery = admin.from('profiles').select('id').eq('is_active', true)
+    if (order.user_id) {
+      userQuery = userQuery.eq('id', order.user_id)
+    } else {
+      const email = order.customer_email
+      if (!email) return false
+      userQuery = userQuery.eq('email', email)
+    }
+    const { data: user, error: userError } = await userQuery.maybeSingle()
 
     if (userError || !user) return false
 
@@ -666,7 +672,7 @@ export async function replySite(
     try {
       const { data: orderForNotify } = await supabase
         .from('orders')
-        .select('id, order_no, customer_email')
+        .select('id, order_no, customer_email, user_id')
         .eq('id', orderId)
         .single()
       if (orderForNotify) {
@@ -731,7 +737,7 @@ export async function replyEmail(
     // 从订单记录中读取客户邮箱，而非信任客户端传入的邮箱地址
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, order_no, customer_email')
+      .select('id, order_no, customer_email, user_id')
       .eq('id', orderId)
       .single()
 
@@ -1115,8 +1121,8 @@ export async function listMyOrders(limit = 20): Promise<{
   try {
     const safeLimit = Math.min(limit, MAX_PAGE_LIMIT)
 
-    // 客户订单：按下单邮箱匹配（orders.customer_email = profile.email）
-    // 同时包含分配给当前用户的订单（studio_user_id = userId），兼容工作台场景
+    // 客户订单：优先按下单账号（user_id）匹配，兜底按下单邮箱匹配（旧订单/匿名订单）
+    // 方案 A：已登录用户下单时 orders.user_id 已写入，邮箱变更/输错不影响订单归属
     const email = currentUser.profile?.email
     let query = supabase
       .from('orders')
@@ -1128,9 +1134,11 @@ export async function listMyOrders(limit = 20): Promise<{
       // 注意：email 中的 "." 不能转义（PostgREST or 过滤器里 \. 会导致匹配失败），
       // 仅需防御转义 or 过滤器分隔符逗号（合法邮箱不含逗号，此为纵深防御）。
       const safeEmail = email.replace(/,/g, '\\,')
-      query = query.or(`customer_email.eq.${safeEmail},studio_user_id.eq.${currentUser.userId}`)
+      query = query.or(
+        `user_id.eq.${currentUser.userId},customer_email.eq.${safeEmail},studio_user_id.eq.${currentUser.userId}`
+      )
     } else if (currentUser.userId) {
-      query = query.eq('studio_user_id', currentUser.userId)
+      query = query.or(`user_id.eq.${currentUser.userId},studio_user_id.eq.${currentUser.userId}`)
     } else if (email) {
       query = query.eq('customer_email', email)
     } else {

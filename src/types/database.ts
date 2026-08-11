@@ -40,6 +40,8 @@ export type Order = {
   estimate_notes: string | null
   reject_reason: string | null
   studio_user_id: string | null
+  /** 下单账号（方案 A：已登录用户下单时写入，我的订单优先按此匹配） */
+  user_id: string | null
   delivery_url: string | null
   admin_notes: string | null
   created_at: string
