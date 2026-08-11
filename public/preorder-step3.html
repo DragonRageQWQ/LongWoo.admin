@@ -150,6 +150,8 @@
           <div class="order-code-area">
             <div class="order-code-label">您的订单代码</div>
             <div class="order-code-value" id="preorderOrderCode">XXXXXXXXXXXXXXXX</div>
+            <button class="copy-code-btn" id="preorderCopyBtn" type="button" onclick="copyPreorderCode()">复制订单代码</button>
+            <p class="save-order-tip">请妥善保存订单代码，用于后续查询进度</p>
           </div>
 
           <!-- Return button (secondary) -->
@@ -586,6 +588,35 @@
       letter-spacing: 0.5px;
     }
 
+    .copy-code-btn {
+      width: 100%;
+      margin-top: var(--space-sm);
+      padding: 10px 0;
+      background-color: var(--color-primary);
+      color: var(--color-background);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .copy-code-btn:hover {
+      opacity: 0.85;
+    }
+
+    .copy-code-btn.copied {
+      background-color: var(--color-success, #16a34a);
+    }
+
+    .save-order-tip {
+      font-size: 10px;
+      color: var(--color-primary-lighter);
+      margin-top: var(--space-sm);
+      text-align: center;
+    }
+
     /* Return button (secondary) */
     .return-btn {
       display: flex;
@@ -711,6 +742,41 @@
         if (orderNo && el) el.textContent = orderNo;
       } catch (e) {}
     })();
+
+    // 复制订单代码
+    function copyPreorderCode() {
+      var btn = document.getElementById('preorderCopyBtn');
+      var orderNo = '';
+      try {
+        orderNo = sessionStorage.getItem('longwoo_preorder_order_no') || sessionStorage.getItem('longwoo_order_no') || '';
+      } catch (e) {}
+      if (!orderNo) {
+        var el = document.getElementById('preorderOrderCode');
+        if (el) orderNo = (el.textContent || '').trim();
+      }
+      if (!orderNo || /X+/.test(orderNo)) return;
+      function done() {
+        btn.classList.add('copied');
+        btn.textContent = '已复制 ✓';
+        setTimeout(function () { btn.classList.remove('copied'); btn.textContent = '复制订单代码'; }, 2000);
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(orderNo).then(done).catch(function () { fallback(); });
+        } else { fallback(); }
+      } catch (e) { fallback(); }
+      function fallback() {
+        var ta = document.createElement('textarea');
+        ta.value = orderNo;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        done();
+      }
+    }
   </script>
 <script src="/js/common.js" defer></script>
 </body>

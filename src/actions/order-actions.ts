@@ -1150,3 +1150,86 @@ export async function listMyOrders(limit = 20): Promise<{
     return { success: false, error: '查询我的订单时发生未知错误' }
   }
 }
+
+// ==================== 订单导出（管理员 CSV） ====================
+const ORDER_EXPORT_COLUMNS = [
+  '订单号',
+  '状态',
+  '客户姓名',
+  '手机号',
+  '邮箱',
+  '下单时间',
+  '估价金额',
+  '需求描述',
+] as const
+
+// CSV 转义：包裹含逗号/引号/换行的字段
+function csvEscape(value: unknown): string {
+  const str = value == null ? '' : String(value)
+  if (/[",\n\r]/.test(str)) {
+    return '"' + str.replace(/"/g, '""') + '"'
+  }
+  return str
+}
+
+/**
+ * 导出全部订单为 CSV（管理员权限）
+ *
+ * @returns success=true 时 csv 为 CSV 字符串（含表头）
+ */
+export async function exportOrdersCsv(): Promise<{
+  success: boolean
+  csv?: string
+  count?: number
+  error?: string
+}> {
+  const currentUser = await requireAdmin()
+  if (!currentUser) {
+    return { success: false, error: '无权限执行此操作' }
+  }
+
+  const supabase = await createClient()
+  const PAGE = 1000
+  let offset = 0
+  const rows: Array<Record<string, unknown>> = []
+
+  try {
+    // 分批拉取全部订单（避免一次性加载过大）
+    while (true) {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('order_no,status,customer_name,customer_phone,customer_email,created_at,estimated_price,requirements')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + PAGE - 1)
+
+      if (error) {
+        return { success: false, error: '导出失败，请稍后重试' }
+      }
+      if (!data || data.length === 0) break
+      rows.push(...data)
+      if (data.length < PAGE) break
+      offset += PAGE
+    }
+
+    const header = ORDER_EXPORT_COLUMNS.join(',')
+    const lines = rows.map((row) =>
+      [
+        row.order_no,
+        row.status,
+        row.customer_name,
+        row.customer_phone,
+        row.customer_email,
+        row.created_at,
+        row.estimated_price != null ? Number(row.estimated_price) : '',
+        row.requirements,
+      ]
+        .map(csvEscape)
+        .join(',')
+    )
+    const csv = '\uFEFF' + [header, ...lines].join('\r\n') // BOM 供 Excel 正确识别 UTF-8
+    return { success: true, csv, count: rows.length }
+  } catch (error) {
+    console.error('导出订单异常:', error)
+    return { success: false, error: '导出订单时发生未知错误' }
+  }
+}

@@ -43,6 +43,22 @@ type OrderDetail = Order & {
   logs?: OperationLog[];
 };
 
+// 从需求描述中提取价格参考（【价格明细】/【选配内容】/【折抵权益】行）
+function extractPriceSummary(requirements: string | null): {
+  detail: string;
+  extras: string[];
+} | null {
+  if (!requirements) return null;
+  const detailMatch = requirements.match(/【价格明细】([^\n]+)/);
+  const extraLines: string[] = [];
+  const addonMatch = requirements.match(/【选配内容】([^\n]+)/);
+  const benefitMatch = requirements.match(/【折抵权益】([^\n]+)/);
+  if (addonMatch && addonMatch[1].trim() !== "无") extraLines.push(addonMatch[1].trim());
+  if (benefitMatch) extraLines.push(benefitMatch[1].trim());
+  if (!detailMatch) return null;
+  return { detail: detailMatch[1].trim(), extras: extraLines };
+}
+
 interface OrderDetailModalProps {
   orderId: string;
   onClose: (needRefresh: boolean) => void;
@@ -622,6 +638,27 @@ export default function OrderDetailModal({
                   {/* 估价表单 */}
                   {order.status === "pending" && (
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      {/* 价格参考：展示客户下单时的价格明细，供估价参考 */}
+                      {(() => {
+                        const summary = extractPriceSummary(order.requirements);
+                        if (!summary) return null;
+                        return (
+                          <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-100">
+                            <p className="text-xs font-semibold text-amber-800 mb-1.5 flex items-center gap-1">
+                              <CircleDollarSign className="w-3.5 h-3.5" />
+                              客户下单价格参考
+                            </p>
+                            <p className="text-xs text-amber-900 leading-relaxed">
+                              {summary.detail}
+                            </p>
+                            {summary.extras.length > 0 && (
+                              <p className="text-[11px] text-amber-700 mt-1 leading-relaxed">
+                                含 {summary.extras.join("；")}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <h3 className="text-sm font-semibold text-lw-black mb-3 flex items-center gap-2">
                         <CircleDollarSign className="w-4 h-4 text-yellow-600" />
                         提交估价

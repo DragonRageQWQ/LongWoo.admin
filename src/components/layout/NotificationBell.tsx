@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, Loader2, CheckCheck, X } from "lucide-react";
+import { Bell, Loader2, CheckCheck, X, ArrowRight } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface NotificationItem {
@@ -20,6 +20,22 @@ interface NotificationsResponse {
 
 // 轮询间隔（毫秒）：Vercel serverless 无实时推送，采用定时刷新
 const POLL_INTERVAL_MS = 60 * 1000;
+
+// 从通知内容中解析订单号（发送格式：订单号：LWxxxx）
+function extractOrderNo(content: string): string {
+  const match = content.match(/订单号[：:]\s*(LW[A-Z0-9]+)/);
+  return match ? match[1] : "";
+}
+
+// 根据标题判断通知类型（用于徽标配色）
+function getNotifyType(title: string): { label: string; cls: string } | null {
+  if (/估价/.test(title)) return { label: "估价", cls: "bg-amber-100 text-amber-700" };
+  if (/回复/.test(title)) return { label: "回复", cls: "bg-blue-100 text-blue-700" };
+  if (/接单/.test(title)) return { label: "接单", cls: "bg-green-100 text-green-700" };
+  if (/拒单/.test(title)) return { label: "拒单", cls: "bg-red-100 text-red-700" };
+  if (/进度|交付|完成/.test(title)) return { label: "进度", cls: "bg-emerald-100 text-emerald-700" };
+  return null;
+}
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -116,8 +132,22 @@ export default function NotificationBell() {
     }
   };
 
-  // 点击通知：打开详情弹窗（查看完整内容）并标记已读
+  // 点击通知：订单类通知直达订单查询页（预填单号）；其他通知打开详情弹窗
   const handleOpenDetail = (item: NotificationItem) => {
+    const orderNo = extractOrderNo(item.content);
+    if (orderNo) {
+      if (!item.is_read) {
+        handleRead(item.id);
+      }
+      setOpen(false);
+      // 跳转订单查询页并预填单号（用户输入手机号即可查询）
+      // 使用相对路径跳转，兼容子路径部署
+      const target = `/order/query?no=${encodeURIComponent(orderNo)}`;
+      setTimeout(() => {
+        window.location.assign(target);
+      }, 0);
+      return;
+    }
     setDetail(item);
     if (!item.is_read) {
       handleRead(item.id);
@@ -226,6 +256,30 @@ export default function NotificationBell() {
                     <p className="text-xs text-gray-500 mt-1 line-clamp-2 whitespace-pre-wrap">
                       {item.content}
                     </p>
+                    {/* 订单相关：订单号标签 + 类型徽标 + 直达入口 */}
+                    {(() => {
+                      const orderNo = extractOrderNo(item.content);
+                      const type = getNotifyType(item.title);
+                      if (!orderNo) return null;
+                      return (
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          {type && (
+                            <span
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${type.cls}`}
+                            >
+                              {type.label}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-mono">
+                            {orderNo}
+                          </span>
+                          <span className="inline-flex items-center gap-0.5 text-[10px] text-lw-accent">
+                            查看订单
+                            <ArrowRight className="w-3 h-3" />
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </button>
                 ))}
               </div>

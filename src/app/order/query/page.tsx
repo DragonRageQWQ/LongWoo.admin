@@ -66,14 +66,18 @@ export default function OrderQueryPage() {
     }
   }, []);
 
-  // 支持从个人中心"我的订单"携带单号+手机号跳转并自动查询
+  // 支持从个人中心"我的订单"/站内通知携带单号+手机号跳转并自动查询
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const no = params.get("no") || "";
     const phoneNo = params.get("phone") || "";
-    if (no && phoneNo) {
+    if (no) {
+      // 预填单号（无手机号时等待用户输入；有手机号则自动查询）
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOrderNo(no);
+    }
+    if (no && phoneNo) {
       handleQuery(no, phoneNo);
     }
   }, [handleQuery]);

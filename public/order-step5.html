@@ -149,6 +149,11 @@
           <p class="waiting-text">我们将在工作日9:00-17:00回复报价并与您进行接下来的沟通</p>
           <div class="spinner"></div>
           <div class="order-code" id="orderCode">您的订单代码：XXXXXXXXXXXXXXXX</div>
+          <div class="order-code-actions">
+            <button class="copy-btn" id="copyOrderBtn" type="button" onclick="copyOrderCode()">复制订单代码</button>
+            <a class="query-link" href="/order/query">去查询进度</a>
+          </div>
+          <p class="save-tip">请妥善保存订单代码，用于后续查询估价与进度</p>
         </div>
       </div>
 
@@ -520,6 +525,59 @@
       letter-spacing: 0.05em;
     }
 
+    .order-code-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      margin-top: var(--space-md);
+      width: 100%;
+      max-width: 220px;
+    }
+
+    .copy-btn {
+      width: 100%;
+      padding: 10px 0;
+      background-color: var(--color-primary);
+      color: var(--color-background);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .copy-btn:hover {
+      opacity: 0.85;
+    }
+
+    .copy-btn.copied {
+      background-color: var(--color-success, #16a34a);
+    }
+
+    .query-link {
+      width: 100%;
+      padding: 10px 0;
+      text-align: center;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-sm);
+      color: var(--color-primary);
+      text-decoration: none;
+      transition: background-color 0.15s;
+    }
+
+    .query-link:hover {
+      background-color: var(--color-surface);
+    }
+
+    .save-tip {
+      font-size: 10px;
+      color: var(--color-primary-lighter);
+      margin-top: var(--space-sm);
+      text-align: center;
+    }
+
     /* Spinner animation */
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -581,6 +639,46 @@
         }
       } catch (err) {}
     })();
+
+    // 复制订单代码
+    function copyOrderCode() {
+      var btn = document.getElementById('copyOrderBtn');
+      var orderNo = '';
+      try {
+        orderNo = sessionStorage.getItem('longwoo_order_no') || '';
+      } catch (e) {}
+      if (!orderNo) {
+        var codeEl = document.getElementById('orderCode');
+        if (codeEl) orderNo = (codeEl.textContent || '').replace('您的订单代码：', '').trim();
+      }
+      if (!orderNo || /X+/.test(orderNo)) return;
+      function done() {
+        btn.classList.add('copied');
+        btn.textContent = '已复制 ✓';
+        setTimeout(function () {
+          btn.classList.remove('copied');
+          btn.textContent = '复制订单代码';
+        }, 2000);
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(orderNo).then(done).catch(function () { fallback(); });
+        } else {
+          fallback();
+        }
+      } catch (e) { fallback(); }
+      function fallback() {
+        var ta = document.createElement('textarea');
+        ta.value = orderNo;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        done();
+      }
+    }
   </script>
 <script src="/js/common.js" defer></script>
 </body>

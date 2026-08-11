@@ -9,8 +9,9 @@ import {
   Funnel,
   Loader,
   Inbox,
+  Download,
 } from "lucide-react";
-import { getOrders } from "@/actions/order-actions";
+import { getOrders, exportOrdersCsv } from "@/actions/order-actions";
 import { formatDate } from "@/lib/utils";
 import type { Order } from "@/types/database";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -54,6 +55,38 @@ export default function OrderList({
 
   // 手动刷新触发器
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // 导出 CSV
+  const [exporting, setExporting] = useState(false);
+
+  // 导出全部订单为 CSV 并触发浏览器下载
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const result = await exportOrdersCsv();
+      if (!result.success || !result.csv) {
+        console.error("导出失败:", result.error);
+        return;
+      }
+      const blob = new Blob([result.csv], {
+        type: "text/csv;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.download = `订单导出_${dateStr}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("导出异常:", err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // 详情弹窗
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -212,11 +245,26 @@ export default function OrderList({
   return (
     <div className="space-y-5">
       {/* 标题 */}
-      <div>
-        <h1 className="text-xl font-bold text-lw-black">{title}</h1>
-        <p className="text-sm text-gray-400 mt-1">
-          {description}
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-lw-black">{title}</h1>
+          <p className="text-sm text-gray-400 mt-1">
+            {description}
+          </p>
+        </div>
+        {/* 导出 CSV */}
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-lw-accent border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {exporting ? (
+            <Loader className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          {exporting ? "导出中..." : "导出 CSV"}
+        </button>
       </div>
 
       {/* 搜索与筛选区 */}
