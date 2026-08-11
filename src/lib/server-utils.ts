@@ -115,8 +115,18 @@ export async function sendEmail(
       body: JSON.stringify({ from: fromEmail, to: [to], subject, html }),
     })
 
-    return response.ok
-  } catch {
+    if (!response.ok) {
+      // 记录 Resend 具体错误（域名未验证/key 无效/区域限制等），便于排查
+      const errText = await response.text().catch(() => '')
+      console.error(
+        `[sendEmail] Resend 发送失败: HTTP ${response.status} ${errText.slice(0, 300)}`
+      )
+      return false
+    }
+
+    return true
+  } catch (err) {
+    console.error('[sendEmail] Resend 调用异常:', err instanceof Error ? err.message : err)
     return false
   }
 }
