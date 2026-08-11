@@ -4,8 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { saveOtp } from '@/lib/otp-store'
-import { loginOtpEmailTemplate } from '@/lib/email-templates'
+import { saveOtp, verifyOtp } from '@/lib/otp-store'
+import { loginOtpEmailTemplate, passwordResetOtpEmailTemplate } from '@/lib/email-templates'
 import type { Profile } from '@/types/database'
 import { randomInt } from 'crypto'
 import { cookies } from 'next/headers'
@@ -14,7 +14,8 @@ import { validateCsrf } from '@/lib/csrf'
 import { getSupabaseCookieName } from '@/lib/supabase/cookie-utils'
 import { getOrCreateProfile } from '@/lib/profile'
 import { getClientIp, sendEmail } from '@/lib/server-utils'
-import { RATE_LIMIT_OTP_WINDOW, RATE_LIMIT_OTP_MAX } from '@/lib/constants'
+import { confirmPasswordSet } from '@/lib/password-confirm'
+import { RATE_LIMIT_OTP_WINDOW, RATE_LIMIT_OTP_MAX, RATE_LIMIT_PASSWORD_WINDOW, RATE_LIMIT_PASSWORD_MAX } from '@/lib/constants'
 
 // ==================== 发送邮箱验证码 ====================
 
@@ -80,6 +81,226 @@ export async function sendEmailOtp(
   } catch (error) {
     console.error('发送验证码异常:', error)
     return { success: false, error: '发送验证码时发生未知错误' }
+  }
+}
+
+// ==================== 忘记密码：发送邮箱验证码 ====================
+
+/**
+ * 发送密码重置验证码到邮箱
+ *
+ * 使用场景：
+ * - 已登录（个人中心-账号安全）：不传 email，使用当前会话邮箱（防止向任意邮箱发送）
+ * - 未登录（登录页"忘记密码"）：传入 email
+ *
+ * 安全：
+ * - CSRF 保护
+ * - 基于 IP 与邮箱的双重速率限制
+ * - 防枚举：邮箱未注册时同样返回成功（不透露账号是否存在）
+ */
+export async function sendPasswordResetOtp(
+  email?: string
+): Promise<{ success: boolean; error?: string }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 邮箱来源：优先使用传入邮箱；已登录但未传邮箱时使用会话邮箱
+  let targetEmail = email?.trim().toLowerCase()
+  if (!targetEmail) {
+    const user = await getSessionUser()
+    if (!user?.email) {
+      return { success: false, error: '未获取到邮箱信息，请直接输入邮箱' }
+    }
+    targetEmail = user.email.toLowerCase()
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+    return { success: false, error: '请输入有效的邮箱地址' }
+  }
+
+  const ip = await getClientIp()
+
+  // 基于 IP 的速率限制
+  const ipRateLimit = await checkRateLimit(`ip:${ip}`, RATE_LIMIT_OTP_MAX, RATE_LIMIT_OTP_WINDOW)
+  if (!ipRateLimit.allowed) {
+    return { success: false, error: '请求过于频繁，请1分钟后再试' }
+  }
+
+  // 基于邮箱的速率限制
+  const emailRateLimit = await checkRateLimit(`pwreset:${targetEmail}`, RATE_LIMIT_OTP_MAX, RATE_LIMIT_OTP_WINDOW)
+  if (!emailRateLimit.allowed) {
+    return { success: false, error: '该邮箱请求过于频繁，请稍后再试' }
+  }
+
+  try {
+    const admin = createAdminClient()
+
+    // 防枚举：账号不存在时同样返回成功，但不发送邮件
+    const { data: existing } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('email', targetEmail)
+      .maybeSingle()
+    if (!existing) {
+      return { success: true }
+    }
+
+    // 生成 6 位验证码并存入数据库（10 分钟有效）
+    const otpCode = String(randomInt(100000, 1000000))
+    await saveOtp(targetEmail, otpCode)
+
+    // 发送密码重置验证码邮件
+    if (process.env.RESEND_API_KEY) {
+      const sent = await sendEmail(
+        targetEmail,
+        '【LongWoo 龙坞】密码重置验证码',
+        passwordResetOtpEmailTemplate(otpCode)
+      )
+      if (!sent) {
+        console.error('Resend 密码重置邮件发送失败')
+        return { success: false, error: '验证码邮件发送失败，请稍后重试或联系客服' }
+      }
+    } else {
+      console.log('[OTP] 密码重置验证码已生成（未配置邮件服务）')
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('发送密码重置验证码异常:', error)
+    return { success: false, error: '发送验证码时发生未知错误' }
+  }
+}
+
+// ==================== 忘记密码：验证码重置密码 ====================
+
+/**
+ * 通过邮箱验证码重置密码（无需旧密码）
+ *
+ * 流程：verifyOtp 校验验证码（含尝试次数限制）→ admin 设置新密码
+ * → 幂等确认（处理 updateUserById 偶发响应丢失）→ 更新 has_password
+ *
+ * 安全：
+ * - CSRF 保护
+ * - 基于 IP 的速率限制
+ * - 验证码错误 5 次自动失效（otp-store 内置 OTP_MAX_ATTEMPTS）
+ * - 重置成功后 Supabase 自动撤销该用户所有 session，需重新登录
+ */
+export async function resetPasswordWithOtp(
+  email: string,
+  code: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  const targetEmail = email.trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+    return { success: false, error: '请输入有效的邮箱地址' }
+  }
+  if (!code || code.length !== 6) {
+    return { success: false, error: '请输入6位验证码' }
+  }
+  if (!newPassword || newPassword.length < 6) {
+    return { success: false, error: '密码长度至少6位' }
+  }
+  if (newPassword.length > 64) {
+    return { success: false, error: '密码长度不能超过64位' }
+  }
+  if (!/[a-zA-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+    return { success: false, error: '密码必须包含字母和数字' }
+  }
+
+  // 速率限制：防止暴力重置（复用密码修改的速率限制配置）
+  const ip = await getClientIp()
+  const rateLimit = await checkRateLimit(`pwreset:${ip}`, RATE_LIMIT_PASSWORD_MAX, RATE_LIMIT_PASSWORD_WINDOW)
+  if (!rateLimit.allowed) {
+    return { success: false, error: '操作过于频繁，请稍后再试' }
+  }
+
+  // 验证 OTP（校验失败达到上限会自动失效）
+  const otpResult = await verifyOtp(targetEmail, code)
+  if (otpResult.systemError) {
+    return { success: false, error: '系统繁忙，请稍后重试' }
+  }
+  if (!otpResult.valid) {
+    return { success: false, error: '验证码无效或已过期' }
+  }
+
+  try {
+    const admin = createAdminClient()
+
+    // 根据邮箱找到用户
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('id, is_active')
+      .eq('email', targetEmail)
+      .maybeSingle()
+    if (!profile) {
+      return { success: false, error: '账号不存在' }
+    }
+    if (!profile.is_active) {
+      return { success: false, error: '账户已停用' }
+    }
+
+    // 使用 admin 客户端设置新密码（Supabase Auth）
+    const { error: updateError } = await admin.auth.admin.updateUserById(
+      profile.id,
+      { password: newPassword }
+    )
+
+    // 幂等确认（处理"报错但实际成功"的响应丢失场景）
+    if (updateError) {
+      console.error('重置密码报错（尝试确认是否实际已重置）:', updateError.message)
+      const confirmResult = await confirmPasswordSet({
+        email: targetEmail,
+        newPassword,
+        updateError,
+        attemptLogin: async (email, password) => {
+          const { createClient: createServerSupabase } = await import('@/lib/supabase/server')
+          const client = await createServerSupabase()
+          const { error } = await client.auth.signInWithPassword({ email, password })
+          return { error }
+        },
+      })
+      if (!confirmResult.success) {
+        return { success: false, error: confirmResult.error }
+      }
+    }
+
+    // 更新 has_password 标记（绕过 RLS）
+    const { error: profileError } = await admin
+      .from('profiles')
+      .update({
+        has_password: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', profile.id)
+
+    if (profileError) {
+      console.error('更新 has_password 失败:', profileError.message)
+      // 密码已重置成功，仅标记更新失败，不影响主流程
+    }
+
+    // 重置成功后 Supabase GoTrue 会撤销该用户所有 session。
+    // 若当前已登录（个人中心场景），显式清除本地 session cookie。
+    try {
+      const { createClient: createServerSupabase } = await import('@/lib/supabase/server')
+      const client = await createServerSupabase()
+      await client.auth.signOut()
+    } catch {
+      // 登出失败不阻断主流程；middleware 会兜底处理失效 session
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('重置密码异常:', error)
+    return { success: false, error: '重置密码时发生未知错误' }
   }
 }
 

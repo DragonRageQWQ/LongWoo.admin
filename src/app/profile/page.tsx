@@ -19,6 +19,7 @@ import {
   Upload,
   Bot,
   Sparkles,
+  KeyRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -33,6 +34,7 @@ import { formatDate, statusLabels } from "@/lib/utils";
 import type { Profile, Order } from "@/types/database";
 import FeedbackSection from "@/components/profile/FeedbackSection";
 import BottomNav from "@/components/layout/BottomNav";
+import PasswordResetModal from "@/components/auth/PasswordResetModal";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -60,6 +62,8 @@ export default function ProfilePage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  // 忘记密码弹窗状态
+  const [resetOpen, setResetOpen] = useState(false);
 
   // 我的订单状态
   const [orders, setOrders] = useState<Order[]>([]);
@@ -726,14 +730,27 @@ export default function ProfilePage() {
             </div>
 
             {!editingPassword && (
-              <button
-                type="button"
-                onClick={handleStartEditPassword}
-                className="flex items-center gap-1.5 text-sm text-lw-accent hover:text-blue-700 transition-colors cursor-pointer"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                {profile?.has_password ? "修改密码" : "设置密码"}
-              </button>
+              <div className="flex items-center gap-3">
+                {profile?.has_password && (
+                  <button
+                    type="button"
+                    onClick={() => setResetOpen(true)}
+                    className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-lw-accent transition-colors cursor-pointer"
+                    title="不记得当前密码时，通过邮箱验证码重置"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    忘记密码？
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleStartEditPassword}
+                  className="flex items-center gap-1.5 text-sm text-lw-accent hover:text-blue-700 transition-colors cursor-pointer"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  {profile?.has_password ? "修改密码" : "设置密码"}
+                </button>
+              </div>
             )}
           </div>
 
@@ -850,6 +867,13 @@ export default function ProfilePage() {
 
       {/* 底部固定导航栏（与首页一致） */}
       <BottomNav />
+
+      {/* 忘记密码弹窗（邮箱验证码重置，无需旧密码） */}
+      <PasswordResetModal
+        open={resetOpen}
+        onClose={() => setResetOpen(false)}
+        fixedEmail={profile?.email}
+      />
     </div>
   );
 }

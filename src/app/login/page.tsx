@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Mail, ArrowLeft, Sparkles, Lock } from "lucide-react";
+import { Loader2, Mail, ArrowLeft, Sparkles, Lock, KeyRound } from "lucide-react";
 import {
   sendEmailOtp,
   signInWithQQ,
@@ -12,6 +12,7 @@ import {
 import {
   checkEmailHasPassword,
 } from "@/actions/profile-actions";
+import PasswordResetModal from "@/components/auth/PasswordResetModal";
 
 type LoginTab = "email" | "password" | "qq";
 
@@ -55,6 +56,16 @@ function LoginForm() {
   // 错误与提示
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  // 忘记密码弹窗
+  const [resetOpen, setResetOpen] = useState(false);
+
+  // 密码重置成功回跳提示（/login?reset=1）
+  useEffect(() => {
+    if (searchParams.get("reset") === "1") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setInfo("密码重置成功，请使用新密码登录");
+    }
+  }, [searchParams]);
 
   // 邮箱倒计时定时器
   const emailTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -504,12 +515,22 @@ function LoginForm() {
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="password-input"
-                    className="block text-sm font-medium text-lw-black mb-1.5"
-                  >
-                    密码
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      htmlFor="password-input"
+                      className="block text-sm font-medium text-lw-black"
+                    >
+                      密码
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setResetOpen(true)}
+                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-lw-accent transition-colors cursor-pointer"
+                    >
+                      <KeyRound className="w-3 h-3" />
+                      忘记密码？
+                    </button>
+                  </div>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -592,6 +613,12 @@ function LoginForm() {
           </div>
         </div>
       </div>
+
+      {/* 忘记密码弹窗（邮箱验证码重置，无需旧密码） */}
+      <PasswordResetModal
+        open={resetOpen}
+        onClose={() => setResetOpen(false)}
+      />
     </div>
   );
 }
