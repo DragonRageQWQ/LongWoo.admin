@@ -241,7 +241,7 @@ export default function OrderQueryPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">估价金额</span>
                     <span className="text-lg font-bold text-lw-accent">
-                      ¥{result.estimated_price}
+                      ¥{Number(result.estimated_price).toLocaleString('zh-CN')}
                     </span>
                   </div>
                   {result.estimate_notes && (

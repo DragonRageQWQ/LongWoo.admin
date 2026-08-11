@@ -68,7 +68,11 @@ function formatLogDetails(
   try {
     switch (action) {
       case "submit_estimate":
-        return `估价金额: ¥${details.estimated_price ?? "-"}`;
+        return `估价金额: ¥${
+          details.estimated_price != null
+            ? Number(details.estimated_price).toLocaleString("zh-CN")
+            : "-"
+        }`;
       case "reject_order":
         return `原因: ${details.reason ?? "-"}`;
       case "update_status":
