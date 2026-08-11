@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, canViewOrderDetail, requireAdmin } from '@/lib/auth'
 import { escapeHtml, escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
 import { validateUrl, isValidUUID } from '@/lib/order-utils'
@@ -15,6 +16,56 @@ import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/d
 // ==================== 订单查询速率限制（数据库版） ====================
 // 基于 IP + 手机号组合做限制，同一组合 1 分钟内最多查询 5 次
 // 使用数据库表实现，兼容 Vercel Serverless 多实例环境
+
+// ==================== 订单状态站内通知 ====================
+// 管理员对订单操作（估价/接单/拒单/进度/回复）后，向订单客户发送站内通知，
+// 用户侧由 NotificationBell（顶栏铃铛）展示。客户未注册账号时跳过（邮件回复已覆盖）。
+
+/**
+ * 向订单客户发送站内通知
+ *
+ * @param order 订单（需含 id/order_no/customer_email）
+ * @param title 通知标题
+ * @param content 通知内容（自动附加订单号）
+ * @returns 是否成功（用户未注册/插入失败返回 false，不阻塞主流程）
+ */
+export async function sendOrderNotification(
+  order: { id: string; order_no: string; customer_email: string | null },
+  title: string,
+  content: string
+): Promise<boolean> {
+  try {
+    const email = order.customer_email
+    if (!email) return false
+
+    const admin = createAdminClient()
+
+    // 查找订单客户对应的注册用户（仅启用的账号）
+    const { data: user, error: userError } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (userError || !user) return false
+
+    const fullContent = `${content}\n订单号：${order.order_no}`
+    const { error: insertError } = await admin.from('notifications').insert({
+      user_id: user.id,
+      sender_user_id: null,
+      batch_id: order.id, // 用订单 id 作为批次标识，便于关联
+      target_role: 'user',
+      title,
+      content: fullContent,
+    })
+
+    return !insertError
+  } catch (error) {
+    console.error('[sendOrderNotification] 发送通知异常:', error)
+    return false
+  }
+}
 
 /**
  * 构建订单查询的公共逻辑
@@ -301,6 +352,13 @@ export async function submitEstimate(
       estimate_notes: trimmedNotes,
     })
 
+    // 站内通知客户：已完成估价
+    await sendOrderNotification(
+      updatedOrder,
+      '委托单估价完成',
+      `您的委托单已完成估价，估价金额 RMB ${price}。请登录个人中心查看详情。`
+    )
+
     revalidatePath('/admin/dashboard')
     revalidatePath(`/studio/dashboard`)
 
@@ -360,6 +418,13 @@ export async function acceptOrder(
 
     // 记录 operation_logs（使用统一的日志记录函数）
     await logOperation(userId, 'accept_order', 'order', orderId)
+
+    // 站内通知客户：已接单
+    await sendOrderNotification(
+      updatedOrder,
+      '委托单已接单',
+      '工作室已接受您的委托单，即将开始制作，请留意后续进度更新。'
+    )
 
     revalidatePath('/studio/dashboard')
     revalidatePath('/admin/dashboard')
@@ -426,6 +491,13 @@ export async function rejectOrder(
     await logOperation(currentUser.userId, 'reject_order', 'order', orderId, {
       reason,
     })
+
+    // 站内通知客户：已拒单
+    await sendOrderNotification(
+      updatedOrder,
+      '委托单已被拒单',
+      `很抱歉，您的委托单未通过审核：${trimmedReason}`
+    )
 
     revalidatePath('/studio/dashboard')
     revalidatePath('/admin/dashboard')
@@ -507,6 +579,18 @@ export async function updateOrderStatus(
       delivery_url: deliveryUrl || null,
     })
 
+    // 站内通知客户：进度更新
+    const STATUS_TEXT: Record<string, string> = {
+      processing: '处理中（开始制作）',
+      delivered: '已交付',
+      completed: '已完成',
+    }
+    await sendOrderNotification(
+      updatedOrder,
+      '委托单进度更新',
+      `您的委托单状态已更新为：${STATUS_TEXT[newStatus] || newStatus}${deliveryUrl ? `，交付链接：${deliveryUrl}` : ''}`
+    )
+
     revalidatePath('/studio/dashboard')
     revalidatePath('/admin/dashboard')
 
@@ -578,6 +662,24 @@ export async function replySite(
       return { success: false, error: '回复失败，请稍后重试' }
     }
 
+    // 站内通知客户：有新的站内回复
+    try {
+      const { data: orderForNotify } = await supabase
+        .from('orders')
+        .select('id, order_no, customer_email')
+        .eq('id', orderId)
+        .single()
+      if (orderForNotify) {
+        await sendOrderNotification(
+          orderForNotify,
+          '委托单有新的回复',
+          '工作室对您的委托单进行了回复，请登录个人中心查看。'
+        )
+      }
+    } catch (notifyError) {
+      console.error('发送回复通知失败:', notifyError)
+    }
+
     revalidatePath('/studio/dashboard')
     revalidatePath('/admin/dashboard')
 
@@ -629,7 +731,7 @@ export async function replyEmail(
     // 从订单记录中读取客户邮箱，而非信任客户端传入的邮箱地址
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('customer_email')
+      .select('id, order_no, customer_email')
       .eq('id', orderId)
       .single()
 
@@ -716,6 +818,13 @@ export async function replyEmail(
       console.error('邮件回复失败:', replyError.message)
       return { success: false, error: '回复失败，请稍后重试' }
     }
+
+    // 站内通知客户：有新的邮件回复
+    await sendOrderNotification(
+      order,
+      '委托单有新的回复',
+      '工作室对您的委托单进行了回复（已同步发送邮件），请登录个人中心查看。'
+    )
 
     revalidatePath('/studio/dashboard')
     revalidatePath('/admin/dashboard')

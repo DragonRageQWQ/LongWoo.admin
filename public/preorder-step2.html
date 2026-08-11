@@ -72,7 +72,7 @@
           <img class="product-thumbnail" src="assets/image_7_yi19x4.jpg" alt="百丈冰预设兽装" loading="lazy" decoding="async" width="480" height="300">
         </picture>
         <div class="product-info">
-          <div class="product-name">RMB 35,000 / 百丈冰</div>
+          <div class="product-name" id="dropProductName">RMB 35,000 / 百丈冰</div>
         </div>
       </div>
     </div>
@@ -105,37 +105,45 @@
 
       <!-- Form fields (two column layout) -->
       <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">姓名 <span class="req-star">*</span></label>
+          <input class="form-input" id="dropName" type="text" placeholder="请输入您的姓名" autocomplete="name">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">手机号 <span class="req-star">*</span></label>
+          <input class="form-input" id="dropPhone" type="tel" maxlength="11" placeholder="请输入手机号" autocomplete="tel">
+        </div>
         <div class="form-group">
           <label class="form-label">身高(CM)</label>
-          <input class="form-input" type="number" placeholder="例如: 175">
+          <input class="form-input" id="dropHeight" type="number" placeholder="例如: 175">
         </div>
         <div class="form-group">
           <label class="form-label">体重(KG)</label>
-          <input class="form-input" type="number" placeholder="例如: 70">
+          <input class="form-input" id="dropWeight" type="number" placeholder="例如: 70">
         </div>
         <div class="form-group">
           <label class="form-label">胸围(CM)</label>
-          <input class="form-input" type="number" placeholder="例如: 96">
+          <input class="form-input" id="dropChest" type="number" placeholder="例如: 96">
         </div>
         <div class="form-group">
           <label class="form-label">腰围(CM)</label>
-          <input class="form-input" type="number" placeholder="例如: 80">
+          <input class="form-input" id="dropWaist" type="number" placeholder="例如: 80">
         </div>
         <div class="form-group">
           <label class="form-label">臀围(CM)</label>
-          <input class="form-input" type="number" placeholder="例如: 94">
+          <input class="form-input" id="dropHip" type="number" placeholder="例如: 94">
         </div>
         <div class="form-group">
           <label class="form-label">鞋码</label>
-          <input class="form-input" type="text" placeholder="例如: 42">
+          <input class="form-input" id="dropShoe" type="text" placeholder="例如: 42">
         </div>
         <div class="form-group full-width">
-          <label class="form-label">Email</label>
-          <input class="form-input" type="email" placeholder="your-email@example.com">
+          <label class="form-label">Email <span class="req-star">*</span></label>
+          <input class="form-input" id="dropEmail" type="email" placeholder="your-email@example.com" autocomplete="email">
         </div>
         <div class="form-group full-width">
           <label class="form-label">任意平台可以联系到您的账号</label>
-          <textarea class="form-input" placeholder="请填写您常用的社交媒体账号或其他联系方式"></textarea>
+          <textarea class="form-input" id="dropSocial" placeholder="请填写您常用的社交媒体账号或其他联系方式"></textarea>
         </div>
       </div>
 
@@ -149,10 +157,12 @@
         <span class="checkbox-label">我已经阅读并同意 <a href="#">购买协议</a></span>
       </div>
 
+      <p class="form-tip" id="dropFormTip"></p>
+
       <!-- Action buttons -->
       <div class="action-buttons">
         <button class="btn-back" onclick="history.back()">返回</button>
-        <button class="btn-submit" onclick="window.location.href='preorder-step3.html'">提 交</button>
+        <button class="btn-submit" id="dropSubmitBtn" type="button" onclick="submitPreorder()">提 交</button>
       </div>
 
     </div>
@@ -206,9 +216,143 @@
   </div>
 
   <script>
+    // ===== 协议勾选 =====
     function toggleCheckbox() {
       const checkbox = document.getElementById('checkboxIcon');
       checkbox.classList.toggle('checked');
+    }
+
+    // ===== 产品信息恢复（来自第一步选择） =====
+    function getSelectedDrop() {
+      try {
+        var raw = sessionStorage.getItem('longwoo_preorder_product');
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return null;
+    }
+
+    (function () {
+      var drop = getSelectedDrop();
+      var nameEl = document.getElementById('dropProductName');
+      if (drop && nameEl && (drop.title || drop.price != null)) {
+        var price = drop.price != null ? 'RMB ' + Number(drop.price).toLocaleString('zh-CN') : '';
+        nameEl.textContent = [price, drop.title].filter(Boolean).join(' / ');
+      }
+    })();
+
+    // ===== 必填校验：焦点定位 + 标红闪烁 =====
+    var REQUIRED_FIELDS = [
+      { id: 'dropName', message: '请输入姓名' },
+      { id: 'dropPhone', message: '请输入有效的手机号', validator: function (v) { return /^1[3-9]\d{9}$/.test(v); } },
+      { id: 'dropEmail', message: '请输入有效的邮箱', validator: function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); } }
+    ];
+
+    REQUIRED_FIELDS.forEach(function (field) {
+      var el = document.getElementById(field.id);
+      if (el) el.addEventListener('input', function () { el.classList.remove('field-invalid'); });
+    });
+
+    function validateRequired() {
+      var firstInvalid = null;
+      REQUIRED_FIELDS.forEach(function (field) {
+        var el = document.getElementById(field.id);
+        if (!el) return;
+        var value = (el.value || '').trim();
+        var ok = field.validator ? field.validator(value) : value.length > 0;
+        if (!ok) {
+          el.classList.remove('field-invalid');
+          void el.offsetWidth;
+          el.classList.add('field-invalid');
+          if (!firstInvalid) {
+            firstInvalid = field;
+            try { el.focus(); } catch (e) {}
+            try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+          }
+        }
+      });
+      return firstInvalid;
+    }
+
+    // ===== 提交：校验 -> 创建订单 -> 保存订单号 -> 进入完成页 =====
+    function buildRequirements() {
+      function get(id) {
+        var el = document.getElementById(id);
+        return el ? (el.value || '').trim() : '';
+      }
+      var drop = getSelectedDrop();
+      var lines = [];
+      lines.push('【下单来源】预设兽装（掉落）购买流程（静态页下单）');
+      var productName = drop && drop.title ? drop.title : '未指定';
+      var productPrice = drop && drop.price != null ? Number(drop.price) : 0;
+      lines.push('【掉落产品】' + productName);
+      lines.push('【价格明细】产品价格 RMB ' + productPrice);
+      var body = [];
+      var h = get('dropHeight'); if (h) body.push('身高' + h + 'CM');
+      var w = get('dropWeight'); if (w) body.push('体重' + w + 'KG');
+      var c = get('dropChest'); if (c) body.push('胸围' + c + 'CM');
+      var wa = get('dropWaist'); if (wa) body.push('腰围' + wa + 'CM');
+      var hi = get('dropHip'); if (hi) body.push('臀围' + hi + 'CM');
+      var ss = get('dropShoe'); if (ss) body.push('鞋码' + ss);
+      if (body.length) lines.push('【身体数据】' + body.join('，'));
+      var sa = get('dropSocial');
+      if (sa) lines.push('【社交账号】' + sa);
+      return lines.join('\n');
+    }
+
+    async function submitPreorder() {
+      var invalid = validateRequired();
+      var tip = document.getElementById('dropFormTip');
+      if (invalid) {
+        if (tip) { tip.textContent = invalid.message; tip.style.color = 'var(--color-error, #ef4444)'; }
+        return;
+      }
+      // 协议勾选校验
+      var checkbox = document.getElementById('checkboxIcon');
+      if (!checkbox.classList.contains('checked')) {
+        if (tip) { tip.textContent = '请先阅读并同意购买协议'; tip.style.color = 'var(--color-error, #ef4444)'; }
+        checkbox.classList.remove('field-invalid');
+        void checkbox.offsetWidth;
+        checkbox.classList.add('field-invalid');
+        return;
+      }
+      if (tip) tip.textContent = '';
+
+      var name = (document.getElementById('dropName').value || '').trim();
+      var phone = (document.getElementById('dropPhone').value || '').trim();
+      var email = (document.getElementById('dropEmail').value || '').trim();
+
+      var btn = document.getElementById('dropSubmitBtn');
+      btn.disabled = true;
+      btn.textContent = '提交中...';
+
+      try {
+        var res = await fetch('/api/order/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerName: name,
+            customerPhone: phone,
+            customerEmail: email,
+            requirements: buildRequirements()
+          })
+        });
+        var result = await res.json();
+        if (result.success && result.orderNo) {
+          try {
+            sessionStorage.setItem('longwoo_order_no', result.orderNo);
+            sessionStorage.setItem('longwoo_preorder_order_no', result.orderNo);
+          } catch (e) {}
+          window.location.href = 'preorder-step3.html';
+        } else {
+          if (tip) tip.textContent = result.error || '提交失败，请重试';
+          btn.disabled = false;
+          btn.textContent = '提 交';
+        }
+      } catch (e) {
+        if (tip) tip.textContent = '网络错误，请稍后重试';
+        btn.disabled = false;
+        btn.textContent = '提 交';
+      }
     }
   </script>
 
@@ -574,6 +718,29 @@
       gap: var(--space-sm);
       margin-top: var(--space-lg);
       margin-bottom: var(--space-lg);
+    }
+
+    /* 必填校验：标红闪烁 + 提示 */
+    .req-star {
+      color: var(--color-error, #ef4444);
+    }
+
+    .form-tip {
+      font-size: var(--font-size-xs, 12px);
+      color: var(--color-error, #ef4444);
+      margin-top: 8px;
+      min-height: 14px;
+      text-align: center;
+    }
+
+    .field-invalid {
+      border-color: var(--color-error, #ef4444) !important;
+      animation: field-flash 0.8s ease 3;
+    }
+
+    @keyframes field-flash {
+      0%, 100% { border-color: var(--color-error, #ef4444); box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15); }
+      50% { border-color: transparent; box-shadow: none; }
     }
 
     .custom-checkbox {

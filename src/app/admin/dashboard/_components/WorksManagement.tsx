@@ -46,11 +46,7 @@ const emptyForm: WorkFormState = {
   image_url: "",
 };
 
-export default function WorksManagement({
-  isSuperAdmin = false,
-}: {
-  isSuperAdmin?: boolean;
-}) {
+export default function WorksManagement() {
   // 列表
   const [works, setWorks] = useState<Work[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,6 +103,7 @@ export default function WorksManagement({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadWorks();
   }, [loadWorks]);
 

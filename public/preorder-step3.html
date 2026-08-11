@@ -149,7 +149,7 @@
           <!-- Order code -->
           <div class="order-code-area">
             <div class="order-code-label">您的订单代码</div>
-            <div class="order-code-value">XXXXXXXXXXXXXXXX</div>
+            <div class="order-code-value" id="preorderOrderCode">XXXXXXXXXXXXXXXX</div>
           </div>
 
           <!-- Return button (secondary) -->
@@ -702,6 +702,16 @@
       height: calc(var(--bottom-nav-height) + var(--space-lg));
     }
   </style>
+  <script>
+    // 显示真实订单代码（来自第二步提交时保存）
+    (function () {
+      try {
+        var orderNo = sessionStorage.getItem('longwoo_preorder_order_no') || sessionStorage.getItem('longwoo_order_no') || '';
+        var el = document.getElementById('preorderOrderCode');
+        if (orderNo && el) el.textContent = orderNo;
+      } catch (e) {}
+    })();
+  </script>
 <script src="/js/common.js" defer></script>
 </body>
 </html>

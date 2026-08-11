@@ -95,7 +95,7 @@ function DashboardContent({
     case "feedback":
       return <FeedbackManagement />;
     case "works":
-      return <WorksManagement isSuperAdmin={isSuperAdmin} />;
+      return <WorksManagement />;
     case "drops":
       return <DropItemsManagement />;
     case "settings":

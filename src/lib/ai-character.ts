@@ -83,7 +83,7 @@ export function buildCharacterSystemPrompt(character: AiCharacter): string {
     ? `【语气风格】${tone}。说话时始终保持这种语气，让用户能明显感受到。\n`
     : ''
 
-  let prompt =
+  const prompt =
     `你正在扮演一个名为「${character.name}」的角色，与用户进行一对一聊天。\n` +
     `【角色人设】${persona}\n` +
     toneLine +

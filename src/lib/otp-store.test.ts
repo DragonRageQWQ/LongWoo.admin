@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { createHash } from 'crypto'
 
 // Mock supabase admin client
 const mocks = {
@@ -42,8 +43,7 @@ function makeQueryResponse(overrides: Record<string, unknown> = {}) {
 }
 
 function sha256hex(input: string): string {
-  const crypto = require('crypto')
-  return crypto.createHash('sha256').update(input, 'utf-8').digest('hex')
+  return createHash('sha256').update(input, 'utf-8').digest('hex')
 }
 
 describe('verifyOtp 错误分类', () => {

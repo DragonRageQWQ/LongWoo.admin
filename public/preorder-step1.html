@@ -674,12 +674,23 @@
     return escapeHtml(str).replace(/\n/g, '<br>');
   }
 
+  // 选择掉落产品：保存产品信息到 sessionStorage 后进入第二步
+  function selectDrop(el) {
+    try {
+      var data = JSON.parse(el.getAttribute('data-drop') || '{}');
+      sessionStorage.setItem('longwoo_preorder_product', JSON.stringify(data));
+    } catch (e) {}
+    window.location.href = 'preorder-step2.html';
+  }
+
   // ===== 渲染：普通模式卡片 =====
   function renderViewCard(item) {
     var meta = STATUS_META[item.status] || STATUS_META.preparing;
     var btn;
     if (item.status === 'on_sale') {
-      btn = '<a class="select-btn" href="preorder-step2.html">选择</a>';
+      var dropJson = JSON.stringify({ id: item.id || '', title: item.title || '', price: item.price != null ? item.price : 0 })
+        .replace(/'/g, '&#39;');
+      btn = '<a class="select-btn" href="javascript:void(0)" data-drop=\'' + dropJson + '\' onclick="selectDrop(this)">选择</a>';
     } else if (item.status === 'adopted') {
       btn = '<button class="select-btn select-btn-disabled" disabled>已被领养</button>';
     } else {
