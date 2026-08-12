@@ -14,10 +14,14 @@ import {
   Pencil,
   Trash2,
   X,
+  Package,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   sendNotification,
   listSentNotifications,
+  listOrderNotifications,
   updateSentNotification,
   deleteSentNotification,
 } from "@/actions/notification-actions";
@@ -61,6 +65,15 @@ interface SentRecord {
   created_at: string;
 }
 
+interface OrderNotifyRecord {
+  batch_id: string;
+  order_no: string;
+  title: string;
+  content: string;
+  recipient_count: number;
+  created_at: string;
+}
+
 const targetLabels: Record<NotificationTargetRole, string> = {
   all: "全体用户",
   admin: "全体管理员",
@@ -86,6 +99,11 @@ export default function NotificationManagement({
   // 历史记录
   const [history, setHistory] = useState<SentRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+
+  // 委托单通知历史（新窗口）
+  const [orderHistory, setOrderHistory] = useState<OrderNotifyRecord[]>([]);
+  const [orderHistoryLoading, setOrderHistoryLoading] = useState(true);
+  const [orderHistoryExpanded, setOrderHistoryExpanded] = useState(false);
 
   // 编辑弹窗
   const [editing, setEditing] = useState<SentRecord | null>(null);
@@ -121,10 +139,26 @@ export default function NotificationManagement({
     }
   }, []);
 
+  // 加载委托单通知历史（新窗口）
+  const loadOrderHistory = useCallback(async () => {
+    setOrderHistoryLoading(true);
+    try {
+      const result = await listOrderNotifications({ limit: 50 });
+      if (result.success) {
+        setOrderHistory((result.data || []) as OrderNotifyRecord[]);
+      }
+    } catch (err) {
+      console.error("加载委托单通知记录异常:", err);
+    } finally {
+      setOrderHistoryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadHistory();
-  }, [loadHistory]);
+    loadOrderHistory();
+  }, [loadHistory, loadOrderHistory]);
 
   // 打开编辑弹窗
   const openEdit = (record: SentRecord) => {
@@ -412,6 +446,85 @@ export default function NotificationManagement({
                 )}
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* 委托单通知历史（新窗口：估价/接单/拒单/回复/进度等） */}
+      <div className="bg-white rounded-2xl shadow-sm">
+        <div className="p-4 sm:p-5 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-lw-accent" />
+              <h2 className="text-sm font-semibold text-lw-black">
+                委托单通知历史
+              </h2>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-lw-accent">
+                估价/接单/回复等
+              </span>
+            </div>
+            {orderHistory.length > 8 && (
+              <button
+                onClick={() => setOrderHistoryExpanded(!orderHistoryExpanded)}
+                className="text-xs text-lw-accent flex items-center gap-0.5 cursor-pointer"
+              >
+                {orderHistoryExpanded ? (
+                  <>
+                    收起 <ChevronUp className="w-3 h-3" />
+                  </>
+                ) : (
+                  <>
+                    展开全部（{orderHistory.length}）{" "}
+                    <ChevronDown className="w-3 h-3" />
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {orderHistoryLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-5 h-5 text-lw-accent animate-spin" />
+            <span className="ml-2 text-sm text-gray-400">加载中...</span>
+          </div>
+        ) : orderHistory.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+            <Package className="w-10 h-10 mb-2 text-gray-300" />
+            <p className="text-sm">暂无委托单通知记录</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {orderHistory
+              .slice(0, orderHistoryExpanded ? orderHistory.length : 8)
+              .map((record) => (
+                <div
+                  key={record.batch_id}
+                  className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-mono flex-shrink-0">
+                        {record.order_no}
+                      </span>
+                      <p className="text-sm font-medium text-lw-black truncate">
+                        {record.title}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 truncate">
+                      {record.content}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    <p className="text-xs text-gray-400">
+                      {record.recipient_count}人
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {formatDate(record.created_at)}
+                    </p>
+                  </div>
+                </div>
+              ))}
           </div>
         )}
       </div>

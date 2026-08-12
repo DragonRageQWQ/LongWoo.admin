@@ -159,6 +159,11 @@ export async function sendNotification(input: {
  * 数据源：notifications 表按 batch_id 分组聚合。
  * 相比审计日志：batch_id 必然存在（删除/修改可用），
  * 且收件人数为实际记录数、可顺带返回内容供编辑预填。
+ *
+ * 分类规则：站内信（公告）的 batch_id 为随机 UUID；
+ * 委托单相关通知（估价/接单/拒单/回复/进度）的 batch_id 为订单 id，
+ * 通过 orders 表反向关联精确区分——本函数仅返回站内信，
+ * 委托单通知请使用 listOrderNotifications。
  */
 export async function listSentNotifications(options?: {
   limit?: number
@@ -198,6 +203,16 @@ export async function listSentNotifications(options?: {
       return { success: false, error: '查询失败，请稍后重试' }
     }
 
+    // 精确分类：batch_id 属于订单 id 的记录为委托单通知，其余为站内信
+    const allBatchIds = Array.from(
+      new Set((data ?? []).map((r) => r.batch_id).filter(Boolean))
+    )
+    const { data: orderRows } = await admin
+      .from('orders')
+      .select('id')
+      .in('id', allBatchIds)
+    const orderIdSet = new Set((orderRows ?? []).map((o) => o.id))
+
     // 按 batch_id 分组：取每组最新一条为批次代表，收件人数 = 组内条数
     const groupMap = new Map<string, {
       batch_id: string
@@ -210,6 +225,8 @@ export async function listSentNotifications(options?: {
 
     for (const row of data ?? []) {
       if (!row.batch_id) continue
+      // 跳过委托单通知（batch_id 为订单 id）
+      if (orderIdSet.has(row.batch_id)) continue
       const existing = groupMap.get(row.batch_id)
       if (existing) {
         existing.recipient_count += 1
@@ -243,6 +260,102 @@ export async function listSentNotifications(options?: {
     }
   } catch (error) {
     console.error('查询发送记录异常:', error)
+    return { success: false, error: '查询时发生未知错误' }
+  }
+}
+
+/**
+ * 查询委托单相关通知历史（估价/接单/拒单/回复/进度等）
+ * 仅管理员可调用
+ *
+ * 分类规则：委托单通知的 batch_id 为订单 id（见 sendOrderNotification），
+ * 通过 orders 表反向关联识别并附带订单号。
+ */
+export async function listOrderNotifications(options?: {
+  limit?: number
+}): Promise<{
+  success: boolean
+  data?: Array<{
+    batch_id: string
+    order_no: string
+    title: string
+    content: string
+    recipient_count: number
+    created_at: string
+  }>
+  error?: string
+}> {
+  // 鉴权：仅管理员
+  const authResult = await requireAdmin()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+
+  const admin = createAdminClient()
+  const limit = Math.min(options?.limit ?? 30, 100)
+
+  try {
+    const { data, error } = await admin
+      .from('notifications')
+      .select('batch_id, title, content, target_role, created_at')
+      .not('batch_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(500)
+
+    if (error) {
+      console.error('查询委托单通知失败:', error.message)
+      return { success: false, error: '查询失败，请稍后重试' }
+    }
+
+    // 反向关联 orders：识别委托单通知并获取订单号
+    const allBatchIds = Array.from(
+      new Set((data ?? []).map((r) => r.batch_id).filter(Boolean))
+    )
+    const { data: orderRows } = await admin
+      .from('orders')
+      .select('id, order_no')
+      .in('id', allBatchIds)
+    const orderMap = new Map<string, string>()
+    for (const o of orderRows ?? []) {
+      orderMap.set(o.id, o.order_no)
+    }
+
+    // 仅保留委托单通知，按 batch_id 聚合
+    const groupMap = new Map<string, {
+      batch_id: string
+      order_no: string
+      title: string
+      content: string
+      created_at: string
+      recipient_count: number
+    }>()
+
+    for (const row of data ?? []) {
+      if (!row.batch_id) continue
+      const orderNo = orderMap.get(row.batch_id)
+      if (!orderNo) continue // 非委托单通知
+      const existing = groupMap.get(row.batch_id)
+      if (existing) {
+        existing.recipient_count += 1
+      } else {
+        groupMap.set(row.batch_id, {
+          batch_id: row.batch_id,
+          order_no: orderNo,
+          title: row.title,
+          content: row.content,
+          created_at: row.created_at,
+          recipient_count: 1,
+        })
+      }
+    }
+
+    const batches = Array.from(groupMap.values())
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limit)
+
+    return { success: true, data: batches }
+  } catch (error) {
+    console.error('查询委托单通知异常:', error)
     return { success: false, error: '查询时发生未知错误' }
   }
 }
