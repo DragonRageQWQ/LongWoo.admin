@@ -20,6 +20,7 @@ import {
   Bot,
   Sparkles,
   KeyRound,
+  Gift,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,7 +30,7 @@ import {
   updateAvatar,
   updatePassword,
 } from "@/actions/profile-actions";
-import { listMyOrders } from "@/actions/order-actions";
+import { listMyOrders, claimOrder } from "@/actions/order-actions";
 import { formatDate, statusLabels } from "@/lib/utils";
 import type { Profile, Order } from "@/types/database";
 import FeedbackSection from "@/components/profile/FeedbackSection";
@@ -69,6 +70,46 @@ export default function ProfilePage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState<string | null>(null);
+
+  // 认领历史订单
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimNo, setClaimNo] = useState("");
+  const [claimPhone, setClaimPhone] = useState("");
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
+
+  const handleClaim = async () => {
+    setClaimError(null);
+    setClaimSuccess(null);
+    if (!claimNo.trim() || !claimPhone.trim()) {
+      setClaimError("请填写订单号和手机号");
+      return;
+    }
+    setClaimLoading(true);
+    try {
+      const result = await claimOrder(claimNo.trim(), claimPhone.trim());
+      if (result.success) {
+        setClaimSuccess("认领成功！该委托单已绑定到您的账号");
+        setClaimNo("");
+        setClaimPhone("");
+        // 刷新订单列表
+        setOrdersLoading(true);
+        const refreshed = await listMyOrders(20);
+        if (refreshed.success) {
+          setOrders(refreshed.data || []);
+          setOrdersError(null);
+        }
+        setOrdersLoading(false);
+      } else {
+        setClaimError(result.error || "认领失败");
+      }
+    } catch {
+      setClaimError("认领时发生未知错误");
+    } finally {
+      setClaimLoading(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -581,13 +622,22 @@ export default function ProfilePage() {
         <section>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-gray-400">我的订单</h3>
-            <Link
-              href="/order/query"
-              className="text-xs text-lw-accent hover:underline flex items-center gap-0.5"
-            >
-              查询更多
-              <ArrowRight className="w-3 h-3" />
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setClaimOpen(true)}
+                className="text-xs text-gray-500 hover:text-lw-accent flex items-center gap-0.5 transition-colors cursor-pointer"
+              >
+                <Gift className="w-3 h-3" />
+                认领历史订单
+              </button>
+              <Link
+                href="/order/query"
+                className="text-xs text-lw-accent hover:underline flex items-center gap-0.5"
+              >
+                查询更多
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
           </div>
 
           {ordersLoading ? (
@@ -874,6 +924,86 @@ export default function ProfilePage() {
         onClose={() => setResetOpen(false)}
         fixedEmail={profile?.email}
       />
+
+      {/* 认领历史订单弹窗 */}
+      {claimOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => {
+              setClaimOpen(false);
+              setClaimError(null);
+              setClaimSuccess(null);
+            }}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-lw-black flex items-center gap-2">
+                <Gift className="w-4 h-4 text-lw-accent" />
+                认领历史订单
+              </h3>
+              <button
+                onClick={() => {
+                  setClaimOpen(false);
+                  setClaimError(null);
+                  setClaimSuccess(null);
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-md cursor-pointer"
+                aria-label="关闭"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+              将您之前未登录状态下提交的委托单绑定到当前账号，绑定后可在「我的订单」查看进度并接收站内通知。
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  委托单号
+                </label>
+                <input
+                  value={claimNo}
+                  onChange={(e) => setClaimNo(e.target.value)}
+                  placeholder="例如 LW202608110032"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-lw-accent/30 focus:border-lw-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  下单手机号
+                </label>
+                <input
+                  value={claimPhone}
+                  onChange={(e) =>
+                    setClaimPhone(e.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="请输入下单时填写的手机号"
+                  inputMode="numeric"
+                  maxLength={11}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-lw-accent/30 focus:border-lw-accent"
+                />
+              </div>
+              {claimError && (
+                <p className="text-xs text-red-500">{claimError}</p>
+              )}
+              {claimSuccess && (
+                <p className="text-xs text-green-600">{claimSuccess}</p>
+              )}
+              <button
+                onClick={handleClaim}
+                disabled={claimLoading}
+                className="w-full py-2.5 text-sm font-semibold text-white bg-lw-accent rounded-lg hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                {claimLoading && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                {claimLoading ? "认领中..." : "确认认领"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

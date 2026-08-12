@@ -31,6 +31,9 @@ const WorksManagement = dynamic(() => import("./_components/WorksManagement"), {
 const DropItemsManagement = dynamic(() => import("./_components/DropItemsManagement"), {
   loading: () => <PanelSkeleton />,
 });
+const SettingsPanel = dynamic(() => import("./_components/SettingsPanel"), {
+  loading: () => <PanelSkeleton />,
+});
 
 // 面板加载占位
 function PanelSkeleton() {
@@ -53,21 +56,6 @@ function resolveTab(tabParam: string | undefined): AdminTab {
     return tabParam as AdminTab;
   }
   return "overview";
-}
-
-// 占位组件：未实现的功能
-function PlaceholderPanel({ title }: { title: string }) {
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-lw-black">{title}</h1>
-        <p className="text-sm text-gray-400 mt-1">该功能正在开发中</p>
-      </div>
-      <div className="bg-white rounded-lg shadow-sm border border-gray-50 p-12 text-center">
-        <p className="text-sm text-gray-400">功能开发中，敬请期待...</p>
-      </div>
-    </div>
-  );
 }
 
 // 主体内容区（根据 tab 渲染不同面板，面板已按需加载）
@@ -99,7 +87,7 @@ function DashboardContent({
     case "drops":
       return <DropItemsManagement />;
     case "settings":
-      return <PlaceholderPanel title="系统设置" />;
+      return <SettingsPanel isSuperAdmin={isSuperAdmin} />;
     default:
       return <StatsOverview />;
   }

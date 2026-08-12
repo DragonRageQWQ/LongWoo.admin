@@ -66,6 +66,15 @@ interface OrderDetailModalProps {
   variant?: "admin" | "studio";
 }
 
+// 常用话术快捷插入（管理员回复效率）
+const QUICK_REPLY_TEMPLATES = [
+  "您好！您的委托单已完成估价，请确认后我们即可开始制作～",
+  "您好！为更精准完成您的定制，能否补充更多设计参考图或细节说明？",
+  "您好！您的委托单正在制作中，我们会持续同步进度，请耐心等待～",
+  "您好！您的委托单已交付，请查收交付链接，如有问题欢迎随时反馈！",
+  "感谢您选择 LongWoo 龙坞，您的信任是我们最大的动力！",
+];
+
 // 操作日志动作映射
 const actionLabels: Record<string, string> = {
   create_order: "创建委托单",
@@ -915,10 +924,27 @@ export default function OrderDetailModal({
 
                     {/* 新回复输入 */}
                     <div className="space-y-2">
+                      {/* 常用话术快捷插入（管理员效率） */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {QUICK_REPLY_TEMPLATES.map((tpl) => (
+                          <button
+                            key={tpl}
+                            onClick={() =>
+                              setReplyContent(
+                                (prev) =>
+                                  (prev ? prev + "\n" : "") + tpl
+                              )
+                            }
+                            className="px-2 py-1 text-[11px] text-lw-accent bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100 transition-colors cursor-pointer"
+                          >
+                            {tpl.slice(0, 10)}...
+                          </button>
+                        ))}
+                      </div>
                       <textarea
                         value={replyContent}
                         onChange={(e) => setReplyContent(e.target.value)}
-                        placeholder="输入回复内容..."
+                        placeholder="输入回复内容...（可点击上方常用话术快速插入）"
                         rows={3}
                         className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent resize-none"
                       />

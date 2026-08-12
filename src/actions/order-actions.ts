@@ -11,6 +11,8 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
 import { getClientIp, logOperation, sendEmail } from '@/lib/server-utils'
 import { RATE_LIMIT_ORDER_WINDOW, MAX_PAGE_LIMIT, ESTIMATE_PRICE_MIN, ESTIMATE_PRICE_MAX, RATE_LIMIT_EMAIL_REPLY_MAX, RATE_LIMIT_EMAIL_REPLY_WINDOW } from '@/lib/constants'
+import { getNotificationTemplate, renderTemplate } from '@/lib/notification-templates'
+import type { TemplateKey, TemplateVars } from '@/lib/notification-templates'
 import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/database'
 
 // ==================== 订单查询速率限制（数据库版） ====================
@@ -22,11 +24,13 @@ import type { Order, OrderAttachment, OrderReply, OperationLog } from '@/types/d
 // 用户侧由 NotificationBell（顶栏铃铛）展示。客户未注册账号时跳过（邮件回复已覆盖）。
 
 /**
- * 向订单客户发送站内通知
+ * 向订单客户发送站内通知（模板化）
  *
  * @param order 订单（需含 id/order_no/customer_email/user_id）
- * @param title 通知标题
- * @param content 通知内容（自动附加订单号）
+ * @param key   模板键（estimate/accepted/rejected/reply/progress），优先读取数据库模板
+ * @param fallbackTitle 未配置模板时的默认标题
+ * @param fallbackContent 未配置模板时的默认内容（可含 {orderNo} 等占位符）
+ * @param vars  模板占位符变量
  * @returns 是否成功（用户未注册/插入失败返回 false，不阻塞主流程）
  */
 export async function sendOrderNotification(
@@ -36,8 +40,10 @@ export async function sendOrderNotification(
     customer_email: string | null
     user_id?: string | null
   },
-  title: string,
-  content: string
+  key: TemplateKey,
+  fallbackTitle: string,
+  fallbackContent: string,
+  vars: TemplateVars = {}
 ): Promise<boolean> {
   try {
     const admin = createAdminClient()
@@ -56,6 +62,15 @@ export async function sendOrderNotification(
 
     if (userError || !user) return false
 
+    // 读取模板（数据库优先，回退内置默认），未命中时用调用方 fallback
+    const tpl = await getNotificationTemplate(key)
+    const title = tpl.title || fallbackTitle
+    let content = (tpl.content || fallbackContent).replaceAll(
+      '{orderNo}',
+      order.order_no
+    )
+    content = renderTemplate(content, { ...vars, orderNo: order.order_no })
+
     const fullContent = `${content}\n订单号：${order.order_no}`
     const { error: insertError } = await admin.from('notifications').insert({
       user_id: user.id,
@@ -69,6 +84,37 @@ export async function sendOrderNotification(
     return !insertError
   } catch (error) {
     console.error('[sendOrderNotification] 发送通知异常:', error)
+    return false
+  }
+}
+
+/**
+ * 向订单客户发送状态邮件（估价/接单/拒单/进度/回复），模板化
+ * 仅在配置 RESEND_API_KEY 且订单有邮箱时发送；失败不阻塞主流程。
+ */
+export async function sendOrderStatusEmail(
+  order: {
+    order_no: string
+    customer_email: string | null
+  },
+  key: TemplateKey,
+  fallbackSubject: string,
+  fallbackBody: string,
+  vars: TemplateVars = {}
+): Promise<boolean> {
+  try {
+    const toEmail = order.customer_email
+    if (!toEmail) return false
+    if (!process.env.RESEND_API_KEY) return false
+
+    const tpl = await getNotificationTemplate(key)
+    const subject = tpl.email_subject || fallbackSubject
+    let body = tpl.email_body || fallbackBody
+    body = renderTemplate(body, { ...vars, orderNo: order.order_no })
+
+    return await sendEmail(toEmail, subject, body)
+  } catch (error) {
+    console.error('[sendOrderStatusEmail] 发送邮件异常:', error)
     return false
   }
 }
@@ -358,11 +404,22 @@ export async function submitEstimate(
       estimate_notes: trimmedNotes,
     })
 
-    // 站内通知客户：已完成估价
+    // 站内通知客户：已完成估价（模板化）
     await sendOrderNotification(
       updatedOrder,
+      'estimate',
       '委托单估价完成',
-      `您的委托单已完成估价，估价金额 RMB ${price}。请登录个人中心查看详情。`
+      `您的委托单已完成估价，估价金额 RMB ${price}。请登录个人中心查看详情。`,
+      { price }
+    )
+
+    // 邮件通知客户：已完成估价（模板化；失败不阻塞主流程）
+    await sendOrderStatusEmail(
+      updatedOrder,
+      'estimate',
+      '【LongWoo 龙坞】委托单估价完成',
+      '',
+      { price }
     )
 
     revalidatePath('/admin/dashboard')
@@ -425,11 +482,20 @@ export async function acceptOrder(
     // 记录 operation_logs（使用统一的日志记录函数）
     await logOperation(userId, 'accept_order', 'order', orderId)
 
-    // 站内通知客户：已接单
+    // 站内通知客户：已接单（模板化）
     await sendOrderNotification(
       updatedOrder,
+      'accepted',
       '委托单已接单',
       '工作室已接受您的委托单，即将开始制作，请留意后续进度更新。'
+    )
+
+    // 邮件通知客户：已接单（模板化；失败不阻塞主流程）
+    await sendOrderStatusEmail(
+      updatedOrder,
+      'accepted',
+      '【LongWoo 龙坞】委托单已接单',
+      ''
     )
 
     revalidatePath('/studio/dashboard')
@@ -498,11 +564,13 @@ export async function rejectOrder(
       reason,
     })
 
-    // 站内通知客户：已拒单
+    // 站内通知客户：已拒单（模板化）
     await sendOrderNotification(
       updatedOrder,
+      'rejected',
       '委托单已被拒单',
-      `很抱歉，您的委托单未通过审核：${trimmedReason}`
+      `很抱歉，您的委托单未通过审核：${trimmedReason}`,
+      { reason: trimmedReason }
     )
 
     revalidatePath('/studio/dashboard')
@@ -585,16 +653,29 @@ export async function updateOrderStatus(
       delivery_url: deliveryUrl || null,
     })
 
-    // 站内通知客户：进度更新
+    // 站内通知客户：进度更新（模板化）
     const STATUS_TEXT: Record<string, string> = {
       processing: '处理中（开始制作）',
       delivered: '已交付',
       completed: '已完成',
     }
+    const statusText = STATUS_TEXT[newStatus] || newStatus
+    const deliveryText = deliveryUrl ? `，交付链接：${deliveryUrl}` : ''
     await sendOrderNotification(
       updatedOrder,
+      'progress',
       '委托单进度更新',
-      `您的委托单状态已更新为：${STATUS_TEXT[newStatus] || newStatus}${deliveryUrl ? `，交付链接：${deliveryUrl}` : ''}`
+      `您的委托单状态已更新为：${statusText}${deliveryText}`,
+      { status: statusText, deliveryUrl: deliveryText }
+    )
+
+    // 邮件通知客户：进度更新（模板化；失败不阻塞主流程）
+    await sendOrderStatusEmail(
+      updatedOrder,
+      'progress',
+      '【LongWoo 龙坞】委托单进度更新',
+      '',
+      { status: statusText, deliveryUrl: deliveryText }
     )
 
     revalidatePath('/studio/dashboard')
@@ -668,7 +749,7 @@ export async function replySite(
       return { success: false, error: '回复失败，请稍后重试' }
     }
 
-    // 站内通知客户：有新的站内回复
+    // 站内通知客户：有新的站内回复（模板化）
     try {
       const { data: orderForNotify } = await supabase
         .from('orders')
@@ -678,8 +759,10 @@ export async function replySite(
       if (orderForNotify) {
         await sendOrderNotification(
           orderForNotify,
+          'reply',
           '委托单有新的回复',
-          '工作室对您的委托单进行了回复，请登录个人中心查看。'
+          '工作室对您的委托单进行了回复，请登录个人中心查看。',
+          { reply: trimmedContent }
         )
       }
     } catch (notifyError) {
@@ -761,50 +844,17 @@ export async function replyEmail(
 
     let emailSent = false
 
-    // 使用统一的邮件发送函数发送回复通知邮件
+    // 使用模板化的状态邮件发送回复通知（数据库模板可自定义文案与样式）
     // 仅在配置了 RESEND_API_KEY 时发送，行为与原实现一致
     if (process.env.RESEND_API_KEY) {
-      // HTML 转义防止 XSS 注入
       const safeContent = escapeHtml(trimmedContent)
-      const safeContentHtml = safeContent.replace(/\n/g, '<br/>')
-
-      emailSent = await sendEmail(toEmail, '【LongWoo 龙坞】委托单回复通知', `
-              <!DOCTYPE html>
-              <html lang="zh-CN">
-              <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-              <body style="margin:0;padding:0;background-color:#F3F3F3;font-family:'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',-apple-system,sans-serif;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F3F3F3;">
-                  <tr><td align="center" style="padding:32px 16px;">
-                    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,0.06);">
-                      <tr><td style="background-color:#0D3B3B;padding:28px 40px;text-align:center;">
-                        <h1 style="color:#FFFFFF;font-size:22px;font-weight:700;margin:0;letter-spacing:3px;">龙坞 LONGWOO</h1>
-                        <p style="color:rgba(255,255,255,0.5);font-size:10px;margin:4px 0 0;letter-spacing:2px;">Creative Design Studio</p>
-                      </td></tr>
-                      <tr><td style="background-color:#1A5050;height:4px;line-height:4px;font-size:4px;">&nbsp;</td></tr>
-                      <tr><td style="padding:32px 40px;">
-                        <h2 style="color:#0D3B3B;font-size:18px;font-weight:700;margin:0 0 16px;">委托单回复通知</h2>
-                        <p style="color:#666;font-size:15px;line-height:1.7;margin:0 0 20px;">您好，您的委托单有新的回复：</p>
-                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
-                          <tr><td style="background-color:#F0F7F7;border-left:3px solid #0D3B3B;border-radius:0 8px 8px 0;padding:16px;">
-                            <p style="color:#333;font-size:14px;line-height:1.7;margin:0;">${safeContentHtml}</p>
-                          </td></tr>
-                        </table>
-                        <p style="color:#666;font-size:14px;line-height:1.6;margin:0 0 8px;">请登录系统查看完整详情。</p>
-                        <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.longwoo.studio'}/studio/dashboard" style="display:inline-block;margin-top:16px;padding:10px 28px;background-color:#0D3B3B;color:#FFFFFF;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;">查看委托单</a>
-                      </td></tr>
-                      <tr><td style="padding:0 40px;">
-                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EEE;"><tr><td style="height:1px;line-height:1px;font-size:1px;">&nbsp;</td></tr></table>
-                      </td></tr>
-                      <tr><td style="padding:20px 40px 28px;">
-                        <p style="color:#AAA;font-size:12px;line-height:1.6;margin:0;">此邮件由 LongWoo 龙坞系统自动发送，请勿直接回复。</p>
-                        <p style="color:#CCC;font-size:11px;margin:4px 0 0;">© 2026 LongWoo 龙坞. All rights reserved.</p>
-                      </td></tr>
-                    </table>
-                  </td></tr>
-                </table>
-              </body>
-              </html>
-            `)
+      emailSent = await sendOrderStatusEmail(
+        order,
+        'reply',
+        '【LongWoo 龙坞】委托单回复通知',
+        '',
+        { reply: safeContent }
+      )
       if (!emailSent) {
         console.error('邮件发送失败')
       }
@@ -825,11 +875,13 @@ export async function replyEmail(
       return { success: false, error: '回复失败，请稍后重试' }
     }
 
-    // 站内通知客户：有新的邮件回复
+    // 站内通知客户：有新的邮件回复（模板化）
     await sendOrderNotification(
       order,
+      'reply',
       '委托单有新的回复',
-      '工作室对您的委托单进行了回复（已同步发送邮件），请登录个人中心查看。'
+      '工作室对您的委托单进行了回复（已同步发送邮件），请登录个人中心查看。',
+      { reply: trimmedContent }
     )
 
     revalidatePath('/studio/dashboard')
@@ -1239,5 +1291,114 @@ export async function exportOrdersCsv(): Promise<{
   } catch (error) {
     console.error('导出订单异常:', error)
     return { success: false, error: '导出订单时发生未知错误' }
+  }
+}
+
+// ==================== 历史订单认领 ====================
+/**
+ * 历史订单认领（方案 A 补充）
+ *
+ * 未登录/匿名下单的订单 user_id 为空，用户注册登录后可通过
+ * 「订单号 + 手机号」验证并绑定到当前账号，此后在"我的订单"可见、
+ * 可接收站内通知，实现"未登录用户也可进行后续操作"。
+ *
+ * 安全约束：
+ * - 订单号 + 手机号必须同时匹配（与公开查询页一致）
+ * - 订单已绑定他人账号时拒绝认领（防止抢占）
+ * - 已绑定当前账号时幂等返回成功
+ * - 速率限制：与公开查询一致（IP + 手机号 5 次/分钟）
+ */
+export async function claimOrder(
+  orderNo: string,
+  phone: string
+): Promise<{ success: boolean; error?: string }> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 必须登录
+  const currentUser = await getCurrentUser()
+  if (!currentUser?.userId) {
+    return { success: false, error: '请先登录后再认领订单' }
+  }
+
+  // 输入验证（与 queryOrderByNo 一致）
+  const trimmedOrderNo = orderNo.trim()
+  const trimmedPhone = phone.trim()
+  if (!trimmedOrderNo) {
+    return { success: false, error: '请输入委托单号' }
+  }
+  if (!trimmedPhone) {
+    return { success: false, error: '请输入手机号' }
+  }
+  if (!/^1[3-9]\d{9}$/.test(trimmedPhone)) {
+    return { success: false, error: '请输入有效的手机号' }
+  }
+  if (trimmedOrderNo.length > 50) {
+    return { success: false, error: '委托单号格式不正确' }
+  }
+
+  // 速率限制：基于 IP + 手机号组合，1 分钟内最多 5 次
+  const ip = await getClientIp()
+  const rateLimitResult = await checkRateLimit(
+    `claim:${ip}:${trimmedPhone}`,
+    5,
+    RATE_LIMIT_ORDER_WINDOW
+  )
+  if (!rateLimitResult.allowed) {
+    return { success: false, error: '操作过于频繁，请稍后再试' }
+  }
+
+  // 使用服务端 admin client 查询/更新（绕过 RLS）：
+  // 用户会话下 RLS 会过滤掉未绑定（user_id 为空）的历史订单，导致无法认领；
+  // 认证凭据为「订单号 + 手机号」同时匹配，服务端可信校验后绑定。
+  const supabase = createAdminClient()
+
+  try {
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('id, order_no, customer_phone, user_id, status')
+      .eq('order_no', trimmedOrderNo)
+      .eq('customer_phone', trimmedPhone)
+      .maybeSingle()
+
+    if (orderError || !order) {
+      return { success: false, error: '未找到匹配的委托单，请确认单号和手机号' }
+    }
+
+    // 已绑定当前账号：幂等成功
+    if (order.user_id === currentUser.userId) {
+      return { success: true }
+    }
+    // 已绑定其他账号：拒绝（防止抢占他人订单）
+    if (order.user_id) {
+      return { success: false, error: '该委托单已关联其他账号，无法认领' }
+    }
+
+    // 认领：绑定 user_id（仅当仍为空时更新，防并发抢占）
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({ user_id: currentUser.userId })
+      .eq('id', order.id)
+      .is('user_id', null)
+
+    if (updateError) {
+      console.error('认领订单失败:', updateError.message)
+      return { success: false, error: '认领失败，请稍后重试' }
+    }
+
+    // 记录操作日志（失败不影响主流程）
+    await logOperation(currentUser.userId, 'claim_order', 'order', order.id, {
+      order_no: order.order_no,
+    }).catch(() => {})
+
+    // 注：不在此处 revalidatePath('/profile')——客户端提交成功后已手动刷新订单列表，
+    // 避免 server action 收尾阶段的页面重验证在中止时返回异常（DB 已更新但客户端报错）
+    return { success: true }
+  } catch (error) {
+    console.error('认领订单异常:', error)
+    return { success: false, error: '认领时发生未知错误' }
   }
 }
