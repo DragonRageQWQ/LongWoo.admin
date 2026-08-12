@@ -33,18 +33,48 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function middleware(request: NextRequest) {
   // 安全加固（L-1）：移除调试端点，避免误配置泄露会话信息
 
-  let response = NextResponse.next({ request })
-
+  // ===== CSP nonce 安全加固（NEXT-CSP-001）=====
+  // 每请求生成唯一 nonce：script-src 不再使用 'unsafe-inline'，
+  // 仅放行 Next.js 自动生成且携带该 nonce 的内联脚本（RSC payload 等），
+  // 其余内联脚本一律被 CSP 拦截，显著缩小 XSS 注入执行面。
+  // 注：public/*.html 静态页不走 middleware，由 next.config.ts 的 CSP（含
+  // 'unsafe-inline'）兜底；本 nonce CSP 仅作用于 App Router 动态页面。
+  // 使用 Web Crypto API（Edge runtime 原生支持，Node crypto 模块不可用）
+  const nonce = Buffer.from(globalThis.crypto.randomUUID()).toString('base64')
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabaseWsUrl = supabaseUrl.replace(/^https/, 'wss')
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}'`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https: blob:",
+    "font-src 'self' data:",
+    `connect-src 'self' ${supabaseUrl} ${supabaseWsUrl}`,
+    "object-src 'none'",
+    "frame-ancestors 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ')
+  // 注入 x-nonce：Next.js 检测到该请求头后，自动为生成的内联脚本附加 nonce
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-nonce', nonce)
+  const applyCsp = (res: NextResponse): NextResponse => {
+    res.headers.set('Content-Security-Policy', csp)
+    return res
+  }
 
+  let response = applyCsp(NextResponse.next({ request: { headers: requestHeaders } }))
+
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() { return request.cookies.getAll() },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value))
-        response = NextResponse.next({ request })
+        // 同步最新 cookie 到渲染请求头（保留 x-nonce，确保 nonce CSP 下内联脚本可用）
+        requestHeaders.set('cookie', request.cookies.toString())
+        response = applyCsp(NextResponse.next({ request: { headers: requestHeaders } }))
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options))
       }
@@ -143,19 +173,19 @@ export async function middleware(request: NextRequest) {
     if (hasExpiredSession) {
       loginUrl.searchParams.set('expired', '1')
     }
-    return NextResponse.redirect(loginUrl)
+    return applyCsp(NextResponse.redirect(loginUrl))
   }
 
   const profileAccess = userId ? await getProfileAccess(userId) : null
   if (userId && (!profileAccess || !profileAccess.isActive)) {
-    return NextResponse.redirect(new URL('/login?inactive=1', request.url))
+    return applyCsp(NextResponse.redirect(new URL('/login?inactive=1', request.url)))
   }
 
   // 已登录用户访问管理员专属路径 → 检查角色
   if (userId && adminOnlyPaths.some(p => pathname.startsWith(p))) {
     // 非管理员访问 /admin/* 或 /studio/* → 重定向到个人中心（防越级）
     if (!profileAccess?.isAdmin) {
-      return NextResponse.redirect(new URL('/profile', request.url))
+      return applyCsp(NextResponse.redirect(new URL('/profile', request.url)))
     }
   }
 
@@ -192,6 +222,12 @@ async function getProfileAccess(
 }
 
 export const config = {
-  // 匹配 /admin/*, /studio/*, /profile, /ai/*, /gray-test（含子路径和根路径）
-  matcher: ['/studio/:path*', '/admin/:path*', '/profile/:path*', '/profile', '/ai/:path*', '/gray-test/:path*', '/gray-test']
+  // 全站 HTML 渲染路径统一应用 nonce CSP（NEXT-CSP-001）：
+  // - 排除 _next 静态资源、图片优化、favicon、robots、sitemap
+  // - 排除 public 静态文件（.html/.css/.js/.png 等，由静态服务器直服，
+  //   其中 public/*.html 的 CSP 由 next.config.ts 的 'unsafe-inline' 配置兜底）
+  // - 排除 '/'（首页经 rewrite 指向 index.html 静态页，同样由 next.config 兜底）
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|index.html|.*\\.(?:png|jpg|jpeg|svg|gif|webp|avif|css|js|mjs|ico|mp4|woff2?|ttf|html)$).*)',
+  ],
 }
