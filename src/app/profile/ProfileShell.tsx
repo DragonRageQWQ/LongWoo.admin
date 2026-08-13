@@ -726,7 +726,12 @@ export default function ProfileShell({
               <span className="text-sm text-gray-500">{t("profile.registeredAt")}</span>
               <span className="text-sm text-gray-700">
                 {profile?.created_at
-                  ? new Date(profile.created_at).toLocaleDateString("zh-CN")
+                  ? new Date(profile.created_at).toLocaleDateString("zh-CN", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      timeZone: "Asia/Shanghai",
+                    })
                   : t("profile.unknown")}
               </span>
             </div>

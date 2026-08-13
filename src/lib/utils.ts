@@ -16,9 +16,13 @@ export function maskEmail(email: string): string {
 }
 
 export function formatDate(date: string): string {
+  // 固定 Asia/Shanghai 时区：SSR（Vercel UTC）与客户端（浏览器本地时区）
+  // 渲染结果必须一致，否则 SSR 直出数据时产生 hydration mismatch（React #418）。
   return new Date(date).toLocaleDateString('zh-CN', {
     year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit'
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'Asia/Shanghai',
+    hour12: false,
   })
 }
 
