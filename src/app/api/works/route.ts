@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const dynamic = 'force-dynamic'
+// 性能优化（PERF-05）：作品为公开低频变更数据，CDN/ISR 缓存 30 秒，
+// 首页与作品详情页不再每次访问实时查库（由 Vercel CDN 按 s-maxage 缓存响应）。
+// 管理后台修改作品后最多 30 秒内生效。
+export const revalidate = 30
 
 /**
  * GET /api/works

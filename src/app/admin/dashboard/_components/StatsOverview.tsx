@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 import { translate, type Lang } from "@/lib/i18n/dict";
 import {
@@ -163,6 +164,15 @@ async function fetchStats() {
   return { stats, trend };
 }
 
+// 性能优化（PERF-06）：统计为低频变化数据，缓存 30 秒，
+// 避免每次进入管理后台（默认 overview tab）都实时执行 3 次数据库查询；
+// 缓存过期后重新执行 fetchStats 时会基于最新时间重新计算"今日"边界。
+const cachedFetchStats = unstable_cache(
+  async () => fetchStats(),
+  ["admin-stats-overview"],
+  { revalidate: 30 }
+);
+
 export default async function StatsOverview() {
   // 安全加固（FIND-02）：本组件使用 service_role 客户端直查全平台订单统计，
   // 必须在组件内部二次鉴权，不能只依赖 middleware（middleware 只是路由级防线）。
@@ -185,7 +195,7 @@ export default async function StatsOverview() {
   let loadError: string | null = null;
 
   try {
-    const result = await fetchStats();
+    const result = await cachedFetchStats();
     stats = result.stats;
     trend = result.trend;
   } catch (error) {

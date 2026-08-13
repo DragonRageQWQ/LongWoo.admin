@@ -472,7 +472,7 @@
 
   async function loadWorks() {
     try {
-      var res = await fetch('/api/works', { cache: 'no-store' });
+      var res = await fetch('/api/works');
       var data = await res.json();
       if (data.success && Array.isArray(data.items) && data.items.length > 0) {
         workItems = data.items.map(normalizeWork);
