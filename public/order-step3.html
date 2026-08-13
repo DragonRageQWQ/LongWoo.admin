@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>购买自设兽装 - 第4步填写联系信息 | LongWoo 工作室</title>
-    <meta name="description" content="LongWoo兽装定制第四步 - 填写联系方式和身体数据。">
+    <meta name="description" data-i18n-meta="order3.docDesc" content="LongWoo兽装定制第四步 - 填写联系方式和身体数据。">
     <meta name="robots" content="index, follow">
     <!-- 预连接 Supabase API -->
     <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
+    <!-- LW-I18N 语言切换（未上线：切换器隐藏，?lang=en 可预览） -->
+    <script src="/js/i18n/i18n-init.js" defer></script>
 </head>
-<body>
+<body data-i18n-doc-title="order3.docTitle">
 
   <!-- Top Navigation -->
   <div class="top-nav">
@@ -20,7 +22,8 @@
         <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
     </button>
-    <span class="top-nav-title">购买自设兽装</span>
+    <span class="top-nav-title" data-i18n="order3.title">购买自设兽装</span>
+    <span data-lang-slot></span>
     <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -29,9 +32,9 @@
 
   <!-- Info Section -->
   <div class="info-section">
-    <h1 class="info-title">购买 自设兽装</h1>
-    <p class="info-subtitle">预计 4-6 周后交付*</p>
-    <p class="info-price">首次购置价格依照15000RMB-25000RMB区间计算</p>
+    <h1 class="info-title" data-i18n="order3.title">购买 自设兽装</h1>
+    <p class="info-subtitle" data-i18n="order3.subtitle">预计 4-6 周后交付*</p>
+    <p class="info-price" data-i18n="order3.price">首次购置价格依照15000RMB-25000RMB区间计算</p>
   </div>
 
   <!-- Step Indicator: Step 4 active -->
@@ -42,7 +45,7 @@
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
-      <div class="step-label done">上传设定图</div>
+      <div class="step-label done" data-i18n="order3.step1">上传设定图</div>
     </div>
     <div class="step-line done"></div>
     <div class="step-item">
@@ -51,7 +54,7 @@
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
-      <div class="step-label done">选配内容</div>
+      <div class="step-label done" data-i18n="order3.step2">选配内容</div>
     </div>
     <div class="step-line done"></div>
     <div class="step-item">
@@ -60,17 +63,17 @@
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
-      <div class="step-label done">折抵权益</div>
+      <div class="step-label done" data-i18n="order3.step3">折抵权益</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle active">4</div>
-      <div class="step-label active">联系方式</div>
+      <div class="step-label active" data-i18n="order3.step4">联系方式</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">5</div>
-      <div class="step-label">等待估价</div>
+      <div class="step-label" data-i18n="order3.step5">等待估价</div>
     </div>
   </div>
 
@@ -84,7 +87,7 @@
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          <span class="locked-text">设定图</span>
+          <span class="locked-text" data-i18n="order3.referenceImage">设定图</span>
         </div>
         <div class="locked-image-fill" id="lockedImageFill" style="display:none;">
           <img id="lockedImage" alt="设定图预览" loading="lazy" decoding="async" width="480" height="300">
@@ -97,9 +100,9 @@
 
       <!-- Locked Step 1 -->
       <div class="locked-step">
-        <div class="locked-step-title">第一步：请上传设定图</div>
+        <div class="locked-step-title" data-i18n="order3.lockStep1Title">第一步：请上传设定图</div>
         <div class="locked-step-value">
-          <span class="tag">
+          <span class="tag" data-i18n-html="order3.uploadDone">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
@@ -110,68 +113,68 @@
 
       <!-- Locked Step 2 -->
       <div class="locked-step">
-        <div class="locked-step-title">第二步：选配内容</div>
-        <div class="locked-step-value">无</div>
+        <div class="locked-step-title" data-i18n="order3.lockStep2Title">第二步：选配内容</div>
+        <div class="locked-step-value" data-i18n="order3.none">无</div>
       </div>
 
       <!-- Locked Step 3 -->
       <div class="locked-step">
-        <div class="locked-step-title">第三步：是否行使折抵权益与复购权益</div>
+        <div class="locked-step-title" data-i18n="order3.lockStep3Title">第三步：是否行使折抵权益与复购权益</div>
         <div class="locked-step-value">
-          <span class="tag">4年期换购权益</span>
-          <span class="tag">复购权益*</span>
+          <span class="tag" data-i18n="order3.benefitTradeIn">4年期换购权益</span>
+          <span class="tag" data-i18n="order3.benefitRepurchase">复购权益*</span>
         </div>
-        <div class="locked-step-note">*原 象山工作室 的首任单主同享复购权益</div>
+        <div class="locked-step-note" data-i18n="order3.benefitNote">*原 象山工作室 的首任单主同享复购权益</div>
       </div>
 
       <!-- Active Step 4: Contact Info Form -->
       <div class="active-step">
-        <h2 class="active-step-title">第四步：请填写您的数据与联系方式</h2>
+        <h2 class="active-step-title" data-i18n="order3.stepTitle">第四步：请填写您的数据与联系方式</h2>
 
         <div class="form-grid">
           <div class="form-field full-width">
-            <label>姓名 <span class="req-star">*</span></label>
-            <input type="text" id="contactName" placeholder="请输入您的姓名" autocomplete="name">
+            <label data-i18n-html="order3.nameLabel">姓名 <span class="req-star">*</span></label>
+            <input type="text" id="contactName" placeholder="请输入您的姓名" autocomplete="name" data-i18n-ph="order3.namePh">
           </div>
           <div class="form-field full-width">
-            <label>手机号 <span class="req-star">*</span></label>
-            <input type="tel" id="contactPhone" maxlength="11" placeholder="请输入手机号" autocomplete="tel">
+            <label data-i18n-html="order3.phoneLabel">手机号 <span class="req-star">*</span></label>
+            <input type="tel" id="contactPhone" maxlength="11" placeholder="请输入手机号" autocomplete="tel" data-i18n-ph="order3.phonePh">
           </div>
           <div class="form-field">
-            <label>身高(CM)</label>
-            <input type="number" id="bodyHeight" placeholder="身高">
+            <label data-i18n="order3.heightLabel">身高(CM)</label>
+            <input type="number" id="bodyHeight" placeholder="身高" data-i18n-ph="order3.heightPh">
           </div>
           <div class="form-field">
-            <label>体重(KG)</label>
-            <input type="number" id="bodyWeight" placeholder="体重">
+            <label data-i18n="order3.weightLabel">体重(KG)</label>
+            <input type="number" id="bodyWeight" placeholder="体重" data-i18n-ph="order3.weightPh">
           </div>
           <div class="form-field">
-            <label>胸围(CM)</label>
-            <input type="number" id="bodyChest" placeholder="胸围">
+            <label data-i18n="order3.chestLabel">胸围(CM)</label>
+            <input type="number" id="bodyChest" placeholder="胸围" data-i18n-ph="order3.chestPh">
           </div>
           <div class="form-field">
-            <label>腰围(CM)</label>
-            <input type="number" id="bodyWaist" placeholder="腰围">
+            <label data-i18n="order3.waistLabel">腰围(CM)</label>
+            <input type="number" id="bodyWaist" placeholder="腰围" data-i18n-ph="order3.waistPh">
           </div>
           <div class="form-field">
-            <label>臀围(CM)</label>
-            <input type="number" id="bodyHip" placeholder="臀围">
+            <label data-i18n="order3.hipLabel">臀围(CM)</label>
+            <input type="number" id="bodyHip" placeholder="臀围" data-i18n-ph="order3.hipPh">
           </div>
           <div class="form-field">
-            <label>鞋码</label>
-            <input type="number" id="shoeSize" placeholder="鞋码">
+            <label data-i18n="order3.shoeSizeLabel">鞋码</label>
+            <input type="number" id="shoeSize" placeholder="鞋码" data-i18n-ph="order3.shoeSizePh">
           </div>
           <div class="form-field full-width">
             <label>Email <span class="req-star">*</span></label>
             <input type="email" id="contactEmail" placeholder="your@email.com" autocomplete="email">
           </div>
           <div class="form-field full-width">
-            <label>任意平台可以联系到您的账号（如：Bilibili QQ X...）</label>
-            <textarea id="socialAccount" placeholder="请输入您的社交平台账号"></textarea>
+            <label data-i18n="order3.socialLabel">任意平台可以联系到您的账号（如：Bilibili QQ X...）</label>
+            <textarea id="socialAccount" placeholder="请输入您的社交平台账号" data-i18n-ph="order3.socialPh"></textarea>
           </div>
         </div>
 
-        <button class="submit-btn" id="submitBtn" type="button">提 交</button>
+        <button class="submit-btn" id="submitBtn" type="button" data-i18n="order3.submitBtn">提 交</button>
         <p class="form-tip" id="formTip"></p>
       </div>
 
@@ -181,19 +184,19 @@
   <!-- Price Summary -->
   <div class="price-summary">
     <div class="price-row">
-      <span class="price-row-label">基础价格</span>
+      <span class="price-row-label" data-i18n="order3.basePriceLabel">基础价格</span>
       <span class="price-row-value">RMB 18,000</span>
     </div>
     <div class="price-row">
-      <span class="price-row-label">附加选项</span>
+      <span class="price-row-label" data-i18n="order3.addonLabel">附加选项</span>
       <span class="price-row-value" id="addonPrice">RMB 0</span>
     </div>
     <div class="price-row discount">
-      <span class="price-row-label">折抵</span>
+      <span class="price-row-label" data-i18n="order3.discountLabel">折抵</span>
       <span class="price-row-value" id="discountPrice">- RMB 0</span>
     </div>
     <div class="price-row total">
-      <span class="price-row-label">合计</span>
+      <span class="price-row-label" data-i18n="order3.totalLabel">合计</span>
       <span class="price-row-value" id="totalPrice">RMB 18,000</span>
     </div>
   </div>
@@ -213,7 +216,7 @@
           <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10"/>
         </svg>
       </div>
-      <span class="nav-item-label">购买兽装</span>
+      <span class="nav-item-label" data-i18n="nav.buyFursuit">购买兽装</span>
     </a>
 
     <!-- 龙灵工坊（原 AI 助手） -->
@@ -227,7 +230,7 @@
           <path d="M8 13C9.2 14.5 10.6 15.2 12 15.2C13.4 15.2 14.8 14.5 16 13"/>
         </svg>
       </div>
-      <span class="nav-item-label">龙灵工坊</span>
+      <span class="nav-item-label" data-i18n="nav.lingWork">龙灵工坊</span>
     </a>
 
     <!-- 购买掉落 -->
@@ -240,7 +243,7 @@
           <path d="M4 19H20"/>
         </svg>
       </div>
-      <span class="nav-item-label">购买掉落</span>
+      <span class="nav-item-label" data-i18n="nav.buyDrop">购买掉落</span>
     </a>
 
     <!-- 查询进度&售后 -->
@@ -251,7 +254,7 @@
           <path d="M12 7V12L15 15"/>
         </svg>
       </div>
-      <span class="nav-item-label">进度&售后</span>
+      <span class="nav-item-label" data-i18n="nav.progress">进度&售后</span>
     </a>
 
     <!-- 个人中心（原我的订单） -->
@@ -262,7 +265,7 @@
           <circle cx="12" cy="7" r="4"/>
         </svg>
       </div>
-      <span class="nav-item-label">个人中心</span>
+      <span class="nav-item-label" data-i18n="nav.profile">个人中心</span>
     </a>
 
   </nav>

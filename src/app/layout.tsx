@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import { LanguageProvider } from "@/components/i18n/LanguageProvider";
+import type { Lang } from "@/lib/i18n/dict";
 import ImageProtection from "@/components/ImageProtection";
 
 export const metadata: Metadata = {
@@ -15,16 +18,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // 服务端读取语言 cookie，注入 Provider 保证 SSR 与客户端首次渲染一致（避免 hydration mismatch）
+  const cookieStore = await cookies();
+  const lang: Lang = cookieStore.get("lw_lang")?.value === "en" ? "en" : "zh";
+
   return (
-    <html lang="zh-CN" className="h-full antialiased" suppressHydrationWarning>
+    <html lang={lang === "en" ? "en" : "zh-CN"} className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full">
         <ImageProtection />
-        <SessionProvider>{children}</SessionProvider>
+        <LanguageProvider initialLang={lang}>
+          <SessionProvider>{children}</SessionProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

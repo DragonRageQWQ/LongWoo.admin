@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { translate, type Lang } from "@/lib/i18n/dict";
 import {
   ClipboardPlus,
   Clock,
@@ -39,6 +41,7 @@ function getLast7Days(): Date[] {
 
 interface StatCard {
   label: string;
+  i18nKey: string;
   value: number;
   icon: React.ElementType;
   iconBg: string;
@@ -125,6 +128,7 @@ async function fetchStats() {
   const stats: StatCard[] = [
     {
       label: "今日新增委托",
+      i18nKey: "admin.stats.todayNew",
       value: todayResult.count ?? 0,
       icon: ClipboardPlus,
       iconBg: "bg-blue-50",
@@ -132,6 +136,7 @@ async function fetchStats() {
     },
     {
       label: "待估价委托",
+      i18nKey: "admin.stats.pending",
       value: statusCounts.get("pending") ?? 0,
       icon: Clock,
       iconBg: "bg-yellow-50",
@@ -139,6 +144,7 @@ async function fetchStats() {
     },
     {
       label: "已接单委托",
+      i18nKey: "admin.stats.accepted",
       value: statusCounts.get("accepted") ?? 0,
       icon: PackageCheck,
       iconBg: "bg-green-50",
@@ -146,6 +152,7 @@ async function fetchStats() {
     },
     {
       label: "已完成委托",
+      i18nKey: "admin.stats.completed",
       value: statusCounts.get("completed") ?? 0,
       icon: CircleCheck,
       iconBg: "bg-gray-100",
@@ -160,6 +167,11 @@ export default async function StatsOverview() {
   // 安全加固（FIND-02）：本组件使用 service_role 客户端直查全平台订单统计，
   // 必须在组件内部二次鉴权，不能只依赖 middleware（middleware 只是路由级防线）。
   // 通过 getCurrentUser 真实网络验证 access token + 校验 admin 角色。
+  // 服务端组件 i18n：cookies 读取语言 + translate()（与根布局一致，避免 hydration mismatch）
+  const cookieStore = await cookies();
+  const lang: Lang = cookieStore.get("lw_lang")?.value === "en" ? "en" : "zh";
+  const t = (key: string) => translate(lang, key);
+
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     redirect("/login");
@@ -187,9 +199,9 @@ export default async function StatsOverview() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-lw-black">数据概览</h1>
+        <h1 className="text-xl font-bold text-lw-black">{t("admin.stats.title")}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          查看委托单的实时数据统计与趋势
+          {t("admin.stats.subtitle")}
         </p>
       </div>
 
@@ -205,13 +217,13 @@ export default async function StatsOverview() {
               const Icon = stat.icon;
               return (
                 <div
-                  key={stat.label}
+                  key={stat.i18nKey}
                   className="bg-white rounded-lg shadow-sm p-5 border border-gray-50"
                 >
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-gray-400 mb-2">
-                        {stat.label}
+                        {t(stat.i18nKey)}
                       </p>
                       <p className="text-3xl font-bold text-lw-black">
                         {stat.value}
@@ -233,13 +245,13 @@ export default async function StatsOverview() {
             <div className="flex items-center gap-2 mb-5">
               <TrendingUp className="w-5 h-5 text-lw-accent" />
               <h2 className="text-base font-semibold text-lw-black">
-                最近7天委托趋势
+                {t("admin.stats.trendTitle")}
               </h2>
             </div>
 
-            {trend.every((t) => t.count === 0) ? (
+            {trend.every((t2) => t2.count === 0) ? (
               <p className="text-sm text-gray-400 text-center py-8">
-                最近7天暂无新增委托
+                {t("admin.stats.noTrend")}
               </p>
             ) : (
               <div className="space-y-3">

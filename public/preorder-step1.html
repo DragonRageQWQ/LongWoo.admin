@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>购买预设兽装 - 第1步选择设定 | LongWoo 工作室</title>
-    <meta name="description" content="LongWoo预设兽装掉落 - 浏览现货预设兽装，先到先得。">
+    <meta name="description" data-i18n-meta="pre1.docDesc" content="LongWoo预设兽装掉落 - 浏览现货预设兽装，先到先得。">
     <meta name="robots" content="index, follow">
     <!-- 预连接 Supabase API -->
     <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
+    <!-- LW-I18N 语言切换（未上线：切换器隐藏，?lang=en 可预览） -->
+    <script src="/js/i18n/i18n-init.js" defer></script>
 </head>
-<body>
+<body data-i18n-doc-title="pre1.docTitle">
 
   <!-- Top Navigation -->
   <div class="top-nav">
@@ -20,32 +22,33 @@
         <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
     </button>
-    <span class="top-nav-title">购买预设兽装</span>
+    <span class="top-nav-title" data-i18n="pre1.topNavTitle">购买预设兽装</span>
+    <span data-lang-slot></span>
     <div class="top-nav-placeholder"></div>
   </div>
 
   <!-- Info Section -->
   <div class="info-section">
-    <h1 class="info-title">购买 预设兽装 (掉落)</h1>
-    <p class="info-subtitle">成品部分立即交付 剩余部分预计 4-6 周后交付*</p>
-    <p class="info-price">购置价格依照每件设定单独定价计算</p>
+    <h1 class="info-title" data-i18n="pre1.infoTitle">购买 预设兽装 (掉落)</h1>
+    <p class="info-subtitle" data-i18n="pre1.infoSubtitle">成品部分立即交付 剩余部分预计 4-6 周后交付*</p>
+    <p class="info-price" data-i18n="pre1.infoPrice">购置价格依照每件设定单独定价计算</p>
   </div>
 
   <!-- Step Indicator -->
   <div class="step-indicator">
     <div class="step-item">
       <div class="step-circle active">1</div>
-      <div class="step-label active">选择设定</div>
+      <div class="step-label active" data-i18n="pre1.step1">选择设定</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">2</div>
-      <div class="step-label">联系方式</div>
+      <div class="step-label" data-i18n="pre1.step2">联系方式</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">3</div>
-      <div class="step-label">等待确认</div>
+      <div class="step-label" data-i18n="pre1.step3">等待确认</div>
     </div>
   </div>
 
@@ -54,13 +57,13 @@
     <!-- 加载中状态（JS 渲染完成前显示） -->
     <div class="product-loading" id="product-loading">
       <div class="loading-spinner"></div>
-      <p>正在加载掉落信息...</p>
+      <p data-i18n="pre1.loading">正在加载掉落信息...</p>
     </div>
   </div>
 
   <!-- 空状态（无掉落时显示） -->
   <div class="product-empty" id="product-empty" style="display:none;">
-    <p>暂无掉落信息，敬请期待</p>
+    <p data-i18n="pre1.empty">暂无掉落信息，敬请期待</p>
   </div>
 
   <!-- Bottom Spacer -->
@@ -78,7 +81,7 @@
           <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10"/>
         </svg>
       </div>
-      <span class="nav-item-label">购买兽装</span>
+      <span class="nav-item-label" data-i18n="nav.buyFursuit">购买兽装</span>
     </a>
 
     <!-- 龙灵工坊（原 AI 助手） -->
@@ -92,7 +95,7 @@
           <path d="M8 13C9.2 14.5 10.6 15.2 12 15.2C13.4 15.2 14.8 14.5 16 13"/>
         </svg>
       </div>
-      <span class="nav-item-label">龙灵工坊</span>
+      <span class="nav-item-label" data-i18n="nav.lingWork">龙灵工坊</span>
     </a>
 
     <!-- 购买掉落 -->
@@ -105,7 +108,7 @@
           <path d="M4 19H20"/>
         </svg>
       </div>
-      <span class="nav-item-label">购买掉落</span>
+      <span class="nav-item-label" data-i18n="nav.buyDrop">购买掉落</span>
     </a>
 
     <!-- 查询进度&售后 -->
@@ -116,7 +119,7 @@
           <path d="M12 7V12L15 15"/>
         </svg>
       </div>
-      <span class="nav-item-label">进度&售后</span>
+      <span class="nav-item-label" data-i18n="nav.progress">进度&售后</span>
     </a>
 
     <!-- 个人中心 -->
@@ -127,7 +130,7 @@
           <circle cx="12" cy="7" r="4"/>
         </svg>
       </div>
-      <span class="nav-item-label">个人中心</span>
+      <span class="nav-item-label" data-i18n="nav.profile">个人中心</span>
     </a>
 
   </nav>

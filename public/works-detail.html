@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>作品详情 | LongWoo Studio</title>
-    <meta name="description" content="LongWoo龙坞专业兽装定制工作室作品展示。">
+    <meta name="description" data-i18n-meta="works.docDesc" content="LongWoo龙坞专业兽装定制工作室作品展示。">
     <meta name="robots" content="index, follow">
     <link rel="stylesheet" href="/css/theme.css">
+    <!-- LW-I18N 语言切换（未上线：切换器隐藏，?lang=en 可预览） -->
+    <script src="/js/i18n/i18n-init.js" defer></script>
 </head>
-<body>
+<body data-i18n-doc-title="works.docTitle">
   <div class="page-wrapper">
 
     <!-- 1. Top Bar -->
@@ -17,6 +19,7 @@
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#101010" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
       </button>
       <span class="logo-text">LongWoo</span>
+      <span data-lang-slot></span>
       <span style="width:24px;"></span>
     </header>
 
@@ -31,7 +34,7 @@
           </picture>
           <div class="zoom-hint">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-            点击查看大图
+            <span data-i18n="works.zoomHint">点击查看大图</span>
           </div>
         </div>
       </section>
@@ -39,8 +42,8 @@
       <!-- 3. 作品信息 -->
       <section class="detail-info">
         <div class="detail-title-row">
-          <h1 class="detail-title" id="detailTitle">作品</h1>
-          <span class="detail-tag" id="detailTag">全装定制案例</span>
+          <h1 class="detail-title" id="detailTitle" data-i18n="works.title">作品</h1>
+          <span class="detail-tag" id="detailTag" data-i18n="works.caseTag">全装定制案例</span>
         </div>
         <p class="detail-desc" id="detailDesc"></p>
       </section>
@@ -48,16 +51,16 @@
       <!-- 4. 规格信息 -->
       <section class="detail-specs">
         <div class="spec-item">
-          <span class="spec-label">定制类型</span>
-          <span class="spec-value">全装定制</span>
+          <span class="spec-label" data-i18n="works.specType">定制类型</span>
+          <span class="spec-value" data-i18n="works.specFullSuit">全装定制</span>
         </div>
         <div class="spec-item">
-          <span class="spec-label">交付周期</span>
-          <span class="spec-value">预计 4-6 周</span>
+          <span class="spec-label" data-i18n="works.specDelivery">交付周期</span>
+          <span class="spec-value" data-i18n="works.specDeliveryEst">预计 4-6 周</span>
         </div>
         <div class="spec-item">
-          <span class="spec-label">制作工艺</span>
-          <span class="spec-value">立体剪裁 · 手工缝制</span>
+          <span class="spec-label" data-i18n="works.specCraft">制作工艺</span>
+          <span class="spec-value" data-i18n="works.specCraftStandard">立体剪裁 · 手工缝制</span>
         </div>
       </section>
 
@@ -65,7 +68,7 @@
 
       <!-- 5. 更多作品 -->
       <section class="more-section">
-        <h2 class="section-title">更多作品</h2>
+        <h2 class="section-title" data-i18n="works.moreTitle">更多作品</h2>
         <div class="showcase-scroll" id="moreWorks">
         </div>
       </section>
@@ -84,7 +87,7 @@
             <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10"/>
           </svg>
         </div>
-        <span class="nav-item-label">购买兽装</span>
+        <span class="nav-item-label" data-i18n="nav.buyFursuit">购买兽装</span>
       </a>
 
       <!-- 龙灵工坊 -->
@@ -98,7 +101,7 @@
             <path d="M8 13C9.2 14.5 10.6 15.2 12 15.2C13.4 15.2 14.8 14.5 16 13"/>
           </svg>
         </div>
-        <span class="nav-item-label">龙灵工坊</span>
+        <span class="nav-item-label" data-i18n="nav.lingWork">龙灵工坊</span>
       </a>
 
       <!-- 购买掉落 -->
@@ -111,7 +114,7 @@
             <path d="M4 19H20"/>
           </svg>
         </div>
-        <span class="nav-item-label">购买掉落</span>
+        <span class="nav-item-label" data-i18n="nav.buyDrop">购买掉落</span>
       </a>
 
       <!-- 查询进度&售后 -->
@@ -122,7 +125,7 @@
             <path d="M12 7V12L15 15"/>
           </svg>
         </div>
-        <span class="nav-item-label">进度&售后</span>
+        <span class="nav-item-label" data-i18n="nav.progress">进度&售后</span>
       </a>
 
       <!-- 个人中心 -->
@@ -133,7 +136,7 @@
             <circle cx="12" cy="7" r="4"/>
           </svg>
         </div>
-        <span class="nav-item-label">个人中心</span>
+        <span class="nav-item-label" data-i18n="nav.profile">个人中心</span>
       </a>
 
     </nav>

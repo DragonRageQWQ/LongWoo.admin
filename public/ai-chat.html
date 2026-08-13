@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 助手 - LongWoo Studio</title>
-    <meta name="description" content="LongWoo龙坞 AI 助手 - 测试功能，解答兽装定制相关问题。">
+    <meta name="description" data-i18n-meta="aichat.docDesc" content="LongWoo龙坞 AI 助手 - 测试功能，解答兽装定制相关问题。">
     <meta name="robots" content="noindex, nofollow">
     <!-- 预连接 Supabase API -->
     <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
@@ -327,22 +327,25 @@
 
       /* 底部导航 - 公共规则已抽取至 theme.css */
     </style>
+    <!-- LW-I18N 语言切换（未上线：切换器隐藏，?lang=en 可预览） -->
+    <script src="/js/i18n/i18n-init.js" defer></script>
 </head>
-<body>
+<body data-i18n-doc-title="aichat.docTitle">
   <div class="page-wrapper">
 
     <!-- Top Bar -->
     <header class="top-bar">
       <a href="index.html" class="logo-text">LongWoo</a>
-      <span class="beta-badge">AI 测试</span>
+      <span class="beta-badge" data-i18n="aichat.betaBadge">AI 测试</span>
+      <span data-lang-slot></span>
     </header>
 
     <!-- 聊天主体 -->
     <main class="chat-main">
 
       <div class="chat-header">
-        <h2 class="chat-header-title">AI 助手</h2>
-        <p class="chat-header-sub">测试功能 · 由 DeepSeek AI 驱动</p>
+        <h2 class="chat-header-title" data-i18n="aichat.title">AI 助手</h2>
+        <p class="chat-header-sub" data-i18n="aichat.subtitle">测试功能 · 由 DeepSeek AI 驱动</p>
       </div>
 
       <!-- 消息列表 -->
@@ -352,17 +355,17 @@
 
       <!-- 快捷问题 -->
       <div class="quick-questions" id="quick-questions">
-        <button class="quick-btn" data-q="你们能定制兽装吗？">你们能定制兽装吗？</button>
-        <button class="quick-btn" data-q="全装定制多少钱？">全装定制多少钱？</button>
-        <button class="quick-btn" data-q="定制需要多久？">定制需要多久？</button>
-        <button class="quick-btn" data-q="预设兽装掉落是什么？">预设兽装掉落是什么？</button>
+        <button class="quick-btn" data-q="你们能定制兽装吗？" data-i18n="aichat.qCustom">你们能定制兽装吗？</button>
+        <button class="quick-btn" data-q="全装定制多少钱？" data-i18n="aichat.qPrice">全装定制多少钱？</button>
+        <button class="quick-btn" data-q="定制需要多久？" data-i18n="aichat.qTime">定制需要多久？</button>
+        <button class="quick-btn" data-q="预设兽装掉落是什么？" data-i18n="aichat.qDrop">预设兽装掉落是什么？</button>
       </div>
 
       <!-- 输入区 -->
       <div class="chat-input-bar">
         <div class="chat-input-row">
-          <textarea id="chat-input" rows="1" placeholder="输入你的问题..." maxlength="500"></textarea>
-          <button id="send-btn" class="send-btn" aria-label="发送">
+          <textarea id="chat-input" rows="1" placeholder="输入你的问题..." maxlength="500" data-i18n-ph="aichat.inputPlaceholder"></textarea>
+          <button id="send-btn" class="send-btn" aria-label="发送" data-i18n-title="aichat.send">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 2L11 13"/>
               <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
@@ -385,7 +388,7 @@
             <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10"/>
           </svg>
         </div>
-        <span class="nav-item-label">购买兽装</span>
+        <span class="nav-item-label" data-i18n="nav.buyFursuit">购买兽装</span>
       </a>
 
       <!-- 龙灵工坊（原 AI 助手） -->
@@ -399,7 +402,7 @@
             <path d="M8 13C9.2 14.5 10.6 15.2 12 15.2C13.4 15.2 14.8 14.5 16 13"/>
           </svg>
         </div>
-        <span class="nav-item-label">龙灵工坊</span>
+        <span class="nav-item-label" data-i18n="nav.lingWork">龙灵工坊</span>
       </a>
 
       <!-- 购买掉落 -->
@@ -412,7 +415,7 @@
             <path d="M4 19H20"/>
           </svg>
         </div>
-        <span class="nav-item-label">购买掉落</span>
+        <span class="nav-item-label" data-i18n="nav.buyDrop">购买掉落</span>
       </a>
 
       <!-- 查询进度&售后 -->
@@ -423,7 +426,7 @@
             <path d="M12 7V12L15 15"/>
           </svg>
         </div>
-        <span class="nav-item-label">进度&售后</span>
+        <span class="nav-item-label" data-i18n="nav.progress">进度&售后</span>
       </a>
 
       <!-- 个人中心（原我的订单） -->
@@ -434,7 +437,7 @@
             <circle cx="12" cy="7" r="4"/>
           </svg>
         </div>
-        <span class="nav-item-label">个人中心</span>
+        <span class="nav-item-label" data-i18n="nav.profile">个人中心</span>
       </a>
 
     </nav>

@@ -209,3 +209,31 @@ picture, figure {
 .nav-item.active .nav-item-icon svg {
   stroke: var(--color-primary);
 }
+
+/* ===== LW-I18N 语言切换器（静态页 top-bar 右上角） ===== */
+.lw-lang-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 12px;
+  font-size: 13px;
+  line-height: 1;
+}
+.lw-lang-btn {
+  background: none;
+  border: none;
+  padding: 3px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: rgba(16, 16, 16, 0.5);
+  transition: color 0.15s ease;
+  font-size: 13px;
+  line-height: 1.2;
+}
+.lw-lang-btn:hover { color: #2563eb; }
+.lw-lang-switcher[data-lang="zh"] .lw-lang-btn[data-lang-val="zh"],
+.lw-lang-switcher[data-lang="en"] .lw-lang-btn[data-lang-val="en"] {
+  color: #2563eb;
+  font-weight: 700;
+}
+.lw-lang-sep { color: rgba(16, 16, 16, 0.2); }

@@ -1,10 +1,17 @@
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
+import { translate, type Lang } from '@/lib/i18n/dict'
 import './ai-styles.css'
 
-export const metadata: Metadata = {
-  title: '龙灵工坊 - LongWoo Studio',
-  description: '创建你的专属 AI 角色，和它自由对话。LongWoo 龙坞 AI 角色扮演。',
-  robots: { index: false, follow: false },
+export async function generateMetadata(): Promise<Metadata> {
+  // 服务端读取语言 cookie（与根布局注入 LanguageProvider 的方式一致，避免 hydration mismatch）
+  const lang: Lang = (await cookies()).get('lw_lang')?.value === 'en' ? 'en' : 'zh'
+  const t = (key: string) => translate(lang, key)
+  return {
+    title: t('ai.layout.title'),
+    description: t('ai.layout.desc'),
+    robots: { index: false, follow: false },
+  }
 }
 
 /**

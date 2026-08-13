@@ -20,6 +20,7 @@ import {
   deleteWork,
 } from "@/actions/works-actions";
 import type { Work, WorkInput } from "@/types/database";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 interface ToastState {
   type: "success" | "error";
@@ -47,6 +48,7 @@ const emptyForm: WorkFormState = {
 };
 
 export default function WorksManagement() {
+  const { t } = useLanguage();
   // 列表
   const [works, setWorks] = useState<Work[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,15 +94,15 @@ export default function WorksManagement() {
         setWorks((result.data || []) as Work[]);
         if (result.nextCode) setNextCode(result.nextCode);
       } else {
-        showToast("error", result.error || "加载失败");
+        showToast("error", result.error || t("admin.works.err.loadFailed"));
       }
     } catch (err) {
       console.error("加载作品列表异常:", err);
-      showToast("error", "加载失败，请稍后重试");
+      showToast("error", t("admin.works.err.loadRetry"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -117,12 +119,12 @@ export default function WorksManagement() {
       const data = await res.json();
       if (data.success && data.image_url) {
         setForm((prev) => ({ ...prev, image_url: data.image_url }));
-        showToast("success", "图片上传成功");
+        showToast("success", t("admin.works.err.uploadSuccess"));
       } else {
-        showToast("error", data.error || "图片上传失败");
+        showToast("error", data.error || t("admin.works.err.uploadFailed"));
       }
     } catch {
-      showToast("error", "图片上传失败，请稍后重试");
+      showToast("error", t("admin.works.err.uploadRetry"));
     } finally {
       setUploading(false);
     }
@@ -138,12 +140,12 @@ export default function WorksManagement() {
       const data = await res.json();
       if (data.success && data.image_url) {
         setEditForm((prev) => ({ ...prev, image_url: data.image_url }));
-        showToast("success", "图片上传成功");
+        showToast("success", t("admin.works.err.uploadSuccess"));
       } else {
-        showToast("error", data.error || "图片上传失败");
+        showToast("error", data.error || t("admin.works.err.uploadFailed"));
       }
     } catch {
-      showToast("error", "图片上传失败，请稍后重试");
+      showToast("error", t("admin.works.err.uploadRetry"));
     } finally {
       setEditUploading(false);
     }
@@ -151,23 +153,23 @@ export default function WorksManagement() {
 
   // 新增作品
   const handleCreate = async () => {
-    if (!form.title.trim()) return showToast("error", "请填写作品名称");
-    if (!form.description.trim()) return showToast("error", "请填写作品描述");
-    if (!form.image_url) return showToast("error", "请先上传作品图片");
+    if (!form.title.trim()) return showToast("error", t("admin.works.err.titleRequired"));
+    if (!form.description.trim()) return showToast("error", t("admin.works.err.descRequired"));
+    if (!form.image_url) return showToast("error", t("admin.works.err.imageRequired"));
 
     setSaving(true);
     try {
       const result = await createWork(form as WorkInput);
       if (result.success) {
-        showToast("success", "作品新增成功");
+        showToast("success", t("admin.works.err.createSuccess"));
         setForm(emptyForm);
         if (result.nextCode) setNextCode(result.nextCode);
         loadWorks();
       } else {
-        showToast("error", result.error || "新增失败");
+        showToast("error", result.error || t("admin.works.err.createFailed"));
       }
     } catch {
-      showToast("error", "新增失败，请稍后重试");
+      showToast("error", t("admin.works.err.createRetry"));
     } finally {
       setSaving(false);
     }
@@ -190,22 +192,22 @@ export default function WorksManagement() {
   // 保存编辑
   const handleUpdate = async () => {
     if (!editing) return;
-    if (!editForm.title.trim()) return showToast("error", "请填写作品名称");
-    if (!editForm.description.trim()) return showToast("error", "请填写作品描述");
-    if (!editForm.image_url) return showToast("error", "请上传作品图片");
+    if (!editForm.title.trim()) return showToast("error", t("admin.works.err.titleRequired"));
+    if (!editForm.description.trim()) return showToast("error", t("admin.works.err.descRequired"));
+    if (!editForm.image_url) return showToast("error", t("admin.works.err.editImageRequired"));
 
     setEditSaving(true);
     try {
       const result = await updateWork(editing.id, editForm as WorkInput);
       if (result.success) {
-        showToast("success", "作品修改成功");
+        showToast("success", t("admin.works.err.updateSuccess"));
         setEditing(null);
         loadWorks();
       } else {
-        showToast("error", result.error || "修改失败");
+        showToast("error", result.error || t("admin.works.err.updateFailed"));
       }
     } catch {
-      showToast("error", "修改失败，请稍后重试");
+      showToast("error", t("admin.works.err.updateRetry"));
     } finally {
       setEditSaving(false);
     }
@@ -218,14 +220,14 @@ export default function WorksManagement() {
     try {
       const result = await deleteWork(deleting.id);
       if (result.success) {
-        showToast("success", "作品已删除，后续序号已自动重排");
+        showToast("success", t("admin.works.err.deleteSuccess"));
         setDeleting(null);
         loadWorks();
       } else {
-        showToast("error", result.error || "删除失败");
+        showToast("error", result.error || t("admin.works.err.deleteFailed"));
       }
     } catch {
-      showToast("error", "删除失败，请稍后重试");
+      showToast("error", t("admin.works.err.deleteRetry"));
     } finally {
       setDeleteSaving(false);
     }
@@ -235,12 +237,13 @@ export default function WorksManagement() {
   const renderUploadBox = (
     imageUrl: string,
     uploading: boolean,
-    onFile: (file: File) => void
+    onFile: (file: File) => void,
+    tr: (key: string) => string
   ) => (
     <div className="flex items-start gap-3">
       <div className="w-24 h-24 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center flex-shrink-0">
         {imageUrl ? (
-          <img src={imageUrl} alt="作品图片预览" className="w-full h-full object-cover" />
+          <img src={imageUrl} alt={tr("admin.works.imgPreviewAlt")} className="w-full h-full object-cover" />
         ) : (
           <ImageIcon className="w-8 h-8 text-gray-300" />
         )}
@@ -252,7 +255,7 @@ export default function WorksManagement() {
           ) : (
             <Upload className="w-4 h-4" />
           )}
-          {uploading ? "上传中..." : "上传图片"}
+          {uploading ? tr("admin.works.uploading") : tr("admin.works.upload")}
           <input
             type="file"
             accept="image/jpeg,image/png,image/gif,image/webp"
@@ -265,7 +268,7 @@ export default function WorksManagement() {
             }}
           />
         </label>
-        <p className="text-xs text-gray-400 mt-2">支持 JPG / PNG / GIF / WebP，不超过 8MB</p>
+        <p className="text-xs text-gray-400 mt-2">{tr("admin.works.uploadHint")}</p>
       </div>
     </div>
   );
@@ -306,12 +309,12 @@ export default function WorksManagement() {
     <div className="space-y-6">
       {/* 头部 */}
       <div>
-        <h1 className="text-xl font-bold text-lw-black">作品管理</h1>
+        <h1 className="text-xl font-bold text-lw-black">{t("admin.works.title")}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          管理首页「我们的作品」展示内容（仅超级管理员可用）
+          {t("admin.works.subtitle")}
         </p>
         <p className="text-xs text-gray-400 mt-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-lg inline-block">
-          提示：作品图片将同步作为灰度测试页背景库，增删改即时生效
+          {t("admin.works.tip")}
         </p>
       </div>
 
@@ -320,23 +323,23 @@ export default function WorksManagement() {
         <div className="flex items-center gap-2 mb-4">
           <Plus className="w-4 h-4 text-lw-accent" />
           <h2 className="text-base font-semibold text-lw-black">
-            新增作品
+            {t("admin.works.add")}
             <span className="ml-2 text-xs font-normal text-gray-400">
-              将自动分配编码：作品 {nextCode || "--"}
+              {t("admin.works.autoCode")}{nextCode || "--"}
             </span>
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderField("作品名称 *", form.title, (v) => setForm({ ...form, title: v }), "如：板栗")}
-          {renderField("类型标签", form.tag, (v) => setForm({ ...form, tag: v }), "全装定制案例")}
-          {renderField("定制类型", form.work_type, (v) => setForm({ ...form, work_type: v }))}
-          {renderField("交付周期", form.delivery, (v) => setForm({ ...form, delivery: v }))}
-          {renderField("制作工艺", form.craft, (v) => setForm({ ...form, craft: v }))}
+          {renderField(t("admin.works.fieldTitle"), form.title, (v) => setForm({ ...form, title: v }), t("admin.works.phTitle"))}
+          {renderField(t("admin.works.fieldTag"), form.tag, (v) => setForm({ ...form, tag: v }), t("admin.works.phTag"))}
+          {renderField(t("admin.works.fieldType"), form.work_type, (v) => setForm({ ...form, work_type: v }))}
+          {renderField(t("admin.works.fieldDelivery"), form.delivery, (v) => setForm({ ...form, delivery: v }))}
+          {renderField(t("admin.works.fieldCraft"), form.craft, (v) => setForm({ ...form, craft: v }))}
         </div>
         <div className="mt-4">
-          {renderField("作品描述 *", form.description, (v) => setForm({ ...form, description: v }), "简要介绍该作品", true)}
+          {renderField(t("admin.works.fieldDesc"), form.description, (v) => setForm({ ...form, description: v }), t("admin.works.phDesc"), true)}
         </div>
-        <div className="mt-4">{renderUploadBox(form.image_url, uploading, handleUpload)}</div>
+        <div className="mt-4">{renderUploadBox(form.image_url, uploading, handleUpload, t)}</div>
         <div className="mt-5 flex justify-end">
           <button
             onClick={handleCreate}
@@ -344,7 +347,7 @@ export default function WorksManagement() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-lw-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            {saving ? "保存中..." : "新增作品"}
+            {saving ? t("admin.works.saving") : t("admin.works.add")}
           </button>
         </div>
       </div>
@@ -352,8 +355,8 @@ export default function WorksManagement() {
       {/* 作品列表 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-50 p-6">
         <h2 className="text-base font-semibold text-lw-black mb-4">
-          作品列表
-          <span className="ml-2 text-xs font-normal text-gray-400">共 {works.length} 个作品</span>
+          {t("admin.works.list")}
+          <span className="ml-2 text-xs font-normal text-gray-400">{t("admin.works.listTotal")} {works.length} {t("admin.works.listUnit")}</span>
         </h2>
 
         {loading ? (
@@ -361,7 +364,7 @@ export default function WorksManagement() {
             <Loader2 className="w-6 h-6 animate-spin text-gray-300" />
           </div>
         ) : works.length === 0 ? (
-          <div className="text-center py-12 text-sm text-gray-400">暂无作品，请先新增</div>
+          <div className="text-center py-12 text-sm text-gray-400">{t("admin.works.empty")}</div>
         ) : (
           <div className="space-y-3">
             {works.map((work) => (
@@ -375,7 +378,7 @@ export default function WorksManagement() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-lw-accent bg-lw-accent/10 rounded-full px-2 py-0.5 flex-shrink-0">
-                      作品 {work.code}
+                      {t("admin.works.workPrefix")}{work.code}
                     </span>
                     <span className="text-sm font-semibold text-lw-black truncate">{work.title}</span>
                   </div>
@@ -385,21 +388,21 @@ export default function WorksManagement() {
                   <button
                     onClick={() => setPreviewing(work)}
                     className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                    title="预览"
+                    title={t("admin.works.preview")}
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => openEdit(work)}
                     className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                    title="编辑"
+                    title={t("admin.works.edit")}
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setDeleting(work)}
                     className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    title="删除"
+                    title={t("admin.works.delete")}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -416,8 +419,8 @@ export default function WorksManagement() {
           <div className="bg-white rounded-xl shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h3 className="text-base font-semibold text-lw-black">
-                编辑作品
-                <span className="ml-2 text-xs font-normal text-gray-400">作品 {editing.code}</span>
+                {t("admin.works.editTitle")}
+                <span className="ml-2 text-xs font-normal text-gray-400">{t("admin.works.workPrefix")}{editing.code}</span>
               </h3>
               <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
@@ -425,25 +428,25 @@ export default function WorksManagement() {
             </div>
             <div className="px-6 py-5 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderField("作品名称 *", editForm.title, (v) => setEditForm({ ...editForm, title: v }))}
-                {renderField("类型标签", editForm.tag, (v) => setEditForm({ ...editForm, tag: v }))}
-                {renderField("定制类型", editForm.work_type, (v) => setEditForm({ ...editForm, work_type: v }))}
-                {renderField("交付周期", editForm.delivery, (v) => setEditForm({ ...editForm, delivery: v }))}
+                {renderField(t("admin.works.fieldTitle"), editForm.title, (v) => setEditForm({ ...editForm, title: v }))}
+                {renderField(t("admin.works.fieldTag"), editForm.tag, (v) => setEditForm({ ...editForm, tag: v }))}
+                {renderField(t("admin.works.fieldType"), editForm.work_type, (v) => setEditForm({ ...editForm, work_type: v }))}
+                {renderField(t("admin.works.fieldDelivery"), editForm.delivery, (v) => setEditForm({ ...editForm, delivery: v }))}
               </div>
               <div>
-                {renderField("制作工艺", editForm.craft, (v) => setEditForm({ ...editForm, craft: v }))}
+                {renderField(t("admin.works.fieldCraft"), editForm.craft, (v) => setEditForm({ ...editForm, craft: v }))}
               </div>
               <div>
-                {renderField("作品描述 *", editForm.description, (v) => setEditForm({ ...editForm, description: v }), "", true)}
+                {renderField(t("admin.works.fieldDesc"), editForm.description, (v) => setEditForm({ ...editForm, description: v }), "", true)}
               </div>
-              <div>{renderUploadBox(editForm.image_url, editUploading, handleEditUpload)}</div>
+              <div>{renderUploadBox(editForm.image_url, editUploading, handleEditUpload, t)}</div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <button
                 onClick={() => setEditing(null)}
                 className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
               >
-                取消
+                {t("admin.works.cancel")}
               </button>
               <button
                 onClick={handleUpdate}
@@ -451,7 +454,7 @@ export default function WorksManagement() {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-lw-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                {editSaving ? "保存中..." : "保存修改"}
+                {editSaving ? t("admin.works.saving") : t("admin.works.saveEdit")}
               </button>
             </div>
           </div>
@@ -463,14 +466,14 @@ export default function WorksManagement() {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-sm">
             <div className="px-6 py-4 border-b border-gray-100">
-              <h3 className="text-base font-semibold text-lw-black">删除作品</h3>
+              <h3 className="text-base font-semibold text-lw-black">{t("admin.works.deleteTitle")}</h3>
             </div>
             <div className="px-6 py-5">
               <p className="text-sm text-gray-600">
-                确定要删除「作品 {deleting.code} - {deleting.title}」吗？
+                {t("admin.works.deleteConfirmStart")}{deleting.code} - {deleting.title}{t("admin.works.deleteConfirmEnd")}
               </p>
               <p className="text-xs text-gray-400 mt-2">
-                删除后，后续作品的编码序号将自动前移补齐。
+                {t("admin.works.deleteWarn")}
               </p>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
@@ -478,7 +481,7 @@ export default function WorksManagement() {
                 onClick={() => setDeleting(null)}
                 className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
               >
-                取消
+                {t("admin.works.cancel")}
               </button>
               <button
                 onClick={handleDelete}
@@ -486,7 +489,7 @@ export default function WorksManagement() {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
               >
                 {deleteSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                {deleteSaving ? "删除中..." : "确认删除"}
+                {deleteSaving ? t("admin.works.deleting") : t("admin.works.confirmDelete")}
               </button>
             </div>
           </div>
@@ -505,7 +508,7 @@ export default function WorksManagement() {
             </button>
             <img src={previewing.image_url} alt={previewing.title} className="w-full rounded-lg shadow-lg" />
             <div className="mt-3 text-center">
-              <span className="text-white font-medium">作品 {previewing.code} - {previewing.title}</span>
+              <span className="text-white font-medium">{t("admin.works.workPrefix")}{previewing.code} - {previewing.title}</span>
               <p className="text-white/60 text-sm mt-1">{previewing.description}</p>
             </div>
           </div>

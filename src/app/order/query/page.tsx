@@ -20,6 +20,7 @@ import Button from "@/components/ui/Button";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { queryOrderByNo } from "@/actions/order-actions";
 import { formatDate } from "@/lib/utils";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 import type { Order, OrderAttachment, OrderReply } from "@/types/database";
 
 type QueryResult = Order & {
@@ -28,6 +29,7 @@ type QueryResult = Order & {
 };
 
 export default function OrderQueryPage() {
+  const { t } = useLanguage();
   const [orderNo, setOrderNo] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,15 +41,15 @@ export default function OrderQueryPage() {
     setResult(null);
 
     if (!no.trim()) {
-      setError("请输入委托单号");
+      setError(t("query.err.orderNoRequired"));
       return;
     }
     if (!phoneNo.trim()) {
-      setError("请输入手机号");
+      setError(t("query.err.phoneRequired"));
       return;
     }
     if (!/^1[3-9]\d{9}$/.test(phoneNo)) {
-      setError("请输入有效的手机号");
+      setError(t("query.err.phoneInvalid"));
       return;
     }
 
@@ -57,14 +59,14 @@ export default function OrderQueryPage() {
       if (res.success && res.data) {
         setResult(res.data);
       } else {
-        setError(res.error || "查询失败");
+        setError(res.error || t("query.err.queryFailed"));
       }
     } catch {
-      setError("查询时发生未知错误");
+      setError(t("query.err.queryUnknown"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // 支持从个人中心"我的订单"/站内通知携带单号+手机号跳转并自动查询
   useEffect(() => {
@@ -94,9 +96,9 @@ export default function OrderQueryPage() {
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-[calc(64px+3rem)]">
         {/* 页面标题 */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-lw-black">查询委托</h1>
+          <h1 className="text-2xl font-bold text-lw-black">{t("query.title")}</h1>
           <p className="mt-2 text-sm text-gray-500">
-            输入委托单号和手机号查询您的委托进度
+            {t("query.subtitle")}
           </p>
         </div>
 
@@ -108,7 +110,7 @@ export default function OrderQueryPage() {
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-lw-black mb-1.5">
-                委托单号
+                {t("query.orderNoLabel")}
               </label>
               <div className="relative">
                 <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -124,7 +126,7 @@ export default function OrderQueryPage() {
 
             <div>
               <label className="block text-sm font-medium text-lw-black mb-1.5">
-                手机号
+                {t("query.phoneLabel")}
               </label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -133,7 +135,7 @@ export default function OrderQueryPage() {
                   maxLength={11}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                  placeholder="请输入提交委托时填写的手机号"
+                  placeholder={t("query.phonePh")}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition"
                 />
               </div>
@@ -155,12 +157,12 @@ export default function OrderQueryPage() {
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                查询中...
+                {t("query.loading")}
               </>
             ) : (
               <>
                 <Search className="w-4 h-4 mr-2" />
-                查询委托
+                {t("query.btn")}
               </>
             )}
           </Button>
@@ -191,7 +193,7 @@ export default function OrderQueryPage() {
                 <div className="flex items-center gap-2.5">
                   <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-400">客户姓名</p>
+                    <p className="text-xs text-gray-400">{t("query.customerName")}</p>
                     <p className="text-sm text-lw-black">
                       {result.customer_name}
                     </p>
@@ -200,7 +202,7 @@ export default function OrderQueryPage() {
                 <div className="flex items-center gap-2.5">
                   <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-400">联系电话</p>
+                    <p className="text-xs text-gray-400">{t("query.phone")}</p>
                     <p className="text-sm text-lw-black">
                       {result.customer_phone}
                     </p>
@@ -209,7 +211,7 @@ export default function OrderQueryPage() {
                 <div className="flex items-center gap-2.5">
                   <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-400">邮箱</p>
+                    <p className="text-xs text-gray-400">{t("query.email")}</p>
                     <p className="text-sm text-lw-black break-all">
                       {result.customer_email}
                     </p>
@@ -218,9 +220,9 @@ export default function OrderQueryPage() {
                 <div className="flex items-center gap-2.5">
                   <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-400">服务类型</p>
+                    <p className="text-xs text-gray-400">{t("query.serviceType")}</p>
                     <p className="text-sm text-lw-black">
-                      {result.service_types?.name || "未指定"}
+                      {result.service_types?.name || t("query.notSpecified")}
                     </p>
                   </div>
                 </div>
@@ -231,7 +233,7 @@ export default function OrderQueryPage() {
                 <div className="flex items-start gap-2.5">
                   <FileText className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-xs text-gray-400 mb-1">需求描述</p>
+                    <p className="text-xs text-gray-400 mb-1">{t("query.desc")}</p>
                     <p className="text-sm text-lw-black whitespace-pre-wrap">
                       {result.requirements}
                     </p>
@@ -243,14 +245,14 @@ export default function OrderQueryPage() {
               {result.estimated_price !== null && (
                 <div className="pt-4 border-t border-gray-50">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">估价金额</span>
+                    <span className="text-sm text-gray-500">{t("query.estimateAmount")}</span>
                     <span className="text-lg font-bold text-lw-accent">
                       ¥{Number(result.estimated_price).toLocaleString('zh-CN')}
                     </span>
                   </div>
                   {result.estimate_notes && (
                     <p className="text-xs text-gray-400 mt-2">
-                      备注：{result.estimate_notes}
+                      {t("query.note")}{result.estimate_notes}
                     </p>
                   )}
                 </div>
@@ -262,7 +264,7 @@ export default function OrderQueryPage() {
                   <div className="flex items-center gap-2.5">
                     <CircleCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
                     <div>
-                      <p className="text-xs text-gray-400">交付链接</p>
+                      <p className="text-xs text-gray-400">{t("query.deliveryLink")}</p>
                       <a
                         href={result.delivery_url}
                         target="_blank"
@@ -282,7 +284,7 @@ export default function OrderQueryPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <MessageSquare className="w-4 h-4 text-gray-400" />
                     <span className="text-xs font-medium text-gray-500">
-                      回复记录（{result.replies.length}）
+                      {t("query.replies")}（{result.replies.length}）
                     </span>
                   </div>
                   <div className="space-y-3">

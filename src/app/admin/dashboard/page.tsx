@@ -1,9 +1,11 @@
 import { Suspense } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
 import AdminSidebar, { type AdminTab } from "./_components/AdminSidebar";
 import StatsOverview from "./_components/StatsOverview";
 import { getCurrentUser, ZERO_USER_UID } from "@/lib/auth";
+import { translate, type Lang } from "@/lib/i18n/dict";
 
 // 支持的有效标签页
 const validTabs: AdminTab[] = ["all-orders", "overview", "users", "notifications", "feedback", "settings", "works", "drops"];
@@ -62,16 +64,18 @@ function resolveTab(tabParam: string | undefined): AdminTab {
 function DashboardContent({
   activeTab,
   isSuperAdmin,
+  t,
 }: {
   activeTab: AdminTab;
   isSuperAdmin: boolean;
+  t: (key: string) => string;
 }) {
   switch (activeTab) {
     case "all-orders":
       return (
         <OrderList
-          title="全部订单"
-          description="快速查看所有订单并进行操作"
+          title={t("admin.orders.title")}
+          description={t("admin.orders.description")}
         />
       );
     case "overview":
@@ -113,6 +117,13 @@ export default async function AdminDashboardPage({
     redirect("/profile");
   }
 
+  // 服务端读取语言 cookie（与根布局一致），用字典 translate 生成 t 函数。
+  // 本文件为服务端组件（async + cookies 鉴权），无法使用客户端 hook useLanguage，
+  // 故采用同字典的服务端等价实现，保证 SSR 与客户端首次渲染一致。
+  const cookieStore = await cookies();
+  const lang: Lang = cookieStore.get("lw_lang")?.value === "en" ? "en" : "zh";
+  const t = (key: string) => translate(lang, key);
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* 左侧侧边栏 */}
@@ -125,11 +136,11 @@ export default async function AdminDashboardPage({
             fallback={
               <div className="flex items-center justify-center py-20">
                 <div className="w-6 h-6 border-2 border-lw-accent border-t-transparent rounded-full animate-spin" />
-                <span className="ml-2 text-sm text-gray-400">加载中...</span>
+                <span className="ml-2 text-sm text-gray-400">{t("admin.loading")}</span>
               </div>
             }
           >
-            <DashboardContent activeTab={activeTab} isSuperAdmin={currentUser.uid === ZERO_USER_UID} />
+            <DashboardContent activeTab={activeTab} isSuperAdmin={currentUser.uid === ZERO_USER_UID} t={t} />
           </Suspense>
         </div>
       </main>

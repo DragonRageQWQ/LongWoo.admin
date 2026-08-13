@@ -13,6 +13,8 @@ import {
   checkEmailHasPassword,
 } from "@/actions/profile-actions";
 import PasswordResetModal from "@/components/auth/PasswordResetModal";
+import LangSwitcher from "@/components/i18n/LangSwitcher";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 type LoginTab = "email" | "password" | "qq";
 
@@ -33,6 +35,7 @@ function QQIcon({ className = "" }: { className?: string }) {
 // ==================== 主组件 ====================
 function LoginForm() {
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<LoginTab>("email");
 
@@ -63,9 +66,9 @@ function LoginForm() {
   useEffect(() => {
     if (searchParams.get("reset") === "1") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setInfo("密码重置成功，请使用新密码登录");
+      setInfo(t("login.err.passwordResetSuccess"));
     }
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   // 邮箱倒计时定时器
   const emailTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -75,26 +78,26 @@ function LoginForm() {
     const errParam = searchParams.get("error");
     if (errParam === "oauth_failed") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setError("第三方登录失败，请重试或选择其他登录方式");
+      setError(t("login.err.oauthFailed"));
     } else if (errParam === "qq_not_configured") {
       // 安全加固（FIND-09）：不向未认证访客暴露内部环境变量名
-      setError("该登录方式暂不可用，请选择其他方式登录");
+      setError(t("login.err.oauthUnavailable"));
     }
 
     // Session 过期提示
     const expired = searchParams.get("expired");
     if (expired === "1") {
-      setInfo("登录状态已过期，请重新登录");
+      setInfo(t("login.err.sessionExpired"));
     }
 
     // 密码修改成功提示
     const changed = searchParams.get("changed");
     if (changed === "1") {
-      setInfo("密码已修改，请使用新密码重新登录");
+      setInfo(t("login.err.passwordChanged"));
     }
 
     isQQConfigured().then(setQqAvailable).catch(() => setQqAvailable(false));
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   // 邮箱倒计时
   const startEmailCountdown = useCallback(() => {
@@ -148,11 +151,11 @@ function LoginForm() {
     setInfo(null);
 
     if (!email) {
-      setError("请输入邮箱地址");
+      setError(t("login.err.emailRequired"));
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("请输入有效的邮箱地址");
+      setError(t("login.err.emailInvalid"));
       return;
     }
 
@@ -161,14 +164,14 @@ function LoginForm() {
       const result = await sendEmailOtp(email);
 
       if (!result.success) {
-        setError(result.error ?? "发送验证码失败");
+        setError(result.error ?? t("login.err.sendOtpFailed"));
         return;
       }
 
-      setInfo("验证码已发送，请查收邮箱");
+      setInfo(t("login.err.otpSent"));
       startEmailCountdown();
     } catch {
-      setError("发送验证码时发生未知错误");
+      setError(t("login.err.sendOtpUnknown"));
     } finally {
       setEmailSending(false);
     }
@@ -184,11 +187,11 @@ function LoginForm() {
     setInfo(null);
 
     if (!email || !emailCode) {
-      setError("请输入邮箱和验证码");
+      setError(t("login.err.emailAndCodeRequired"));
       return;
     }
     if (emailCode.length !== 6) {
-      setError("请输入6位验证码");
+      setError(t("login.err.code6Digits"));
       return;
     }
 
@@ -203,14 +206,14 @@ function LoginForm() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        setError(result.error ?? "验证失败");
+        setError(result.error ?? t("login.err.verifyFailed"));
         return;
       }
 
       redirectByRole(result.role);
     } catch (err) {
       console.error("[Login] 客户端异常:", err);
-      setError("登录时发生未知错误，请稍后重试");
+      setError(t("login.err.loginUnknownRetry"));
     } finally {
       setEmailVerifying(false);
     }
@@ -227,11 +230,11 @@ function LoginForm() {
       if (result.success && result.url) {
         window.location.href = result.url;
       } else {
-        setError(result.error ?? "QQ 登录失败");
+        setError(result.error ?? t("login.err.qqLoginFailed"));
         setOauthLoading(false);
       }
     } catch {
-      setError("QQ 登录时发生未知错误");
+      setError(t("login.err.qqLoginUnknown"));
       setOauthLoading(false);
     }
   };
@@ -247,7 +250,7 @@ function LoginForm() {
     try {
       const result = await checkEmailHasPassword(passwordEmail);
       if (!result.canUsePassword) {
-        setInfo("该邮箱无法使用密码登录，请使用邮箱验证码登录");
+        setInfo(t("login.err.emailNoPassword"));
       }
     } catch {
       // 检查失败时不阻断流程，交给登录接口校验
@@ -264,15 +267,15 @@ function LoginForm() {
     setInfo(null);
 
     if (!passwordEmail) {
-      setError("请输入邮箱地址");
+      setError(t("login.err.emailRequired"));
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(passwordEmail)) {
-      setError("请输入有效的邮箱地址");
+      setError(t("login.err.emailInvalid"));
       return;
     }
     if (!password) {
-      setError("请输入密码");
+      setError(t("login.err.passwordRequired"));
       return;
     }
 
@@ -286,14 +289,14 @@ function LoginForm() {
       const result = await response.json();
 
       if (!response.ok || !result?.success) {
-        setError(result?.error ?? "登录失败，请检查邮箱和密码");
+        setError(result?.error ?? t("login.err.loginFailed"));
         return;
       }
 
       redirectByRole(result.role);
     } catch (err) {
       console.error("[Login] 密码登录客户端异常:", err);
-      setError("登录时发生未知错误");
+      setError(t("login.err.loginUnknown"));
     } finally {
       setPasswordLoading(false);
     }
@@ -301,13 +304,13 @@ function LoginForm() {
 
   const tabs: { key: LoginTab; label: string }[] = qqAvailable
     ? [
-        { key: "email", label: "邮箱验证码" },
-        { key: "password", label: "密码登录" },
-        { key: "qq", label: "QQ登录" },
+        { key: "email", label: t("login.tab.email") },
+        { key: "password", label: t("login.tab.password") },
+        { key: "qq", label: t("login.tab.qq") },
       ]
     : [
-        { key: "email", label: "邮箱验证码" },
-        { key: "password", label: "密码登录" },
+        { key: "email", label: t("login.tab.email") },
+        { key: "password", label: t("login.tab.password") },
       ];
 
   return (
@@ -333,12 +336,12 @@ function LoginForm() {
 
           <div className="relative z-10 space-y-4">
             <h2 className="text-3xl font-bold leading-tight">
-              专业兽装定制
+              {t("login.brand.title1")}
               <br />
-              匠心铸造每一件作品
+              {t("login.brand.title2")}
             </h2>
             <p className="text-white/70 text-sm leading-relaxed">
-              专注于高品质定制服务，从设计到交付，每一处细节都倾注我们的热忱与专业。
+              {t("login.brand.desc")}
             </p>
           </div>
 
@@ -349,6 +352,10 @@ function LoginForm() {
 
         {/* ============ 右侧登录表单区 ============ */}
         <div className="flex flex-col p-6 sm:p-10">
+          {/* 语言切换（登录页无 Header，置于表单区右上角） */}
+          <div className="flex justify-end mb-2">
+            <LangSwitcher />
+          </div>
           <div className="md:hidden mb-6 text-center">
             <Link href="/" className="inline-flex items-center gap-2">
               <div className="w-9 h-9 rounded-xl bg-lw-accent flex items-center justify-center">
@@ -361,9 +368,9 @@ function LoginForm() {
           </div>
 
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-lw-black">欢迎回来</h1>
+            <h1 className="text-2xl font-bold text-lw-black">{t("login.title")}</h1>
             <p className="text-sm text-gray-500 mt-1">
-              请选择登录方式进入您的工作台
+              {t("login.subtitle")}
             </p>
           </div>
 
@@ -425,7 +432,7 @@ function LoginForm() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="请输入邮箱"
+                      placeholder={t("login.email.placeholder")}
                       autoComplete="email"
                       className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition"
                     />
@@ -437,7 +444,7 @@ function LoginForm() {
                     htmlFor="email-code"
                     className="block text-sm font-medium text-lw-black mb-1.5"
                   >
-                    验证码
+                    {t("login.code.label")}
                   </label>
                   <div className="flex gap-3">
                     <input
@@ -449,7 +456,7 @@ function LoginForm() {
                       onChange={(e) =>
                         setEmailCode(e.target.value.replace(/\D/g, ""))
                       }
-                      placeholder="请输入6位验证码"
+                      placeholder={t("login.code.placeholder")}
                       className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition tracking-widest"
                     />
                     <button
@@ -467,7 +474,7 @@ function LoginForm() {
                       ) : emailCountdown > 0 ? (
                         `${emailCountdown}s 后重发`
                       ) : (
-                        "发送验证码"
+                        t("login.btn.email")
                       )}
                     </button>
                   </div>
@@ -479,7 +486,7 @@ function LoginForm() {
                   className="w-full py-3 bg-lw-accent text-white rounded-lg font-medium hover:bg-blue-700 active:bg-blue-800 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {emailVerifying && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {emailVerifying ? "登录中..." : "登录"}
+                  {emailVerifying ? t("login.btn.login") + "..." : t("login.btn.login")}
                 </button>
               </form>
             )}
@@ -497,7 +504,7 @@ function LoginForm() {
                     htmlFor="password-email-input"
                     className="block text-sm font-medium text-lw-black mb-1.5"
                   >
-                    邮箱地址
+                    {t("login.email.label")}
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -507,7 +514,7 @@ function LoginForm() {
                       value={passwordEmail}
                       onChange={(e) => setPasswordEmail(e.target.value)}
                       onBlur={handlePasswordEmailBlur}
-                      placeholder="请输入邮箱"
+                      placeholder={t("login.email.placeholder")}
                       autoComplete="email"
                       className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition"
                     />
@@ -520,7 +527,7 @@ function LoginForm() {
                       htmlFor="password-input"
                       className="block text-sm font-medium text-lw-black"
                     >
-                      密码
+                      {t("login.password.label")}
                     </label>
                     <button
                       type="button"
@@ -528,7 +535,7 @@ function LoginForm() {
                       className="flex items-center gap-1 text-xs text-gray-400 hover:text-lw-accent transition-colors cursor-pointer"
                     >
                       <KeyRound className="w-3 h-3" />
-                      忘记密码？
+                      {t("login.forgot")}
                     </button>
                   </div>
                   <div className="relative">
@@ -538,7 +545,7 @@ function LoginForm() {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="请输入密码"
+                      placeholder={t("login.password.placeholder")}
                       autoComplete="current-password"
                       className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition"
                     />
@@ -554,10 +561,10 @@ function LoginForm() {
                     <Loader2 className="w-4 h-4 animate-spin" />
                   )}
                   {passwordLoading
-                    ? "登录中..."
+                    ? t("login.btn.login") + "..."
                     : passwordChecking
-                    ? "检查中..."
-                    : "登录"}
+                    ? t("login.btn.login") + "..."
+                    : t("login.btn.login")}
                 </button>
               </form>
             )}
@@ -574,7 +581,7 @@ function LoginForm() {
                     <QQIcon className="w-8 h-8 text-[#12B7F5]" />
                   </div>
                   <h3 className="text-lg font-medium text-lw-black mb-1">
-                    QQ 账号登录
+                    {t("login.tab.qq")} 登录
                   </h3>
                   <p className="text-sm text-gray-500">
                     点击下方按钮使用 QQ 账号快捷登录
@@ -592,7 +599,7 @@ function LoginForm() {
                   ) : (
                     <QQIcon className="w-5 h-5" />
                   )}
-                  {oauthLoading ? "正在跳转..." : "使用 QQ 登录"}
+                  {oauthLoading ? "正在跳转..." : t("login.btn.qq")}
                 </button>
 
                 <p className="text-center text-xs text-gray-400">

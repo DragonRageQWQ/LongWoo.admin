@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 /**
  * 移动端底部固定导航栏（与静态页 public/index.html 的 .bottom-nav 视觉一致）
@@ -56,15 +57,16 @@ const NAV_ICONS = {
 
 const NAV_ITEMS = [
   // 静态 HTML 页用 <a>（跨体系整页跳转，避免 Next RSC 预取 404）；Next 路由用 <Link>
-  { key: "buy", label: "购买兽装", href: "/order-step1.html", icon: NAV_ICONS.bag, external: true },
-  { key: "ai", label: "龙灵工坊", href: "/ai/characters", icon: NAV_ICONS.chat, external: false },
-  { key: "drop", label: "购买掉落", href: "/preorder-step1.html", icon: NAV_ICONS.drop, external: true },
-  { key: "order", label: "进度&售后", href: "/order/query", icon: NAV_ICONS.clock, external: false },
-  { key: "profile", label: "个人中心", href: "/profile", icon: NAV_ICONS.user, external: false },
+  { key: "buy", label: "购买兽装", i18nKey: "nav.buyFursuit", href: "/order-step1.html", icon: NAV_ICONS.bag, external: true },
+  { key: "ai", label: "龙灵工坊", i18nKey: "nav.lingWork", href: "/ai/characters", icon: NAV_ICONS.chat, external: false },
+  { key: "drop", label: "购买掉落", i18nKey: "nav.buyDrop", href: "/preorder-step1.html", icon: NAV_ICONS.drop, external: true },
+  { key: "order", label: "进度&售后", i18nKey: "nav.progress", href: "/order/query", icon: NAV_ICONS.clock, external: false },
+  { key: "profile", label: "个人中心", i18nKey: "nav.profile", href: "/profile", icon: NAV_ICONS.user, external: false },
 ] as const;
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   const isActive = (href: string): boolean => {
     // 子路由页（如 /ai/characters/xxx）归属父项：前缀匹配；
@@ -106,7 +108,7 @@ export default function BottomNav() {
                   : "text-[rgba(16,16,16,0.5)]"
               }`}
             >
-              {item.label}
+              {t(item.i18nKey)}
             </span>
           </>
         );

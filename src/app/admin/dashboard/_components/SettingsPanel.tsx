@@ -31,6 +31,7 @@ import {
   type OperationLogItem,
 } from "@/actions/settings-actions";
 import { formatDate } from "@/lib/utils";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 interface TemplateItem {
   key: string;
@@ -43,19 +44,19 @@ interface TemplateItem {
   updated_at: string | null;
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  create_order: "创建委托单",
-  submit_estimate: "提交估价",
-  accept_order: "接单",
-  reject_order: "拒单",
-  update_status: "更新进度",
-  claim_order: "认领订单",
-  reply_site: "站内回复",
-  reply_email: "邮件回复",
-  create_user: "创建用户",
-  update_user: "更新用户",
-  deactivate_user: "停用用户",
-  send_notification: "发送通知",
+const ACTION_LABEL_KEYS: Record<string, string> = {
+  create_order: "admin.settings.action.createOrder",
+  submit_estimate: "admin.settings.action.submitEstimate",
+  accept_order: "admin.settings.action.acceptOrder",
+  reject_order: "admin.settings.action.rejectOrder",
+  update_status: "admin.settings.action.updateStatus",
+  claim_order: "admin.settings.action.claimOrder",
+  reply_site: "admin.settings.action.replySite",
+  reply_email: "admin.settings.action.replyEmail",
+  create_user: "admin.settings.action.createUser",
+  update_user: "admin.settings.action.updateUser",
+  deactivate_user: "admin.settings.action.deactivateUser",
+  send_notification: "admin.settings.action.sendNotification",
 };
 
 export default function SettingsPanel({
@@ -63,6 +64,7 @@ export default function SettingsPanel({
 }: {
   isSuperAdmin: boolean;
 }) {
+  const { t } = useLanguage();
   const [info, setInfo] = useState<SystemSettingsData | null>(null);
   const [logs, setLogs] = useState<OperationLogItem[]>([]);
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
@@ -92,15 +94,15 @@ export default function SettingsPanel({
         getTemplates(),
       ]);
       if (infoRes.success && infoRes.data) setInfo(infoRes.data);
-      else setError(infoRes.error || "加载系统信息失败");
+      else setError(infoRes.error || t("admin.settings.err.loadInfoFailed"));
       if (logRes.success && logRes.data) setLogs(logRes.data);
       if (tplRes.success && tplRes.data) setTemplates(tplRes.data);
     } catch {
-      setError("加载系统设置失败");
+      setError(t("admin.settings.err.loadSettingsFailed"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -110,7 +112,7 @@ export default function SettingsPanel({
   const handleSendTest = async () => {
     setMsg(null);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail.trim())) {
-      setMsg({ type: "err", text: "请输入有效的测试邮箱" });
+      setMsg({ type: "err", text: t("admin.settings.err.invalidEmail") });
       return;
     }
     setMailSending(true);
@@ -118,11 +120,11 @@ export default function SettingsPanel({
       const res = await sendTestEmail(testEmail.trim());
       setMsg(
         res.success
-          ? { type: "ok", text: "测试邮件已发送，请查收" }
-          : { type: "err", text: res.error || "发送失败" }
+          ? { type: "ok", text: t("admin.settings.err.testSent") }
+          : { type: "err", text: res.error || t("admin.settings.err.sendFailed") }
       );
     } catch {
-      setMsg({ type: "err", text: "发送测试邮件时发生错误" });
+      setMsg({ type: "err", text: t("admin.settings.err.testSendUnknown") });
     } finally {
       setMailSending(false);
     }
@@ -141,8 +143,8 @@ export default function SettingsPanel({
       });
       setMsg(
         res.success
-          ? { type: "ok", text: "模板已保存" }
-          : { type: "err", text: res.error || "保存失败" }
+          ? { type: "ok", text: t("admin.settings.err.templateSaved") }
+          : { type: "err", text: res.error || t("admin.settings.err.saveFailed") }
       );
       if (res.success) {
         setEditingKey(null);
@@ -161,15 +163,15 @@ export default function SettingsPanel({
       const res = await resetTemplate(key);
       setMsg(
         res.success
-          ? { type: "ok", text: "模板已重置为内置默认" }
-          : { type: "err", text: res.error || "重置失败" }
+          ? { type: "ok", text: t("admin.settings.err.templateReset") }
+          : { type: "err", text: res.error || t("admin.settings.err.resetFailed") }
       );
       if (res.success) {
         const tplRes = await getTemplates();
         if (tplRes.success && tplRes.data) setTemplates(tplRes.data);
       }
     } catch {
-      setMsg({ type: "err", text: "重置失败" });
+      setMsg({ type: "err", text: t("admin.settings.err.resetFailed") });
     }
   };
 
@@ -193,17 +195,17 @@ export default function SettingsPanel({
     <div className="space-y-5">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-lw-black">系统设置</h1>
+          <h1 className="text-xl font-bold text-lw-black">{t("admin.settings.title")}</h1>
           <p className="text-sm text-gray-400 mt-1">
-            系统运行参数与服务状态
-            {isSuperAdmin ? "（超级管理员可修改）" : "（当前为只读模式，仅超级管理员可修改）"}
+            {t("admin.settings.subtitle")}
+            {isSuperAdmin ? t("admin.settings.superAdminTag") : t("admin.settings.readOnlyTag")}
           </p>
         </div>
         <button
           onClick={loadAll}
           className="px-3 py-2 text-sm font-medium text-lw-accent border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
         >
-          刷新
+          {t("admin.settings.refresh")}
         </button>
       </div>
 
@@ -225,15 +227,15 @@ export default function SettingsPanel({
           <section className="bg-white rounded-lg shadow-sm border border-gray-50 p-5">
             <h2 className="text-sm font-semibold text-lw-black mb-4 flex items-center gap-2">
               <Server className="w-4 h-4 text-lw-accent" />
-              环境与部署信息
+              {t("admin.settings.env")}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <InfoCard label="运行环境" value={info.environment.nodeEnv === "production" ? "生产环境" : info.environment.nodeEnv} highlight={info.environment.nodeEnv === "production"} />
-              <InfoCard label="站点地址" value={info.environment.siteUrl} />
-              <InfoCard label="应用版本" value={info.environment.appVersion} />
-              <InfoCard label="构建号" value={info.environment.buildNumber} />
-              <InfoCard label="超级管理员 UID" value={String(info.environment.zeroUserUid)} />
-              <InfoCard label="零号用户显式配置" value={info.security.zeroUserUidConfigured ? "已配置" : "默认值"} />
+              <InfoCard label={t("admin.settings.envRuntime")} value={info.environment.nodeEnv === "production" ? t("admin.settings.envProduction") : info.environment.nodeEnv} highlight={info.environment.nodeEnv === "production"} />
+              <InfoCard label={t("admin.settings.envSiteUrl")} value={info.environment.siteUrl} />
+              <InfoCard label={t("admin.settings.envVersion")} value={info.environment.appVersion} />
+              <InfoCard label={t("admin.settings.envBuild")} value={info.environment.buildNumber} />
+              <InfoCard label={t("admin.settings.envZeroUid")} value={String(info.environment.zeroUserUid)} />
+              <InfoCard label={t("admin.settings.envZeroConfig")} value={info.security.zeroUserUidConfigured ? t("admin.settings.configured") : t("admin.settings.defaultValue")} />
             </div>
           </section>
 
@@ -241,7 +243,7 @@ export default function SettingsPanel({
           <section className="bg-white rounded-lg shadow-sm border border-gray-50 p-5">
             <h2 className="text-sm font-semibold text-lw-black mb-4 flex items-center gap-2">
               <Database className="w-4 h-4 text-lw-accent" />
-              数据库统计
+              {t("admin.settings.db")}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {info.database.map((d) => (
@@ -259,15 +261,15 @@ export default function SettingsPanel({
           <section className="bg-white rounded-lg shadow-sm border border-gray-50 p-5">
             <h2 className="text-sm font-semibold text-lw-black mb-4 flex items-center gap-2">
               <Activity className="w-4 h-4 text-lw-accent" />
-              外部服务健康状态
+              {t("admin.settings.services")}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <ServiceCard name="Supabase 数据库" ok={info.services.supabase} />
-              <ServiceCard name="Resend 邮件服务" ok={info.services.resend} />
-              <ServiceCard name="DeepSeek AI 服务" ok={info.services.deepseek} />
+              <ServiceCard name={t("admin.settings.svcSupabase")} ok={info.services.supabase} t={t} />
+              <ServiceCard name={t("admin.settings.svcResend")} ok={info.services.resend} t={t} />
+              <ServiceCard name={t("admin.settings.svcDeepseek")} ok={info.services.deepseek} t={t} />
             </div>
             <p className="text-xs text-gray-400 mt-3">
-              发件邮箱：{info.services.fromEmail} ｜ 联系邮箱：{info.services.contactEmail}
+              {t("admin.settings.fromEmail")}{info.services.fromEmail} ｜ {t("admin.settings.contactEmail")}{info.services.contactEmail}
             </p>
           </section>
 
@@ -275,13 +277,13 @@ export default function SettingsPanel({
           <section className="bg-white rounded-lg shadow-sm border border-gray-50 p-5">
             <h2 className="text-sm font-semibold text-lw-black mb-4 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-lw-accent" />
-              安全与密钥配置状态
+              {t("admin.settings.security")}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <ConfigCard name="CSRF 防护" ok={info.security.csrfEnabled} desc="始终启用" />
-              <ConfigCard name="JWT 密钥" ok={info.security.jwtSecret} desc="middleware 本地校验" />
-              <ConfigCard name="附件上传密钥" ok={info.security.uploadTokenSecret} desc="订单附件凭证" />
-              <ConfigCard name="定时任务密钥" ok={info.security.cronSecret} desc="清理任务鉴权" />
+              <ConfigCard name={t("admin.settings.cfgCsrf")} ok={info.security.csrfEnabled} desc={t("admin.settings.cfgCsrfDesc")} />
+              <ConfigCard name={t("admin.settings.cfgJwt")} ok={info.security.jwtSecret} desc={t("admin.settings.cfgJwtDesc")} />
+              <ConfigCard name={t("admin.settings.cfgUpload")} ok={info.security.uploadTokenSecret} desc={t("admin.settings.cfgUploadDesc")} />
+              <ConfigCard name={t("admin.settings.cfgCron")} ok={info.security.cronSecret} desc={t("admin.settings.cfgCronDesc")} />
             </div>
           </section>
 
@@ -289,7 +291,7 @@ export default function SettingsPanel({
           <section className="bg-white rounded-lg shadow-sm border border-gray-50 p-5">
             <h2 className="text-sm font-semibold text-lw-black mb-4 flex items-center gap-2">
               <Clock className="w-4 h-4 text-lw-accent" />
-              定时任务与数据健康
+              {t("admin.settings.cron")}
             </h2>
             <ul className="space-y-1.5 mb-3">
               {info.cron.scheduled.map((s) => (
@@ -300,9 +302,9 @@ export default function SettingsPanel({
               ))}
             </ul>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <InfoCard label="限流记录当前行数" value={info.cron.rateLimitsRows == null ? "—" : String(info.cron.rateLimitsRows)} />
-              <InfoCard label="验证码记录当前行数" value={info.cron.otpRows == null ? "—" : String(info.cron.otpRows)} />
-              <InfoCard label="日志保留天数" value={`${info.cron.logRetentionDays} 天`} />
+              <InfoCard label={t("admin.settings.cronRateRows")} value={info.cron.rateLimitsRows == null ? "—" : String(info.cron.rateLimitsRows)} />
+              <InfoCard label={t("admin.settings.cronOtpRows")} value={info.cron.otpRows == null ? "—" : String(info.cron.otpRows)} />
+              <InfoCard label={t("admin.settings.cronLogDays")} value={`${info.cron.logRetentionDays} ${t("admin.settings.daysUnit")}`} />
             </div>
           </section>
 
@@ -310,14 +312,14 @@ export default function SettingsPanel({
           <section className="bg-white rounded-lg shadow-sm border border-gray-50 p-5">
             <h2 className="text-sm font-semibold text-lw-black mb-4 flex items-center gap-2">
               <Gauge className="w-4 h-4 text-lw-accent" />
-              速率限制与业务参数
+              {t("admin.settings.rateLimits")}
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                    <th className="py-2 pr-4 font-medium">参数</th>
-                    <th className="py-2 font-medium">当前值</th>
+                    <th className="py-2 pr-4 font-medium">{t("admin.settings.param")}</th>
+                    <th className="py-2 font-medium">{t("admin.settings.currentValue")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -338,13 +340,13 @@ export default function SettingsPanel({
       <section className="bg-white rounded-lg shadow-sm border border-gray-50 p-5">
         <h2 className="text-sm font-semibold text-lw-black mb-4 flex items-center gap-2">
           <Mail className="w-4 h-4 text-lw-accent" />
-          邮件服务测试{!isSuperAdmin && "（仅超管可操作）"}
+          {t("admin.settings.mailTest")}{!isSuperAdmin && t("admin.settings.mailTestTag")}
         </h2>
         <div className="flex gap-2">
           <input
             value={testEmail}
             onChange={(e) => setTestEmail(e.target.value)}
-            placeholder="输入测试接收邮箱"
+            placeholder={t("admin.settings.mailPh")}
             disabled={!isSuperAdmin}
             className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent disabled:bg-gray-50 disabled:text-gray-400"
           />
@@ -354,7 +356,7 @@ export default function SettingsPanel({
             className="px-4 py-2 text-sm font-medium text-white bg-lw-accent rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
             {mailSending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            发送测试邮件
+            {t("admin.settings.mailSend")}
           </button>
         </div>
       </section>
@@ -364,7 +366,7 @@ export default function SettingsPanel({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-lw-black flex items-center gap-2">
             <History className="w-4 h-4 text-lw-accent" />
-            操作日志时间线（最近 {logsExpanded ? logs.length : 8} 条）
+            {t("admin.settings.logTimeline")}{logsExpanded ? logs.length : 8}{t("admin.settings.logItems")}
           </h2>
           <button
             onClick={() => setLogsExpanded(!logsExpanded)}
@@ -372,17 +374,17 @@ export default function SettingsPanel({
           >
             {logsExpanded ? (
               <>
-                收起 <ChevronUp className="w-3 h-3" />
+                {t("admin.settings.collapse")} <ChevronUp className="w-3 h-3" />
               </>
             ) : (
               <>
-                展开全部 <ChevronDown className="w-3 h-3" />
+                {t("admin.settings.expandAll")} <ChevronDown className="w-3 h-3" />
               </>
             )}
           </button>
         </div>
         {logs.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">暂无操作记录</p>
+          <p className="text-sm text-gray-400 text-center py-6">{t("admin.settings.noLogs")}</p>
         ) : (
           <div className="relative pl-5 space-y-4">
             {/* 时间线竖线 */}
@@ -392,7 +394,7 @@ export default function SettingsPanel({
                 <span className="absolute -left-5 top-1.5 w-2.5 h-2.5 rounded-full bg-lw-accent border-2 border-white shadow" />
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium text-lw-black">
-                    {ACTION_LABELS[log.action] || log.action}
+                    {ACTION_LABEL_KEYS[log.action] ? t(ACTION_LABEL_KEYS[log.action]) : log.action}
                   </span>
                   {log.order_no && (
                     <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-mono">
@@ -419,11 +421,11 @@ export default function SettingsPanel({
       <section className="bg-white rounded-lg shadow-sm border border-gray-50 p-5">
         <h2 className="text-sm font-semibold text-lw-black mb-1 flex items-center gap-2">
           <FileText className="w-4 h-4 text-lw-accent" />
-          通知 / 邮件模板管理
+          {t("admin.settings.templates")}
         </h2>
         <p className="text-xs text-gray-400 mb-4">
-          模板用于站内通知与邮件发送（估价/接单/拒单/回复/进度）。{isSuperAdmin ? "可编辑保存或重置为默认。" : "仅超级管理员可编辑。"}
-          支持占位符：{"{orderNo}"} {"{price}"} {"{status}"} {"{reason}"} {"{reply}"} {"{deliveryUrl}"}
+          {t("admin.settings.tplDesc")} {isSuperAdmin ? t("admin.settings.tplEditable") : t("admin.settings.tplReadOnly")}
+          {t("admin.settings.tplPlaceholders")}{"{orderNo}"} {"{price}"} {"{status}"} {"{reason}"} {"{reply}"} {"{deliveryUrl}"}
         </p>
         <div className="space-y-3">
           {templates.map((tpl) => (
@@ -431,14 +433,14 @@ export default function SettingsPanel({
               {editingKey === tpl.key && editForm ? (
                 <div className="space-y-2.5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                    <Field label="通知标题">
+                    <Field label={t("admin.settings.fieldTitle")}>
                       <input
                         value={editForm.title}
                         onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                         className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent"
                       />
                     </Field>
-                    <Field label="邮件主题">
+                    <Field label={t("admin.settings.fieldSubject")}>
                       <input
                         value={editForm.email_subject}
                         onChange={(e) => setEditForm({ ...editForm, email_subject: e.target.value })}
@@ -446,7 +448,7 @@ export default function SettingsPanel({
                       />
                     </Field>
                   </div>
-                  <Field label="站内通知内容（自动附加订单号）">
+                  <Field label={t("admin.settings.fieldContent")}>
                     <textarea
                       value={editForm.content}
                       onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
@@ -454,7 +456,7 @@ export default function SettingsPanel({
                       className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent resize-none"
                     />
                   </Field>
-                  <Field label="邮件正文（HTML，含邮件外壳模板）">
+                  <Field label={t("admin.settings.fieldBody")}>
                     <textarea
                       value={editForm.email_body}
                       onChange={(e) => setEditForm({ ...editForm, email_body: e.target.value })}
@@ -469,7 +471,7 @@ export default function SettingsPanel({
                       className="px-4 py-1.5 text-sm font-medium text-white bg-lw-accent rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                     >
                       {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                      保存
+                      {t("admin.settings.save")}
                     </button>
                     <button
                       onClick={() => {
@@ -478,7 +480,7 @@ export default function SettingsPanel({
                       }}
                       className="px-4 py-1.5 text-sm font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                     >
-                      取消
+                      {t("admin.settings.cancel")}
                     </button>
                   </div>
                 </div>
@@ -489,13 +491,13 @@ export default function SettingsPanel({
                       <span className="text-sm font-semibold text-lw-black">{tpl.label}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-mono">{tpl.key}</span>
                       {tpl.fromDb ? (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">已自定义</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">{t("admin.settings.custom")}</span>
                       ) : (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-50 text-gray-400">内置默认</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-50 text-gray-400">{t("admin.settings.builtin")}</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-600 mt-1">通知：{tpl.title} ｜ {tpl.content.slice(0, 40)}...</p>
-                    <p className="text-xs text-gray-400 mt-0.5">邮件：{tpl.email_subject}</p>
+                    <p className="text-xs text-gray-600 mt-1">{t("admin.settings.tplNotif")}{tpl.title} ｜ {tpl.content.slice(0, 40)}...</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{t("admin.settings.tplMail")}{tpl.email_subject}</p>
                   </div>
                   {isSuperAdmin && (
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -505,7 +507,7 @@ export default function SettingsPanel({
                           className="px-2.5 py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer flex items-center gap-1"
                         >
                           <RotateCcw className="w-3 h-3" />
-                          重置
+                          {t("admin.settings.reset")}
                         </button>
                       )}
                       <button
@@ -516,7 +518,7 @@ export default function SettingsPanel({
                         className="px-2.5 py-1.5 text-xs text-lw-accent border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer flex items-center gap-1"
                       >
                         <Pencil className="w-3 h-3" />
-                        编辑
+                        {t("admin.settings.edit")}
                       </button>
                     </div>
                   )}
@@ -553,19 +555,19 @@ function InfoCard({
   );
 }
 
-function ServiceCard({ name, ok }: { name: string; ok: boolean }) {
+function ServiceCard({ name, ok, t }: { name: string; ok: boolean; t: (key: string) => string }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-gray-100 p-3">
       <span className="text-sm text-gray-600">{name}</span>
       {ok ? (
         <span className="inline-flex items-center gap-1 text-xs text-green-600">
           <CheckCircle2 className="w-3.5 h-3.5" />
-          正常
+          {t("admin.settings.ok")}
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 text-xs text-red-500">
           <XCircle className="w-3.5 h-3.5" />
-          未配置
+          {t("admin.settings.notConfigured")}
         </span>
       )}
     </div>

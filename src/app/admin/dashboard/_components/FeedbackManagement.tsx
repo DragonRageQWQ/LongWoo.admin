@@ -21,26 +21,27 @@ import {
 } from "@/actions/feedback-actions";
 import { formatDate } from "@/lib/utils";
 import type { FeedbackCategory, FeedbackStatus, UserFeedback } from "@/types/database";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 const PAGE_SIZE = 10;
 
-const CATEGORY_META: Record<FeedbackCategory, { label: string; icon: React.ElementType; className: string }> = {
-  bug: { label: "问题反馈", icon: AlertCircle, className: "text-red-600 bg-red-50" },
-  suggestion: { label: "建议", icon: Lightbulb, className: "text-amber-600 bg-amber-50" },
-  other: { label: "其他", icon: HelpCircle, className: "text-gray-600 bg-gray-100" },
+const CATEGORY_META: Record<FeedbackCategory, { label: string; i18nKey: string; icon: React.ElementType; className: string }> = {
+  bug: { label: "问题反馈", i18nKey: "admin.feedback.catBug", icon: AlertCircle, className: "text-red-600 bg-red-50" },
+  suggestion: { label: "建议", i18nKey: "admin.feedback.catSuggestion", icon: Lightbulb, className: "text-amber-600 bg-amber-50" },
+  other: { label: "其他", i18nKey: "admin.feedback.catOther", icon: HelpCircle, className: "text-gray-600 bg-gray-100" },
 };
 
-const STATUS_META: Record<FeedbackStatus, { label: string; className: string }> = {
-  pending: { label: "待处理", className: "text-orange-600 bg-orange-50" },
-  replied: { label: "已回复", className: "text-blue-600 bg-blue-50" },
-  adopted: { label: "已采纳", className: "text-green-600 bg-green-50" },
+const STATUS_META: Record<FeedbackStatus, { label: string; i18nKey: string; className: string }> = {
+  pending: { label: "待处理", i18nKey: "admin.feedback.statusPending", className: "text-orange-600 bg-orange-50" },
+  replied: { label: "已回复", i18nKey: "admin.feedback.statusReplied", className: "text-blue-600 bg-blue-50" },
+  adopted: { label: "已采纳", i18nKey: "admin.feedback.statusAdopted", className: "text-green-600 bg-green-50" },
 };
 
-const STATUS_FILTERS: { value: FeedbackListFilter; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "pending", label: "待处理" },
-  { value: "replied", label: "已回复" },
-  { value: "adopted", label: "已采纳" },
+const STATUS_FILTERS: { value: FeedbackListFilter; label: string; i18nKey: string }[] = [
+  { value: "all", label: "全部", i18nKey: "admin.feedback.filterAll" },
+  { value: "pending", label: "待处理", i18nKey: "admin.feedback.statusPending" },
+  { value: "replied", label: "已回复", i18nKey: "admin.feedback.statusReplied" },
+  { value: "adopted", label: "已采纳", i18nKey: "admin.feedback.statusAdopted" },
 ];
 
 interface ToastState {
@@ -49,6 +50,7 @@ interface ToastState {
 }
 
 export default function FeedbackManagement() {
+  const { t } = useLanguage();
   // 列表状态
   const [items, setItems] = useState<UserFeedback[]>([]);
   const [total, setTotal] = useState(0);
@@ -92,14 +94,14 @@ export default function FeedbackManagement() {
         setItems((result.data || []) as UserFeedback[]);
         setTotal(result.total ?? 0);
       } else {
-        setError(result.error || "加载反馈列表失败");
+        setError(result.error || t("admin.feedback.err.loadListFailed"));
       }
     } catch {
-      setError("加载反馈列表时发生未知错误");
+      setError(t("admin.feedback.err.loadListUnknown"));
     } finally {
       setLoading(false);
     }
-  }, [offset, statusFilter, search]);
+  }, [offset, statusFilter, search, t]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -125,7 +127,7 @@ export default function FeedbackManagement() {
     if (!replying) return;
     setReplyError(null);
     if (!replyText.trim()) {
-      setReplyError("请输入回复内容");
+      setReplyError(t("admin.feedback.err.replyRequired"));
       return;
     }
     setReplySaving(true);
@@ -136,14 +138,14 @@ export default function FeedbackManagement() {
         status: replyStatus,
       });
       if (result.success) {
-        setToast({ type: "success", message: replyStatus === "adopted" ? "已采纳并回复" : "回复成功" });
+        setToast({ type: "success", message: replyStatus === "adopted" ? t("admin.feedback.err.adoptedReplied") : t("admin.feedback.err.replySuccess") });
         setReplying(null);
         await loadList();
       } else {
-        setReplyError(result.error || "回复失败");
+        setReplyError(result.error || t("admin.feedback.err.replyFailed"));
       }
     } catch {
-      setReplyError("回复时发生未知错误");
+      setReplyError(t("admin.feedback.err.replyUnknown"));
     } finally {
       setReplySaving(false);
     }
@@ -152,8 +154,8 @@ export default function FeedbackManagement() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-lw-black">反馈管理</h1>
-        <p className="text-sm text-gray-400 mt-1">查看用户提交的问题反馈与建议，进行回复或采纳</p>
+        <h1 className="text-xl font-bold text-lw-black">{t("admin.feedback.title")}</h1>
+        <p className="text-sm text-gray-400 mt-1">{t("admin.feedback.subtitle")}</p>
       </div>
 
       {/* Toast */}
@@ -184,7 +186,7 @@ export default function FeedbackManagement() {
                   : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              {f.label}
+              {t(f.i18nKey)}
               {f.value === "pending" && total > 0 && statusFilter === "pending" && (
                 <span className="ml-1 text-xs opacity-90">({total})</span>
               )}
@@ -199,7 +201,7 @@ export default function FeedbackManagement() {
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSearch();
             }}
-            placeholder="搜索标题或内容"
+            placeholder={t("admin.feedback.searchPh")}
             className="flex-1 px-3 py-2 text-sm bg-white rounded-lg border border-gray-200 focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors"
           />
           <button
@@ -208,7 +210,7 @@ export default function FeedbackManagement() {
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-lw-accent rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
           >
             <Search className="w-4 h-4" />
-            搜索
+            {t("admin.feedback.search")}
           </button>
         </div>
       </div>
@@ -218,7 +220,7 @@ export default function FeedbackManagement() {
         {loading ? (
           <div className="flex items-center justify-center py-16 text-gray-400">
             <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="ml-2 text-sm">加载中...</span>
+            <span className="ml-2 text-sm">{t("admin.feedback.loading")}</span>
           </div>
         ) : error ? (
           <div className="py-16 text-center">
@@ -228,13 +230,13 @@ export default function FeedbackManagement() {
               onClick={loadList}
               className="mt-2 text-xs text-lw-accent hover:text-blue-700 cursor-pointer"
             >
-              点击重试
+              {t("admin.feedback.retry")}
             </button>
           </div>
         ) : items.length === 0 ? (
           <div className="py-16 text-center">
             <MessageSquare className="w-10 h-10 text-gray-200 mx-auto" />
-            <p className="mt-3 text-sm text-gray-400">暂无反馈记录</p>
+            <p className="mt-3 text-sm text-gray-400">{t("admin.feedback.empty")}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -254,16 +256,16 @@ export default function FeedbackManagement() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-gray-800 truncate">{item.title}</span>
                         <span className={`px-1.5 py-0.5 text-xs rounded ${statusMeta.className}`}>
-                          {statusMeta.label}
+                          {t(statusMeta.i18nKey)}
                         </span>
                       </div>
                       <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-gray-400">
                         <span>
-                          {author?.display_name || "用户"}
+                          {author?.display_name || t("admin.feedback.user")}
                           {author?.uid ? ` (UID ${author.uid})` : ""}
                         </span>
                         <span>{formatDate(item.created_at)}</span>
-                        {item.replied_at && <span>回复于 {formatDate(item.replied_at)}</span>}
+                        {item.replied_at && <span>{t("admin.feedback.repliedAt")} {formatDate(item.replied_at)}</span>}
                       </div>
                       {expanded && (
                         <div className="mt-3 space-y-3">
@@ -272,13 +274,13 @@ export default function FeedbackManagement() {
                           </p>
                           {item.reply ? (
                             <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                              <p className="text-xs font-medium text-gray-500 mb-1">管理员回复</p>
+                              <p className="text-xs font-medium text-gray-500 mb-1">{t("admin.feedback.adminReply")}</p>
                               <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                                 {item.reply}
                               </p>
                             </div>
                           ) : (
-                            <p className="text-xs text-gray-400">尚未回复</p>
+                            <p className="text-xs text-gray-400">{t("admin.feedback.notReplied")}</p>
                           )}
                         </div>
                       )}
@@ -289,7 +291,7 @@ export default function FeedbackManagement() {
                         onClick={() => setDetailId(expanded ? null : item.id)}
                         className="px-2.5 py-1.5 text-xs text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
                       >
-                        {expanded ? "收起" : "详情"}
+                        {expanded ? t("admin.feedback.collapse") : t("admin.feedback.detail")}
                       </button>
                       {item.status === "pending" && (
                         <button
@@ -298,7 +300,7 @@ export default function FeedbackManagement() {
                           className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-lw-accent rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
                         >
                           <Reply className="w-3 h-3" />
-                          回复
+                          {t("admin.feedback.reply")}
                         </button>
                       )}
                       {(item.status === "replied" || item.status === "adopted") && (
@@ -308,7 +310,7 @@ export default function FeedbackManagement() {
                           className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
                         >
                           <Reply className="w-3 h-3" />
-                          编辑
+                          {t("admin.feedback.edit")}
                         </button>
                       )}
                     </div>
@@ -323,7 +325,7 @@ export default function FeedbackManagement() {
         {!loading && !error && total > 0 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-50">
             <span className="text-xs text-gray-400">
-              共 {total} 条 · 第 {currentPage}/{totalPages} 页
+              {t("admin.feedback.total")} {total} {t("admin.feedback.items")} · {t("admin.feedback.page")} {currentPage}/{totalPages} {t("admin.feedback.pageUnit")}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -331,7 +333,7 @@ export default function FeedbackManagement() {
                 onClick={() => setOffset((prev) => Math.max(0, prev - PAGE_SIZE))}
                 disabled={currentPage <= 1}
                 className="p-1.5 text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                aria-label="上一页"
+                aria-label={t("admin.feedback.prev")}
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -340,7 +342,7 @@ export default function FeedbackManagement() {
                 onClick={() => setOffset((prev) => prev + PAGE_SIZE)}
                 disabled={currentPage >= totalPages}
                 className="p-1.5 text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                aria-label="下一页"
+                aria-label={t("admin.feedback.next")}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -358,13 +360,13 @@ export default function FeedbackManagement() {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-lw-black">
-                {replying.status === "pending" ? "回复反馈" : "编辑回复"}
+                {replying.status === "pending" ? t("admin.feedback.replyTitle") : t("admin.feedback.editTitle")}
               </h2>
               <button
                 type="button"
                 onClick={() => !replySaving && setReplying(null)}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer"
-                aria-label="关闭"
+                aria-label={t("admin.feedback.close")}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -376,7 +378,7 @@ export default function FeedbackManagement() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-xs text-gray-500 mb-1.5">处理结果</label>
+              <label className="block text-xs text-gray-500 mb-1.5">{t("admin.feedback.result")}</label>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -387,7 +389,7 @@ export default function FeedbackManagement() {
                       : "border-gray-200 text-gray-600 hover:border-lw-accent"
                   }`}
                 >
-                  已回复
+                  {t("admin.feedback.replied")}
                 </button>
                 <button
                   type="button"
@@ -398,24 +400,24 @@ export default function FeedbackManagement() {
                       : "border-gray-200 text-gray-600 hover:border-lw-accent"
                   }`}
                 >
-                  已采纳
+                  {t("admin.feedback.adopted")}
                 </button>
               </div>
               <p className="mt-1.5 text-xs text-gray-400">
                 {replyStatus === "adopted"
-                  ? "标记为已采纳并回复，用户端显示已采纳状态"
-                  : "回复用户，用户端显示已回复状态"}
+                  ? t("admin.feedback.adoptedHint")
+                  : t("admin.feedback.repliedHint")}
               </p>
             </div>
 
             <div className="mb-4">
-              <label className="block text-xs text-gray-500 mb-1.5">回复内容</label>
+              <label className="block text-xs text-gray-500 mb-1.5">{t("admin.feedback.replyContent")}</label>
               <textarea
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 rows={5}
                 maxLength={2000}
-                placeholder="请输入回复内容"
+                placeholder={t("admin.feedback.replyPh")}
                 className="w-full px-3 py-2 text-sm text-lw-black bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors resize-none"
               />
             </div>
@@ -434,7 +436,7 @@ export default function FeedbackManagement() {
                 disabled={replySaving}
                 className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 cursor-pointer"
               >
-                取消
+                {t("admin.feedback.cancel")}
               </button>
               <button
                 type="button"
@@ -447,7 +449,7 @@ export default function FeedbackManagement() {
                 ) : (
                   <CheckCircle className="w-4 h-4" />
                 )}
-                {replySaving ? "保存中..." : "保存回复"}
+                {replySaving ? t("admin.feedback.saving") : t("admin.feedback.save")}
               </button>
             </div>
           </div>

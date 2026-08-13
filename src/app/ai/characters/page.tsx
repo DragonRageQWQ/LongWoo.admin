@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { AiCharacter } from '@/types/database'
 import BottomNav from '@/components/layout/BottomNav'
+import { useLanguage } from '@/components/i18n/LanguageProvider'
 
 // ===== 内联 SVG 图标 =====
 const BackIcon = () => (
@@ -79,6 +80,7 @@ function CharacterAvatar({ character, size = 56 }: { character: AiCharacter; siz
  */
 export default function CharactersPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [characters, setCharacters] = useState<AiCharacter[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -90,12 +92,12 @@ export default function CharactersPage() {
         if (data.success) {
           setCharacters(data.characters ?? [])
         } else {
-          setError(data.error || '加载失败')
+          setError(data.error || t('ai.characters.err.loadFailed'))
         }
       })
-      .catch(() => setError('网络错误，请稍后重试'))
+      .catch(() => setError(t('ai.characters.err.networkError')))
       .finally(() => setLoading(false))
-  }, [])
+  }, [t])
 
   if (loading) {
     return (
@@ -103,7 +105,7 @@ export default function CharactersPage() {
         <TopBar />
         <div className="loading-wrap">
           <div className="spinner" />
-          <span>正在唤醒灵龙…</span>
+          <span>{t('ai.characters.loading')}</span>
         </div>
       </div>
     )
@@ -116,7 +118,7 @@ export default function CharactersPage() {
         <div className="empty-wrap">
           <div className="empty-icon"><SparkleIcon /></div>
           <p className="empty-desc">{error}</p>
-          <button className="btn-primary" onClick={() => router.push('/login')}>重新登录</button>
+          <button className="btn-primary" onClick={() => router.push('/login')}>{t('ai.characters.relogin')}</button>
         </div>
       </div>
     )
@@ -131,14 +133,14 @@ export default function CharactersPage() {
       {isEmpty ? (
         <div className="empty-wrap">
           <div className="empty-icon"><SparkleIcon /></div>
-          <h2 className="empty-title">你的灵龙工坊还空着</h2>
+          <h2 className="empty-title">{t('ai.characters.emptyTitle')}</h2>
           <p className="empty-desc">
-            创建一个属于你的 AI 角色吧<br />
-            设定它的名字、人设和称呼，和它自由对话
+            {t('ai.characters.emptyDesc1')}<br />
+            {t('ai.characters.emptyDesc2')}
           </p>
           <Link href="/ai/characters/new" className="empty-create-btn">
             <PlusIcon />
-            添加角色
+            {t('ai.characters.add')}
           </Link>
         </div>
       ) : (
@@ -157,7 +159,7 @@ export default function CharactersPage() {
                       <ChatIcon />
                     </div>
                     <p className="character-desc">
-                      {char.persona?.slice(0, 40) || (char.user_nickname ? `叫你「${char.user_nickname}」` : '还没有人设')}
+                      {char.persona?.slice(0, 40) || (char.user_nickname ? `叫你「${char.user_nickname}」` : t('ai.characters.noPersona'))}
                       {char.persona && char.persona.length > 40 ? '…' : ''}
                     </p>
                   </div>
@@ -165,8 +167,8 @@ export default function CharactersPage() {
                 <Link
                   href={`/ai/characters/${char.id}/edit`}
                   className="character-card-edit"
-                  title="调整角色设定"
-                  aria-label="调整角色设定"
+                  title={t('ai.characters.editTitle')}
+                  aria-label={t('ai.characters.editTitle')}
                 >
                   <EditIcon />
                 </Link>
@@ -177,7 +179,7 @@ export default function CharactersPage() {
           <div className="character-list-footer">
             <Link href="/ai/characters/new" className="footer-create-btn">
               <PlusIcon />
-              添加角色
+              {t('ai.characters.add')}
             </Link>
           </div>
         </>
@@ -190,13 +192,14 @@ export default function CharactersPage() {
 }
 
 function TopBar() {
+  const { t } = useLanguage()
   return (
     <header className="top-bar">
       <div className="top-bar-left">
-        <Link href="/" className="top-back" aria-label="返回首页"><BackIcon /></Link>
+        <Link href="/" className="top-back" aria-label={t('ai.characters.backHome')}><BackIcon /></Link>
         <div>
-          <h1 className="top-title">龙灵工坊</h1>
-          <span className="top-sub">你的专属 AI 角色</span>
+          <h1 className="top-title">{t('nav.lingWork')}</h1>
+          <span className="top-sub">{t('ai.characters.subtitle')}</span>
         </div>
       </div>
     </header>

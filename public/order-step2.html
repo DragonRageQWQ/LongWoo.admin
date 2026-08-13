@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>购买自设兽装 - 第2步选配内容 | LongWoo 工作室</title>
-    <meta name="description" content="LongWoo兽装定制第二步 - 选择附加配件和定制选项。">
+    <meta name="description" data-i18n-meta="order2.docDesc" content="LongWoo兽装定制第二步 - 选择附加配件和定制选项。">
     <meta name="robots" content="index, follow">
     <!-- 预连接 Supabase API -->
     <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
+    <!-- LW-I18N 语言切换（未上线：切换器隐藏，?lang=en 可预览） -->
+    <script src="/js/i18n/i18n-init.js" defer></script>
 </head>
-<body>
+<body data-i18n-doc-title="order2.docTitle">
 
   <!-- Top Navigation -->
   <div class="top-nav">
@@ -20,7 +22,8 @@
         <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
     </button>
-    <span class="top-nav-title">购买自设兽装</span>
+    <span class="top-nav-title" data-i18n="order2.title">购买自设兽装</span>
+    <span data-lang-slot></span>
     <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -29,9 +32,9 @@
 
   <!-- Info Section -->
   <div class="info-section">
-    <h1 class="info-title">购买 自设兽装</h1>
-    <p class="info-subtitle">预计 4-6 周后交付*</p>
-    <p class="info-price">首次购置价格依照15000RMB-25000RMB区间计算</p>
+    <h1 class="info-title" data-i18n="order2.title">购买 自设兽装</h1>
+    <p class="info-subtitle" data-i18n="order2.subtitle">预计 4-6 周后交付*</p>
+    <p class="info-price" data-i18n="order2.price">首次购置价格依照15000RMB-25000RMB区间计算</p>
   </div>
 
   <!-- Step Indicator (Step 2 active) -->
@@ -42,27 +45,27 @@
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
-      <div class="step-label completed">上传设定图</div>
+      <div class="step-label completed" data-i18n="order2.step1">上传设定图</div>
     </div>
     <div class="step-line filled"></div>
     <div class="step-item">
       <div class="step-circle active">2</div>
-      <div class="step-label active">选配内容</div>
+      <div class="step-label active" data-i18n="order2.step2">选配内容</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">3</div>
-      <div class="step-label">折抵权益</div>
+      <div class="step-label" data-i18n="order2.step3">折抵权益</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">4</div>
-      <div class="step-label">联系方式</div>
+      <div class="step-label" data-i18n="order2.step4">联系方式</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">5</div>
-      <div class="step-label">等待估价</div>
+      <div class="step-label" data-i18n="order2.step5">等待估价</div>
     </div>
   </div>
 
@@ -81,7 +84,7 @@
         <div class="locked-image-preview" id="lockedImagePreview" style="display:none;">
           <img id="lockedImage" alt="设定图预览" loading="lazy" decoding="async" width="480" height="300">
         </div>
-        <span class="locked-text" id="lockedText">上传完成</span>
+        <span class="locked-text" id="lockedText" data-i18n="order2.uploadDone">上传完成</span>
         <span class="locked-filename" id="lockedFileName" style="display:none;"></span>
       </div>
     </div>
@@ -91,18 +94,18 @@
 
       <!-- Locked Step 1 (collapsed, grayed out) -->
       <div class="locked-step">
-        <div class="locked-step-title">
+        <div class="locked-step-title" data-i18n-html="order2.lockStep1Title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
           第一步：请上传设定图
         </div>
-        <div class="locked-step-status">上传完成</div>
+        <div class="locked-step-status" data-i18n="order2.uploadDone">上传完成</div>
       </div>
 
       <!-- Current Step 2: Select Options -->
-      <h2 class="current-step-title">第二步：选配内容 <span class="multi-hint">可多选</span></h2>
+      <h2 class="current-step-title" data-i18n-html="order2.stepTitle">第二步：选配内容 <span class="multi-hint">可多选</span></h2>
 
       <div class="radio-group">
         <div class="radio-option selected" id="optNone" onclick="toggleOption(this)" data-price="0" data-none="1">
@@ -111,7 +114,7 @@
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           </div>
-          <span class="radio-label">无</span>
+          <span class="radio-label" data-i18n="order2.optNone">无</span>
         </div>
         <div class="radio-option" onclick="toggleOption(this)" data-price="300">
           <div class="radio-circle">
@@ -119,7 +122,7 @@
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           </div>
-          <span class="radio-label">Longwoo 便携式头包</span>
+          <span class="radio-label" data-i18n="order2.optHeadBag">Longwoo 便携式头包</span>
           <span class="radio-price">RMB 300</span>
         </div>
         <div class="radio-option" onclick="toggleOption(this)" data-price="750">
@@ -128,18 +131,18 @@
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           </div>
-          <span class="radio-label">Longwoo室内脚</span>
+          <span class="radio-label" data-i18n="order2.optIndoorFeet">Longwoo室内脚</span>
           <span class="radio-price">RMB 750</span>
         </div>
-        <div class="radio-option disabled" data-price="8888" title="暂未上线">
+        <div class="radio-option disabled" data-price="8888" title="暂未上线" data-i18n-title="order2.comingSoon">
           <div class="radio-circle">
             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           </div>
-          <span class="radio-label">Longwoo Vision 视觉增强套件</span>
+          <span class="radio-label" data-i18n="order2.optVisionKit">Longwoo Vision 视觉增强套件</span>
           <span class="radio-price">RMB 8,888</span>
-          <span class="radio-tag">暂未上线</span>
+          <span class="radio-tag" data-i18n="order2.comingSoon">暂未上线</span>
         </div>
       </div>
 
@@ -149,26 +152,26 @@
   <!-- Price Summary -->
   <div class="price-summary">
     <div class="price-row">
-      <span class="price-row-label">基础价格</span>
+      <span class="price-row-label" data-i18n="order2.basePriceLabel">基础价格</span>
       <span class="price-row-value">RMB 15,000 - 25,000</span>
     </div>
     <div class="price-row">
-      <span class="price-row-label">附加选项</span>
+      <span class="price-row-label" data-i18n="order2.addonLabel">附加选项</span>
       <span class="price-row-value" id="addonPrice">RMB 0</span>
     </div>
     <div class="price-row">
-      <span class="price-row-label">折抵</span>
+      <span class="price-row-label" data-i18n="order2.discountLabel">折抵</span>
       <span class="price-row-value">RMB 0</span>
     </div>
     <div class="price-row total">
-      <span class="price-row-label">合计</span>
+      <span class="price-row-label" data-i18n="order2.totalLabel">合计</span>
       <span class="price-row-value" id="totalPrice">RMB 15,000 - 25,000</span>
     </div>
   </div>
 
   <!-- Next Step Action -->
   <div class="action-bar">
-    <button class="next-step-btn" type="button" onclick="window.location.href='order-step3-benefits.html'">下一步：折抵权益</button>
+    <button class="next-step-btn" type="button" onclick="window.location.href='order-step3-benefits.html'" data-i18n="order2.nextBtn">下一步：折抵权益</button>
   </div>
 
   <!-- Bottom Spacer -->
@@ -186,7 +189,7 @@
           <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10"/>
         </svg>
       </div>
-      <span class="nav-item-label">购买兽装</span>
+      <span class="nav-item-label" data-i18n="nav.buyFursuit">购买兽装</span>
     </a>
 
     <!-- 龙灵工坊（原 AI 助手） -->
@@ -200,7 +203,7 @@
           <path d="M8 13C9.2 14.5 10.6 15.2 12 15.2C13.4 15.2 14.8 14.5 16 13"/>
         </svg>
       </div>
-      <span class="nav-item-label">龙灵工坊</span>
+      <span class="nav-item-label" data-i18n="nav.lingWork">龙灵工坊</span>
     </a>
 
     <!-- 购买掉落 -->
@@ -213,7 +216,7 @@
           <path d="M4 19H20"/>
         </svg>
       </div>
-      <span class="nav-item-label">购买掉落</span>
+      <span class="nav-item-label" data-i18n="nav.buyDrop">购买掉落</span>
     </a>
 
     <!-- 查询进度&售后 -->
@@ -224,7 +227,7 @@
           <path d="M12 7V12L15 15"/>
         </svg>
       </div>
-      <span class="nav-item-label">进度&售后</span>
+      <span class="nav-item-label" data-i18n="nav.progress">进度&售后</span>
     </a>
 
     <!-- 个人中心（原我的订单） -->
@@ -235,7 +238,7 @@
           <circle cx="12" cy="7" r="4"/>
         </svg>
       </div>
-      <span class="nav-item-label">个人中心</span>
+      <span class="nav-item-label" data-i18n="nav.profile">个人中心</span>
     </a>
 
   </nav>

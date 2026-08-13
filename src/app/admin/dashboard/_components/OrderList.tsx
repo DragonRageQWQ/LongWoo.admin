@@ -15,30 +15,32 @@ import { getOrders, exportOrdersCsv } from "@/actions/order-actions";
 import { formatDate } from "@/lib/utils";
 import type { Order } from "@/types/database";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 import OrderDetailModal from "./OrderDetailModal";
 
 // 分页大小
 const PAGE_SIZE = 10;
 
 // 状态筛选项
-const statusOptions: Array<{ value: string; label: string }> = [
-  { value: "", label: "全部状态" },
-  { value: "pending", label: "待估价" },
-  { value: "estimated", label: "已估价" },
-  { value: "accepted", label: "已接单" },
-  { value: "processing", label: "处理中" },
-  { value: "delivered", label: "已交付" },
-  { value: "completed", label: "已完成" },
-  { value: "rejected", label: "已拒单" },
+const statusOptions: Array<{ value: string; label: string; i18nKey: string }> = [
+  { value: "", label: "全部状态", i18nKey: "admin.order.status.all" },
+  { value: "pending", label: "待估价", i18nKey: "admin.order.status.pending" },
+  { value: "estimated", label: "已估价", i18nKey: "admin.order.status.estimated" },
+  { value: "accepted", label: "已接单", i18nKey: "admin.order.status.accepted" },
+  { value: "processing", label: "处理中", i18nKey: "admin.order.status.processing" },
+  { value: "delivered", label: "已交付", i18nKey: "admin.order.status.delivered" },
+  { value: "completed", label: "已完成", i18nKey: "admin.order.status.completed" },
+  { value: "rejected", label: "已拒单", i18nKey: "admin.order.status.rejected" },
 ];
 
 export default function OrderList({
-  title = "委托管理",
-  description = "管理所有委托单，进行估价、接单、进度更新等操作",
+  title,
+  description,
 }: {
   title?: string;
   description?: string;
 }) {
+  const { t } = useLanguage();
   // 搜索与筛选状态
   const [searchKeyword, setSearchKeyword] = useState("");
   const [appliedKeyword, setAppliedKeyword] = useState("");
@@ -118,7 +120,7 @@ export default function OrderList({
         if (cancelled) return;
 
         if (!result.success) {
-          setError(result.error || "获取委托列表失败");
+          setError(result.error || t("admin.order.err.fetchListFailed"));
           setOrders([]);
           setTotalCount(0);
           return;
@@ -130,7 +132,7 @@ export default function OrderList({
       } catch (err) {
         if (cancelled) return;
         console.error("加载委托列表异常:", err);
-        setError("加载委托列表时发生未知错误");
+        setError(t("admin.order.err.loadListUnknown"));
         setOrders([]);
         setTotalCount(0);
       } finally {
@@ -141,7 +143,7 @@ export default function OrderList({
     return () => {
       cancelled = true;
     };
-  }, [statusFilter, currentPage, appliedKeyword, startDate, endDate, refreshKey]);
+  }, [statusFilter, currentPage, appliedKeyword, startDate, endDate, refreshKey, t]);
 
   // 搜索按钮
   const handleSearch = () => {
@@ -247,9 +249,11 @@ export default function OrderList({
       {/* 标题 */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-lw-black">{title}</h1>
+          <h1 className="text-xl font-bold text-lw-black">
+            {title ?? t("admin.order.title")}
+          </h1>
           <p className="text-sm text-gray-400 mt-1">
-            {description}
+            {description ?? t("admin.order.description")}
           </p>
         </div>
         {/* 导出 CSV */}
@@ -263,7 +267,7 @@ export default function OrderList({
           ) : (
             <Download className="w-4 h-4" />
           )}
-          {exporting ? "导出中..." : "导出 CSV"}
+          {exporting ? t("admin.order.exporting") : t("admin.order.export")}
         </button>
       </div>
 
@@ -278,7 +282,7 @@ export default function OrderList({
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="按订单号或客户名称搜索..."
+              placeholder={t("admin.order.searchPh")}
               className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors"
             />
           </div>
@@ -287,7 +291,7 @@ export default function OrderList({
             className="px-5 py-2 bg-lw-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <Search className="w-4 h-4" />
-            搜索
+            {t("admin.order.search")}
           </button>
         </div>
 
@@ -295,7 +299,7 @@ export default function OrderList({
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Funnel className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-gray-500">筛选:</span>
+            <span className="text-sm text-gray-500">{t("admin.order.filter")}</span>
           </div>
 
           {/* 状态下拉 */}
@@ -334,7 +338,7 @@ export default function OrderList({
               onClick={handleReset}
               className="px-3 py-1.5 text-sm text-gray-500 hover:text-lw-accent transition-colors cursor-pointer"
             >
-              重置
+              {t("admin.order.reset")}
             </button>
           )}
         </div>
@@ -352,12 +356,12 @@ export default function OrderList({
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader className="w-6 h-6 text-lw-accent animate-spin" />
-            <span className="ml-2 text-sm text-gray-400">加载中...</span>
+            <span className="ml-2 text-sm text-gray-400">{t("admin.order.loading")}</span>
           </div>
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
             <Inbox className="w-12 h-12 mb-3 text-gray-300" />
-            <p className="text-sm">暂无委托数据</p>
+            <p className="text-sm">{t("admin.order.empty")}</p>
           </div>
         ) : (
           <>
@@ -367,25 +371,25 @@ export default function OrderList({
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      订单号
+                      {t("admin.order.colOrderNo")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      客户姓名
+                      {t("admin.order.colCustomer")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      联系方式
+                      {t("admin.order.colContact")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      需求摘要
+                      {t("admin.order.colSummary")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      状态
+                      {t("admin.order.colStatus")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      提交时间
+                      {t("admin.order.colTime")}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      操作
+                      {t("admin.order.colAction")}
                     </th>
                   </tr>
                 </thead>
@@ -421,7 +425,7 @@ export default function OrderList({
                           className="inline-flex items-center gap-1 px-3 py-1 text-sm text-lw-accent hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                         >
                           <Eye className="w-4 h-4" />
-                          查看详情
+                          {t("admin.order.viewDetail")}
                         </button>
                       </td>
                     </tr>
@@ -441,7 +445,7 @@ export default function OrderList({
                     <StatusBadge status={order.status} size="sm" />
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600">
-                    <span>客户: {order.customer_name}</span>
+                    <span>{t("admin.order.customer")} {order.customer_name}</span>
                     <span>{order.customer_phone}</span>
                   </div>
                   <p className="text-sm text-gray-500 line-clamp-2">
@@ -456,7 +460,7 @@ export default function OrderList({
                       className="inline-flex items-center gap-1 px-3 py-1 text-sm text-lw-accent hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                     >
                       <Eye className="w-4 h-4" />
-                      查看详情
+                      {t("admin.order.viewDetail")}
                     </button>
                   </div>
                 </div>
@@ -466,8 +470,10 @@ export default function OrderList({
             {/* 分页控件 */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-50 bg-gray-50/50">
               <p className="text-sm text-gray-500">
-                共 <span className="font-medium text-lw-black">{totalCount}</span> 条，
-                第 {currentPage}/{totalPages} 页
+                {t("admin.order.total")}{" "}
+                <span className="font-medium text-lw-black">{totalCount}</span>{" "}
+                {t("admin.order.items")}，{t("admin.order.page")}{" "}
+                {currentPage}/{totalPages} {t("admin.order.pageUnit")}
               </p>
               <div className="flex items-center gap-1">
                 <button

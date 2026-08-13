@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>购买预设兽装 - 第3步等待确认 | LongWoo 工作室</title>
-    <meta name="description" content="LongWoo预设兽装购买 - 完成支付并提交订单。">
+    <meta name="description" data-i18n-meta="pre3.docDesc" content="LongWoo预设兽装购买 - 完成支付并提交订单。">
     <meta name="robots" content="index, follow">
     <!-- 预连接 Supabase API -->
     <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
+    <!-- LW-I18N 语言切换（未上线：切换器隐藏，?lang=en 可预览） -->
+    <script src="/js/i18n/i18n-init.js" defer></script>
 </head>
-<body>
+<body data-i18n-doc-title="pre3.docTitle">
 
   <!-- Top Navigation -->
   <div class="top-nav">
@@ -20,7 +22,8 @@
         <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
     </button>
-    <span class="top-nav-title">购买预设兽装</span>
+    <span class="top-nav-title" data-i18n="pre3.topNavTitle">购买预设兽装</span>
+    <span data-lang-slot></span>
     <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -29,9 +32,9 @@
 
   <!-- Info Section -->
   <div class="info-section">
-    <h1 class="info-title">购买 预设兽装 (掉落)</h1>
-    <p class="info-subtitle">成品部分立即交付 剩余部分预计 4-6 周后交付*</p>
-    <p class="info-price">购置价格依照每件设定单独定价计算</p>
+    <h1 class="info-title" data-i18n="pre3.infoTitle">购买 预设兽装 (掉落)</h1>
+    <p class="info-subtitle" data-i18n="pre3.infoSubtitle">成品部分立即交付 剩余部分预计 4-6 周后交付*</p>
+    <p class="info-price" data-i18n="pre3.infoPrice">购置价格依照每件设定单独定价计算</p>
   </div>
 
   <!-- Step Indicator: Step 3 active (all complete) -->
@@ -42,7 +45,7 @@
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
-      <div class="step-label done">选配内容</div>
+      <div class="step-label done" data-i18n="pre3.step1">选配内容</div>
     </div>
     <div class="step-line done"></div>
     <div class="step-item">
@@ -51,7 +54,7 @@
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
-      <div class="step-label done">折抵权益</div>
+      <div class="step-label done" data-i18n="pre3.step2">折抵权益</div>
     </div>
     <div class="step-line done"></div>
     <div class="step-item">
@@ -60,7 +63,7 @@
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
-      <div class="step-label active">等待确认</div>
+      <div class="step-label active" data-i18n="pre3.step3">等待确认</div>
     </div>
   </div>
 
@@ -78,7 +81,7 @@
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          <span class="locked-text">产品图</span>
+          <span class="locked-text" data-i18n="pre3.lockedText">产品图</span>
         </div>
       </div>
     </div>
@@ -95,14 +98,14 @@
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            第一步：选配内容
+            <span data-i18n="pre3.lockedStep1Title">第一步：选配内容</span>
           </div>
           <div class="locked-step-value">
             <span class="tag">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
-              已选择
+              <span data-i18n="pre3.tagSelected">已选择</span>
             </span>
           </div>
         </div>
@@ -114,17 +117,17 @@
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            第二步：折抵权益
+            <span data-i18n="pre3.lockedStep2Title">第二步：折抵权益</span>
           </div>
           <div class="locked-step-value">
-            <span class="tag">不使用</span>
+            <span class="tag" data-i18n="pre3.tagNotUsed">不使用</span>
           </div>
         </div>
       </div>
 
       <!-- Active Step 3: Confirmation / Success -->
       <div class="active-step">
-        <h2 class="active-step-title">第三步：请稍等~我们将尽快与您联系</h2>
+        <h2 class="active-step-title" data-i18n="pre3.stepTitle">第三步：请稍等~我们将尽快与您联系</h2>
 
         <div class="success-area">
 
@@ -141,17 +144,17 @@
           </div>
 
           <!-- Thank you heading -->
-          <h3 class="success-heading">感谢您的订购</h3>
+          <h3 class="success-heading" data-i18n="pre3.successHeading">感谢您的订购</h3>
 
           <!-- Detailed description -->
-          <p class="success-description">我们将在工作日9:00-17:00回复订单并与您进行接下来的沟通</p>
+          <p class="success-description" data-i18n="pre3.successDescription">我们将在工作日9:00-17:00回复订单并与您进行接下来的沟通</p>
 
           <!-- Order code -->
           <div class="order-code-area">
-            <div class="order-code-label">您的订单代码</div>
+            <div class="order-code-label" data-i18n="pre3.orderCodeLabel">您的订单代码</div>
             <div class="order-code-value" id="preorderOrderCode">XXXXXXXXXXXXXXXX</div>
-            <button class="copy-code-btn" id="preorderCopyBtn" type="button" onclick="copyPreorderCode()">复制订单代码</button>
-            <p class="save-order-tip">请妥善保存订单代码，用于后续查询进度</p>
+            <button class="copy-code-btn" id="preorderCopyBtn" type="button" onclick="copyPreorderCode()" data-i18n="pre3.copyBtn">复制订单代码</button>
+            <p class="save-order-tip" data-i18n="pre3.saveTip">请妥善保存订单代码，用于后续查询进度</p>
           </div>
 
           <!-- Return button (secondary) -->
@@ -159,7 +162,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
-            返回
+            <span data-i18n="pre3.backBtn">返回</span>
           </button>
 
         </div>
@@ -178,7 +181,7 @@
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
         <polyline points="9 22 9 12 15 12 15 22"></polyline>
       </svg>
-      <span>首页</span>
+      <span data-i18n="nav.home">首页</span>
     </button>
     <button class="nav-item active" aria-label="产品">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -187,14 +190,14 @@
         <rect x="3" y="14" width="7" height="7" rx="1"></rect>
         <rect x="14" y="14" width="7" height="7" rx="1"></rect>
       </svg>
-      <span>产品</span>
+      <span data-i18n="nav.products">产品</span>
     </button>
     <button class="nav-item" aria-label="估价">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="12" y1="1" x2="12" y2="23"></line>
         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
       </svg>
-      <span>估价</span>
+      <span data-i18n="nav.estimate">估价</span>
     </button>
     <button class="nav-item" aria-label="订单">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -204,14 +207,14 @@
         <line x1="16" y1="17" x2="8" y2="17"></line>
         <polyline points="10 9 9 9 8 9"></polyline>
       </svg>
-      <span>订单</span>
+      <span data-i18n="nav.orders">订单</span>
     </button>
     <button class="nav-item" aria-label="我的">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
         <circle cx="12" cy="7" r="4"></circle>
       </svg>
-      <span>我的</span>
+      <span data-i18n="nav.mine">我的</span>
     </button>
   </div>
 

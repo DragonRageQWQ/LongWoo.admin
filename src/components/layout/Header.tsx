@@ -8,11 +8,13 @@ import Button from "@/components/ui/Button";
 import NotificationBell from "@/components/layout/NotificationBell";
 import { logoutUser } from "@/actions/auth-actions";
 import { useSession, clearSessionCache } from "@/components/providers/SessionProvider";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
+import LangSwitcher from "@/components/i18n/LangSwitcher";
 
 const navLinks = [
-  { label: "首页", href: "/" },
-  { label: "服务项目", href: "/services" },
-  { label: "工作室介绍", href: "/about" },
+  { label: "首页", i18nKey: "nav.home", href: "/" },
+  { label: "服务项目", i18nKey: "nav.services", href: "/services" },
+  { label: "工作室介绍", i18nKey: "nav.about", href: "/about" },
 ];
 
 function HeaderContent() {
@@ -20,6 +22,7 @@ function HeaderContent() {
   const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
   const { profile, loading } = useSession();
+  const { t } = useLanguage();
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -65,9 +68,11 @@ function HeaderContent() {
 
           {/* 桌面端右侧操作区 */}
           <div className="hidden md:flex items-center gap-3">
+            {/* 语言切换（未上线：LangSwitcher 默认不渲染，上线时改 enabled） */}
+            <LangSwitcher />
             <Link href="/order-step1.html">
               <Button variant="primary" size="sm">
-                提交委托
+                {t("header.submitOrder")}
               </Button>
             </Link>
 
@@ -100,7 +105,7 @@ function HeaderContent() {
                 <button
                   onClick={handleLogout}
                   disabled={loggingOut}
-                  title="退出登录"
+                  title={t("header.logout")}
                   className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {loggingOut ? (
@@ -113,7 +118,7 @@ function HeaderContent() {
             ) : (
               <Link href="/login">
                 <Button variant="outline" size="sm">
-                  登录
+                  {t("header.signIn")}
                 </Button>
               </Link>
             )}
@@ -133,6 +138,10 @@ function HeaderContent() {
         {mobileOpen && (
           <div className="md:hidden border-t border-gray-100 py-4">
             <nav className="flex flex-col gap-4">
+              {/* 语言切换（移动端：菜单第一项；未上线默认不渲染） */}
+              <div className="px-2 py-1">
+                <LangSwitcher />
+              </div>
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -150,7 +159,7 @@ function HeaderContent() {
               <div className="flex flex-col gap-3 mt-2 px-2">
                 <Link href="/order-step1.html" onClick={() => setMobileOpen(false)}>
                   <Button variant="primary" size="sm" className="w-full">
-                    提交委托
+                    {t("header.submitOrder")}
                   </Button>
                 </Link>
 
@@ -182,7 +191,7 @@ function HeaderContent() {
                         )}
                       </div>
                       <span className="text-sm font-medium text-lw-accent">
-                        进入{profile.role === "admin" ? "管理后台" : "个人中心"}
+                        {t("header.enter")}{t(profile.role === "admin" ? "header.enterAdmin" : "header.enterProfile")}
                       </span>
                     </Link>
                     <button
@@ -198,13 +207,13 @@ function HeaderContent() {
                       ) : (
                         <LogOut className="w-4 h-4" />
                       )}
-                      {loggingOut ? "退出中..." : "退出登录"}
+                      {loggingOut ? t("header.loggingOut") : t("header.logout")}
                     </button>
                   </>
                 ) : (
                   <Link href="/login" onClick={() => setMobileOpen(false)}>
                     <Button variant="outline" size="sm" className="w-full">
-                      登录
+                      {t("header.signIn")}
                     </Button>
                   </Link>
                 )}

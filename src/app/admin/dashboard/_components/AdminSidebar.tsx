@@ -19,6 +19,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 export type AdminTab = "all-orders" | "overview" | "users" | "notifications" | "feedback" | "settings" | "works" | "drops";
 
@@ -29,6 +30,7 @@ const BUILD_NUMBER = "810";
 interface NavItem {
   key: AdminTab | "gray-test";
   label: string;
+  i18nKey: string;
   icon: React.ElementType;
   disabled?: boolean;
   superAdminOnly?: boolean;
@@ -36,15 +38,15 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { key: "all-orders", label: "全部订单", icon: Inbox },
-  { key: "overview", label: "数据概览", icon: LayoutDashboard },
-  { key: "users", label: "用户管理", icon: Users },
-  { key: "notifications", label: "通知管理", icon: Bell },
-  { key: "feedback", label: "反馈管理", icon: MessageSquare },
-  { key: "works", label: "作品管理", icon: ImageIcon, superAdminOnly: true },
-  { key: "drops", label: "掉落管理", icon: ShoppingBag },
-  { key: "gray-test", label: "灰度测试", icon: FlaskConical, superAdminOnly: true, href: "/gray-test" },
-  { key: "settings", label: "系统设置", icon: Settings },
+  { key: "all-orders", label: "全部订单", i18nKey: "admin.sidebar.nav.allOrders", icon: Inbox },
+  { key: "overview", label: "数据概览", i18nKey: "admin.sidebar.nav.overview", icon: LayoutDashboard },
+  { key: "users", label: "用户管理", i18nKey: "admin.sidebar.nav.users", icon: Users },
+  { key: "notifications", label: "通知管理", i18nKey: "admin.sidebar.nav.notifications", icon: Bell },
+  { key: "feedback", label: "反馈管理", i18nKey: "admin.sidebar.nav.feedback", icon: MessageSquare },
+  { key: "works", label: "作品管理", i18nKey: "admin.sidebar.nav.works", icon: ImageIcon, superAdminOnly: true },
+  { key: "drops", label: "掉落管理", i18nKey: "admin.sidebar.nav.drops", icon: ShoppingBag },
+  { key: "gray-test", label: "灰度测试", i18nKey: "admin.sidebar.nav.grayTest", icon: FlaskConical, superAdminOnly: true, href: "/gray-test" },
+  { key: "settings", label: "系统设置", i18nKey: "admin.sidebar.nav.settings", icon: Settings },
 ];
 
 interface AdminSidebarProps {
@@ -53,6 +55,7 @@ interface AdminSidebarProps {
 }
 
 export default function AdminSidebar({ activeTab, isSuperAdmin = false }: AdminSidebarProps) {
+  const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -95,9 +98,9 @@ export default function AdminSidebar({ activeTab, isSuperAdmin = false }: AdminS
       {/* 顶部标题 */}
       <div className="px-6 py-6 border-b border-gray-100">
         <h1 className="text-base font-bold text-lw-black tracking-tight">
-          LongWoo 管理后台
+          {t("admin.sidebar.brand")}
         </h1>
-        <p className="text-xs text-gray-400 mt-1">管理员控制台</p>
+        <p className="text-xs text-gray-400 mt-1">{t("admin.sidebar.subtitle")}</p>
       </div>
 
       {/* 导航项 */}
@@ -119,9 +122,9 @@ export default function AdminSidebar({ activeTab, isSuperAdmin = false }: AdminS
               } ${item.disabled ? "opacity-40 cursor-not-allowed hover:bg-transparent" : ""}`}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
-              <span className="flex-1 text-left">{item.label}</span>
+              <span className="flex-1 text-left">{t(item.i18nKey)}</span>
               {item.disabled && (
-                <span className="text-[10px] text-gray-400">占位</span>
+                <span className="text-[10px] text-gray-400">{t("admin.sidebar.placeholder")}</span>
               )}
             </button>
           );
@@ -142,7 +145,7 @@ export default function AdminSidebar({ activeTab, isSuperAdmin = false }: AdminS
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
         >
           <Briefcase className="w-4 h-4 flex-shrink-0" />
-          <span>进入工作台</span>
+          <span>{t("admin.sidebar.studio")}</span>
         </button>
         <div className="pt-1 border-t border-gray-100">
           <button
@@ -151,7 +154,7 @@ export default function AdminSidebar({ activeTab, isSuperAdmin = false }: AdminS
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
-            <span>{loggingOut ? "正在退出..." : "退出登录"}</span>
+            <span>{loggingOut ? t("admin.sidebar.loggingOut") : t("admin.sidebar.logout")}</span>
           </button>
         </div>
         {/* 部署版本号（仅管理员可见） */}
@@ -168,7 +171,7 @@ export default function AdminSidebar({ activeTab, isSuperAdmin = false }: AdminS
       <button
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border border-gray-100"
         onClick={() => setMobileOpen(!mobileOpen)}
-        aria-label="切换侧边栏"
+        aria-label={t("admin.sidebar.toggle")}
       >
         {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>

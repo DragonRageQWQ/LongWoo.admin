@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Camera, Loader2, Trash2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import { useLanguage } from '@/components/i18n/LanguageProvider'
 import type { AiCharacter } from '@/types/database'
 
 const MAX_LENGTHS = {
@@ -38,6 +39,7 @@ export default function CharacterEditForm({
   initial?: AiCharacter | null
 }) {
   const router = useRouter()
+  const { t } = useLanguage()
   const fileInputRef = useRef<HTMLInputElement>(null)
   // 创建模式下保存选中的头像文件（input 的 value 会被清空，不能依赖 fileInputRef.current.files）
   const pendingAvatarFileRef = useRef<File | null>(null)
@@ -67,11 +69,11 @@ export default function CharacterEditForm({
 
     // 客户端预校验
     if (file.size > 2 * 1024 * 1024) {
-      setError('图片大小不能超过 2MB')
+      setError(t('ai.form.err.avatarTooLarge'))
       return
     }
     if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
-      setError('仅支持 JPG、PNG、GIF、WebP 格式')
+      setError(t('ai.form.err.avatarFormat'))
       return
     }
 
@@ -98,20 +100,20 @@ export default function CharacterEditForm({
       if (data.success) {
         setAvatarUrl(data.avatar_url)
       } else {
-        setError(data.error || '头像上传失败')
+        setError(data.error || t('ai.form.err.avatarUploadFailed'))
       }
     } catch {
-      setError('头像上传失败，请稍后重试')
+      setError(t('ai.form.err.avatarUploadRetry'))
     } finally {
       setUploadingAvatar(false)
     }
-  }, [mode, characterId])
+  }, [mode, characterId, t])
 
   // ===== 保存 =====
   const handleSave = useCallback(async () => {
     const trimmedName = name.trim()
     if (!trimmedName) {
-      setError('请填写角色名字')
+      setError(t('ai.form.err.nameRequired'))
       return
     }
 
@@ -136,7 +138,7 @@ export default function CharacterEditForm({
         })
         const createData = await createRes.json()
         if (!createData.success) {
-          setError(createData.error || '创建失败')
+          setError(createData.error || t('ai.form.err.createFailed'))
           setSaving(false)
           return
         }
@@ -183,14 +185,14 @@ export default function CharacterEditForm({
         router.push(`/ai/characters/${characterId}`)
         router.refresh()
       } else {
-        setError(data.error || '保存失败')
+        setError(data.error || t('ai.form.err.saveFailed'))
       }
     } catch {
-      setError('网络错误，请稍后重试')
+      setError(t('ai.form.err.networkError'))
     } finally {
       setSaving(false)
     }
-  }, [mode, characterId, name, persona, greeting, userNickname, avatarUrl, router])
+  }, [mode, characterId, name, persona, greeting, userNickname, avatarUrl, router, t])
 
   // ===== 删除角色 =====
   const handleDelete = useCallback(async () => {
@@ -210,14 +212,14 @@ export default function CharacterEditForm({
         router.push('/ai/characters')
         router.refresh()
       } else {
-        setError(data.error || '删除失败')
+        setError(data.error || t('ai.form.err.deleteFailed'))
         setDeleting(false)
       }
     } catch {
-      setError('网络错误，请稍后重试')
+      setError(t('ai.form.err.networkError'))
       setDeleting(false)
     }
-  }, [characterId, name, deleting, router])
+  }, [characterId, name, deleting, router, t])
 
   return (
     <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
@@ -231,9 +233,9 @@ export default function CharacterEditForm({
         >
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="角色头像" className="w-full h-full object-cover" />
+            <img src={avatarUrl} alt={t('ai.form.avatarAlt')} className="w-full h-full object-cover" />
           ) : (
-            <span>{name.trim() ? name.charAt(0) : '灵'}</span>
+            <span>{name.trim() ? name.charAt(0) : t('ai.form.avatarFallback')}</span>
           )}
           <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
             {uploadingAvatar ? (
@@ -241,7 +243,7 @@ export default function CharacterEditForm({
             ) : (
               <Camera className="w-4 h-4" />
             )}
-            <span className="text-[10px]">更换头像</span>
+            <span className="text-[10px]">{t('ai.form.changeAvatar')}</span>
           </span>
         </button>
         <input
@@ -252,7 +254,7 @@ export default function CharacterEditForm({
           className="hidden"
         />
         <p className="text-xs text-gray-400">
-          {uploadingAvatar ? '上传中…' : '点击头像可更换图片（2MB以内）'}
+          {uploadingAvatar ? t('ai.form.uploading') : t('ai.form.avatarHint')}
         </p>
       </div>
 
@@ -261,14 +263,14 @@ export default function CharacterEditForm({
         {/* 名字 */}
         <div>
           <label className="block text-sm font-medium text-lw-black mb-1.5">
-            角色名字 <span className="text-red-500">*</span>
-            <span className="text-xs text-gray-400 font-normal ml-2">AI 的名字</span>
+            {t('ai.form.nameLabel')} <span className="text-red-500">*</span>
+            <span className="text-xs text-gray-400 font-normal ml-2">{t('ai.form.nameHint')}</span>
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="例如：小灵、龙岚、阿焰…"
+            placeholder={t('ai.form.namePh')}
             maxLength={MAX_LENGTHS.name}
             className={inputClass}
           />
@@ -280,14 +282,14 @@ export default function CharacterEditForm({
         {/* 称呼 */}
         <div>
           <label className="block text-sm font-medium text-lw-black mb-1.5">
-            对你的称呼
-            <span className="text-xs text-gray-400 font-normal ml-2">AI 怎么叫你</span>
+            {t('ai.form.nicknameLabel')}
+            <span className="text-xs text-gray-400 font-normal ml-2">{t('ai.form.nicknameHint')}</span>
           </label>
           <input
             type="text"
             value={userNickname}
             onChange={(e) => setUserNickname(e.target.value)}
-            placeholder="例如：主人、朋友、搭档…"
+            placeholder={t('ai.form.nicknamePh')}
             maxLength={MAX_LENGTHS.user_nickname}
             className={inputClass}
           />
@@ -299,14 +301,14 @@ export default function CharacterEditForm({
         {/* 人设 */}
         <div>
           <label className="block text-sm font-medium text-lw-black mb-1.5">
-            角色人设
-            <span className="text-xs text-gray-400 font-normal ml-2">性格、背景、说话风格</span>
+            {t('ai.form.personaLabel')}
+            <span className="text-xs text-gray-400 font-normal ml-2">{t('ai.form.personaHint')}</span>
           </label>
           <textarea
             rows={5}
             value={persona}
             onChange={(e) => setPersona(e.target.value)}
-            placeholder={'例如：\n你是一只温柔又傲娇的银龙，喜欢晒太阳和收集亮晶晶的东西。\n说话简短带点小脾气，但心里很在意对方。'}
+            placeholder={t('ai.form.personaPh')}
             maxLength={MAX_LENGTHS.persona}
             className={`${inputClass} resize-none`}
           />
@@ -318,22 +320,22 @@ export default function CharacterEditForm({
         {/* 语气风格 */}
         <div>
           <label className="block text-sm font-medium text-lw-black mb-1.5">
-            语气风格
-            <span className="text-xs text-gray-400 font-normal ml-2">点击选择，也可以自己写</span>
+            {t('ai.form.toneLabel')}
+            <span className="text-xs text-gray-400 font-normal ml-2">{t('ai.form.toneHint')}</span>
           </label>
           <div className="flex flex-wrap gap-2 mb-2">
-            {TONE_PRESETS.map((t) => (
+            {TONE_PRESETS.map((preset) => (
               <button
-                key={t}
+                key={preset}
                 type="button"
                 className={`px-3 py-1.5 text-sm rounded-full border transition cursor-pointer ${
-                  tone === t
+                  tone === preset
                     ? 'bg-lw-accent text-white border-lw-accent'
                     : 'bg-white text-lw-black border-gray-200 hover:border-gray-300'
                 }`}
-                onClick={() => setTone(tone === t ? '' : t)}
+                onClick={() => setTone(tone === preset ? '' : preset)}
               >
-                {t}
+                {t(`ai.form.tone.${preset}`)}
               </button>
             ))}
           </div>
@@ -341,7 +343,7 @@ export default function CharacterEditForm({
             type="text"
             value={tone}
             onChange={(e) => setTone(e.target.value)}
-            placeholder="自定义语气，例如：带着点方言腔、喜欢说反话…"
+            placeholder={t('ai.form.tonePh')}
             maxLength={MAX_LENGTHS.tone}
             className={inputClass}
           />
@@ -353,14 +355,14 @@ export default function CharacterEditForm({
         {/* 开场白 */}
         <div>
           <label className="block text-sm font-medium text-lw-black mb-1.5">
-            开场白
-            <span className="text-xs text-gray-400 font-normal ml-2">对话开始时它说的第一句话</span>
+            {t('ai.form.greetingLabel')}
+            <span className="text-xs text-gray-400 font-normal ml-2">{t('ai.form.greetingHint')}</span>
           </label>
           <input
             type="text"
             value={greeting}
             onChange={(e) => setGreeting(e.target.value)}
-            placeholder="例如：哼，你终于来了，我等你好久了。"
+            placeholder={t('ai.form.greetingPh')}
             maxLength={MAX_LENGTHS.greeting}
             className={inputClass}
           />
@@ -390,12 +392,12 @@ export default function CharacterEditForm({
               {deleting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  删除中…
+                  {t('ai.form.deleting')}
                 </>
               ) : (
                 <>
                   <Trash2 className="w-4 h-4 mr-1" />
-                  删除角色
+                  {t('ai.form.delete')}
                 </>
               )}
             </Button>
@@ -408,10 +410,10 @@ export default function CharacterEditForm({
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  保存中…
+                  {t('ai.form.saving')}
                 </>
               ) : (
-                '保存'
+                t('ai.form.save')
               )}
             </Button>
           </>
@@ -423,7 +425,7 @@ export default function CharacterEditForm({
               disabled={saving}
               className="flex-1"
             >
-              取消
+              {t('ai.form.cancel')}
             </Button>
             <Button
               variant="primary"
@@ -434,10 +436,10 @@ export default function CharacterEditForm({
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  创建中…
+                  {t('ai.form.creating')}
                 </>
               ) : (
-                '创建角色'
+                t('ai.form.create')
               )}
             </Button>
           </>

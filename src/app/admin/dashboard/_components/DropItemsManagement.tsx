@@ -21,7 +21,21 @@ import {
   updateDropStatus,
 } from "@/actions/drop-actions";
 import type { DropItem, DropItemInput, DropItemStatus } from "@/types/database";
-import { DROP_STATUS_LABELS, DROP_STATUS_DESCRIPTIONS } from "@/types/database";
+import { DROP_STATUS_LABELS } from "@/types/database";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
+
+// 掉落状态下拉选项的 i18n key（渲染处用 t() 转换，避免模块级常量引用 hook）
+const DROP_STATUS_I18N_KEYS: Record<DropItemStatus, string> = {
+  on_sale: "admin.drop.status.onSale",
+  preparing: "admin.drop.status.preparing",
+  adopted: "admin.drop.status.adopted",
+};
+
+const DROP_STATUS_DESC_I18N_KEYS: Record<DropItemStatus, string> = {
+  on_sale: "admin.drop.statusDesc.onSale",
+  preparing: "admin.drop.statusDesc.preparing",
+  adopted: "admin.drop.statusDesc.adopted",
+};
 
 interface ToastState {
   type: "success" | "error";
@@ -62,6 +76,7 @@ const STATUS_STYLES: Record<DropItemStatus, string> = {
 };
 
 export default function DropItemsManagement() {
+  const { t } = useLanguage();
   const [items, setItems] = useState<DropItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -103,15 +118,15 @@ export default function DropItemsManagement() {
       if (result.success) {
         setItems((result.data || []) as DropItem[]);
       } else {
-        showToast("error", result.error || "加载失败");
+        showToast("error", result.error || t("admin.drop.err.loadFailed"));
       }
     } catch (err) {
       console.error("加载掉落列表异常:", err);
-      showToast("error", "加载失败，请稍后重试");
+      showToast("error", t("admin.drop.err.loadRetry"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -128,12 +143,12 @@ export default function DropItemsManagement() {
       const data = await res.json();
       if (data.success && data.image_url) {
         setForm((prev) => ({ ...prev, image_url: data.image_url }));
-        showToast("success", "图片上传成功");
+        showToast("success", t("admin.drop.err.uploadSuccess"));
       } else {
-        showToast("error", data.error || "图片上传失败");
+        showToast("error", data.error || t("admin.drop.err.uploadFailed"));
       }
     } catch {
-      showToast("error", "图片上传失败，请稍后重试");
+      showToast("error", t("admin.drop.err.uploadRetry"));
     } finally {
       setUploading(false);
     }
@@ -149,12 +164,12 @@ export default function DropItemsManagement() {
       const data = await res.json();
       if (data.success && data.image_url) {
         setEditForm((prev) => ({ ...prev, image_url: data.image_url }));
-        showToast("success", "图片上传成功");
+        showToast("success", t("admin.drop.err.uploadSuccess"));
       } else {
-        showToast("error", data.error || "图片上传失败");
+        showToast("error", data.error || t("admin.drop.err.uploadFailed"));
       }
     } catch {
-      showToast("error", "图片上传失败，请稍后重试");
+      showToast("error", t("admin.drop.err.uploadRetry"));
     } finally {
       setEditUploading(false);
     }
@@ -162,10 +177,10 @@ export default function DropItemsManagement() {
 
   // 新增掉落
   const handleCreate = async () => {
-    if (!form.title.trim()) return showToast("error", "请填写掉落标题");
-    if (!form.image_url) return showToast("error", "请先上传介绍图片");
+    if (!form.title.trim()) return showToast("error", t("admin.drop.err.titleRequired"));
+    if (!form.image_url) return showToast("error", t("admin.drop.err.imageRequired"));
     const price = Number(form.price);
-    if (!Number.isFinite(price) || price < 0) return showToast("error", "请填写有效价格");
+    if (!Number.isFinite(price) || price < 0) return showToast("error", t("admin.drop.err.priceInvalid"));
 
     setSaving(true);
     try {
@@ -183,14 +198,14 @@ export default function DropItemsManagement() {
       };
       const result = await createDropItem(input);
       if (result.success) {
-        showToast("success", "掉落新增成功");
+        showToast("success", t("admin.drop.err.createSuccess"));
         setForm(emptyForm);
         loadItems();
       } else {
-        showToast("error", result.error || "新增失败");
+        showToast("error", result.error || t("admin.drop.err.createFailed"));
       }
     } catch {
-      showToast("error", "新增失败，请稍后重试");
+      showToast("error", t("admin.drop.err.createRetry"));
     } finally {
       setSaving(false);
     }
@@ -216,10 +231,10 @@ export default function DropItemsManagement() {
   // 保存编辑
   const handleUpdate = async () => {
     if (!editing) return;
-    if (!editForm.title.trim()) return showToast("error", "请填写掉落标题");
-    if (!editForm.image_url) return showToast("error", "请上传介绍图片");
+    if (!editForm.title.trim()) return showToast("error", t("admin.drop.err.titleRequired"));
+    if (!editForm.image_url) return showToast("error", t("admin.drop.err.editImageRequired"));
     const price = Number(editForm.price);
-    if (!Number.isFinite(price) || price < 0) return showToast("error", "请填写有效价格");
+    if (!Number.isFinite(price) || price < 0) return showToast("error", t("admin.drop.err.priceInvalid"));
 
     setEditSaving(true);
     try {
@@ -237,14 +252,14 @@ export default function DropItemsManagement() {
       };
       const result = await updateDropItem(editing.id, input);
       if (result.success) {
-        showToast("success", "掉落修改成功");
+        showToast("success", t("admin.drop.err.updateSuccess"));
         setEditing(null);
         loadItems();
       } else {
-        showToast("error", result.error || "修改失败");
+        showToast("error", result.error || t("admin.drop.err.updateFailed"));
       }
     } catch {
-      showToast("error", "修改失败，请稍后重试");
+      showToast("error", t("admin.drop.err.updateRetry"));
     } finally {
       setEditSaving(false);
     }
@@ -260,10 +275,10 @@ export default function DropItemsManagement() {
         showToast("success", `掉落状态已切换为「${DROP_STATUS_LABELS[status]}」`);
         loadItems();
       } else {
-        showToast("error", result.error || "状态切换失败");
+        showToast("error", result.error || t("admin.drop.err.statusChangeFailed"));
       }
     } catch {
-      showToast("error", "状态切换失败，请稍后重试");
+      showToast("error", t("admin.drop.err.statusChangeRetry"));
     } finally {
       setStatusUpdating(null);
     }
@@ -276,14 +291,14 @@ export default function DropItemsManagement() {
     try {
       const result = await deleteDropItem(deleting.id);
       if (result.success) {
-        showToast("success", "掉落已删除");
+        showToast("success", t("admin.drop.err.deleteSuccess"));
         setDeleting(null);
         loadItems();
       } else {
-        showToast("error", result.error || "删除失败");
+        showToast("error", result.error || t("admin.drop.err.deleteFailed"));
       }
     } catch {
-      showToast("error", "删除失败，请稍后重试");
+      showToast("error", t("admin.drop.err.deleteRetry"));
     } finally {
       setDeleteSaving(false);
     }
@@ -300,7 +315,8 @@ export default function DropItemsManagement() {
     uploading: boolean,
     onFile: (file: File) => void,
     focus_x: number,
-    focus_y: number
+    focus_y: number,
+    tr: (key: string) => string
   ) => (
     <div className="flex items-start gap-3">
       <div className="w-24 h-24 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center flex-shrink-0">
@@ -308,7 +324,7 @@ export default function DropItemsManagement() {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageUrl}
-            alt="掉落图片预览"
+            alt={tr("admin.drop.imgPreviewAlt")}
             className="w-full h-full object-cover"
             style={{ objectPosition: `${focus_x}% ${focus_y}%` }}
           />
@@ -323,7 +339,7 @@ export default function DropItemsManagement() {
           ) : (
             <Upload className="w-4 h-4" />
           )}
-          {uploading ? "上传中..." : "上传图片"}
+          {uploading ? tr("admin.drop.uploading") : tr("admin.drop.upload")}
           <input
             type="file"
             accept="image/jpeg,image/png,image/gif,image/webp"
@@ -336,10 +352,11 @@ export default function DropItemsManagement() {
             }}
           />
         </label>
-        <p className="text-xs text-gray-400 mt-2">支持 JPG / PNG / GIF / WebP，不超过 8MB</p>
+        <p className="text-xs text-gray-400 mt-2">{tr("admin.drop.uploadHint")}</p>
         {imageUrl && (
           <p className="text-xs text-gray-400 mt-1">
-            焦点：X {focus_x.toFixed(0)}% · Y {focus_y.toFixed(0)}%（点击下方图片选择角色焦点，长图可聚焦显示）
+            {tr("admin.drop.focusLabel")} X {focus_x.toFixed(0)}% · Y {focus_y.toFixed(0)}%
+            {tr("admin.drop.focusHint")}
           </p>
         )}
       </div>
@@ -351,13 +368,14 @@ export default function DropItemsManagement() {
     imageUrl: string,
     focus_x: number,
     focus_y: number,
-    onFocusChange: (x: number, y: number) => void
+    onFocusChange: (x: number, y: number) => void,
+    tr: (key: string) => string
   ) => {
     if (!imageUrl) return null;
     return (
       <div>
         <p className="text-xs font-medium text-gray-500 mb-2">
-          选择展示焦点：点击或拖拽框选角色所在区域（卡片封面将聚焦显示该区域，点此图可查看完整原图）
+          {tr("admin.drop.focusPickerHint")}
         </p>
         <div className="relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50 select-none"
           style={{ height: 240 }}
@@ -390,7 +408,7 @@ export default function DropItemsManagement() {
           onClick={() => onFocusChange(50, 50)}
           className="mt-2 text-xs text-gray-400 hover:text-blue-600"
         >
-          重置焦点（居中）
+          {tr("admin.drop.focusReset")}
         </button>
       </div>
     );
@@ -431,10 +449,11 @@ export default function DropItemsManagement() {
   // 状态下拉
   const renderStatusSelect = (
     value: DropItemStatus,
-    onChange: (v: DropItemStatus) => void
+    onChange: (v: DropItemStatus) => void,
+    tr: (key: string) => string
   ) => (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">掉落状态 *</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{tr("admin.drop.status")}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as DropItemStatus)}
@@ -442,7 +461,7 @@ export default function DropItemsManagement() {
       >
         {(Object.keys(DROP_STATUS_LABELS) as DropItemStatus[]).map((s) => (
           <option key={s} value={s}>
-            {DROP_STATUS_LABELS[s]} - {DROP_STATUS_DESCRIPTIONS[s]}
+            {tr(DROP_STATUS_I18N_KEYS[s])} - {tr(DROP_STATUS_DESC_I18N_KEYS[s])}
           </option>
         ))}
       </select>
@@ -453,37 +472,37 @@ export default function DropItemsManagement() {
     <div className="space-y-6">
       {/* 头部 */}
       <div>
-        <h1 className="text-xl font-bold text-lw-black">掉落管理</h1>
+        <h1 className="text-xl font-bold text-lw-black">{t("admin.drop.title")}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          管理「购买掉落」界面展示内容（仅管理员可用）
+          {t("admin.drop.subtitle")}
         </p>
         <div className="flex flex-wrap gap-2 mt-2">
-          <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600">发售：可以购买</span>
-          <span className="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-600">准备：只能查看，不能购买</span>
-          <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-600">领养：已被购买，交付中</span>
+          <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-600">{t("admin.drop.legendOnSale")}</span>
+          <span className="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-600">{t("admin.drop.legendPreparing")}</span>
+          <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-600">{t("admin.drop.legendAdopted")}</span>
         </div>
       </div>
 
       {/* 操作入口：跳转掉落界面 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-50 p-6">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-medium text-gray-700">掉落界面：</span>
+          <span className="text-sm font-medium text-gray-700">{t("admin.drop.interfaceLabel")}</span>
           <button
             onClick={() => goToDropPage(false)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <ExternalLink className="w-4 h-4" />
-            查看掉落界面（用户视角）
+            {t("admin.drop.viewUser")}
           </button>
           <button
             onClick={() => goToDropPage(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-lw-accent text-white text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer"
           >
             <Pencil className="w-4 h-4" />
-            在掉落界面编辑（管理员模式）
+            {t("admin.drop.editAdmin")}
           </button>
           <span className="text-xs text-gray-400">
-            点击后跳转到购买掉落界面，管理员模式下可直接编辑内容并保存
+            {t("admin.drop.interfaceHint")}
           </span>
         </div>
       </div>
@@ -492,22 +511,22 @@ export default function DropItemsManagement() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-50 p-6">
         <div className="flex items-center gap-2 mb-4">
           <Plus className="w-4 h-4 text-lw-accent" />
-          <h2 className="text-base font-semibold text-lw-black">新增掉落</h2>
+          <h2 className="text-base font-semibold text-lw-black">{t("admin.drop.add")}</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderField("掉落标题 *", form.title, (v) => setForm({ ...form, title: v }), "如：百丈冰")}
-          {renderField("价格（RMB）*", form.price, (v) => setForm({ ...form, price: v }), "如：35000")}
-          {renderStatusSelect(form.status, (v) => setForm({ ...form, status: v }))}
-          {renderField("包含内容", form.includes, (v) => setForm({ ...form, includes: v }), "如：双视图/标准全装/定制外衣/定制道具")}
-          {renderField("版权说明", form.copyright, (v) => setForm({ ...form, copyright: v }), "如：全部版权转让/可商用*")}
-          {renderField("交付说明", form.delivery, (v) => setForm({ ...form, delivery: v }), "如：成品部分立即交付，剩余预计 4-6 周")}
+          {renderField(t("admin.drop.fieldTitle"), form.title, (v) => setForm({ ...form, title: v }), t("admin.drop.phTitle"))}
+          {renderField(t("admin.drop.fieldPrice"), form.price, (v) => setForm({ ...form, price: v }), t("admin.drop.phPrice"))}
+          {renderStatusSelect(form.status, (v) => setForm({ ...form, status: v }), t)}
+          {renderField(t("admin.drop.fieldIncludes"), form.includes, (v) => setForm({ ...form, includes: v }), t("admin.drop.phIncludes"))}
+          {renderField(t("admin.drop.fieldCopyright"), form.copyright, (v) => setForm({ ...form, copyright: v }), t("admin.drop.phCopyright"))}
+          {renderField(t("admin.drop.fieldDelivery"), form.delivery, (v) => setForm({ ...form, delivery: v }), t("admin.drop.phDelivery"))}
         </div>
         <div className="mt-4">
-          {renderField("介绍信息", form.description, (v) => setForm({ ...form, description: v }), "简要介绍该掉落", true)}
+          {renderField(t("admin.drop.fieldDescription"), form.description, (v) => setForm({ ...form, description: v }), t("admin.drop.phDescription"), true)}
         </div>
-        <div className="mt-4">{renderUploadBox(form.image_url, uploading, handleUpload, form.focus_x, form.focus_y)}</div>
+        <div className="mt-4">{renderUploadBox(form.image_url, uploading, handleUpload, form.focus_x, form.focus_y, t)}</div>
         {form.image_url && (
-          <div className="mt-4">{renderFocusPicker(form.image_url, form.focus_x, form.focus_y, (x, y) => setForm({ ...form, focus_x: x, focus_y: y }))}</div>
+          <div className="mt-4">{renderFocusPicker(form.image_url, form.focus_x, form.focus_y, (x, y) => setForm({ ...form, focus_x: x, focus_y: y }), t)}</div>
         )}
         <div className="mt-5 flex justify-end">
           <button
@@ -516,7 +535,7 @@ export default function DropItemsManagement() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-lw-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            {saving ? "保存中..." : "新增掉落"}
+            {saving ? t("admin.drop.saving") : t("admin.drop.add")}
           </button>
         </div>
       </div>
@@ -524,8 +543,8 @@ export default function DropItemsManagement() {
       {/* 掉落列表 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-50 p-6">
         <h2 className="text-base font-semibold text-lw-black mb-4">
-          掉落列表
-          <span className="ml-2 text-xs font-normal text-gray-400">共 {items.length} 个掉落</span>
+          {t("admin.drop.list")}
+          <span className="ml-2 text-xs font-normal text-gray-400">{t("admin.drop.listTotal")} {items.length} {t("admin.drop.listUnit")}</span>
         </h2>
 
         {loading ? (
@@ -533,7 +552,7 @@ export default function DropItemsManagement() {
             <Loader2 className="w-6 h-6 animate-spin text-gray-300" />
           </div>
         ) : items.length === 0 ? (
-          <div className="text-center py-12 text-sm text-gray-400">暂无掉落，请先新增</div>
+          <div className="text-center py-12 text-sm text-gray-400">{t("admin.drop.empty")}</div>
         ) : (
           <div className="space-y-3">
             {items.map((item) => (
@@ -556,7 +575,7 @@ export default function DropItemsManagement() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-lw-black">{item.title}</span>
                     <span className={`text-xs font-medium rounded-full px-2 py-0.5 ${STATUS_STYLES[item.status]}`}>
-                      {DROP_STATUS_LABELS[item.status]}
+                      {t(DROP_STATUS_I18N_KEYS[item.status])}
                     </span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1 truncate">
@@ -570,25 +589,25 @@ export default function DropItemsManagement() {
                     disabled={statusUpdating === item.id}
                     onChange={(e) => handleStatusChange(item, e.target.value as DropItemStatus)}
                     className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-lw-accent/20 cursor-pointer disabled:opacity-50"
-                    title="切换掉落状态"
+                    title={t("admin.drop.statusSwitchTitle")}
                   >
                     {(Object.keys(DROP_STATUS_LABELS) as DropItemStatus[]).map((s) => (
                       <option key={s} value={s}>
-                        {DROP_STATUS_LABELS[s]}
+                        {t(DROP_STATUS_I18N_KEYS[s])}
                       </option>
                     ))}
                   </select>
                   <button
                     onClick={() => openEdit(item)}
                     className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                    title="编辑"
+                    title={t("admin.drop.edit")}
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setDeleting(item)}
                     className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    title="删除"
+                    title={t("admin.drop.delete")}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -604,26 +623,26 @@ export default function DropItemsManagement() {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h3 className="text-base font-semibold text-lw-black">编辑掉落</h3>
+              <h3 className="text-base font-semibold text-lw-black">{t("admin.drop.editTitle")}</h3>
               <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderField("掉落标题 *", editForm.title, (v) => setEditForm({ ...editForm, title: v }))}
-                {renderField("价格（RMB）*", editForm.price, (v) => setEditForm({ ...editForm, price: v }))}
+                {renderField(t("admin.drop.fieldTitle"), editForm.title, (v) => setEditForm({ ...editForm, title: v }))}
+                {renderField(t("admin.drop.fieldPrice"), editForm.price, (v) => setEditForm({ ...editForm, price: v }))}
               </div>
-              {renderStatusSelect(editForm.status, (v) => setEditForm({ ...editForm, status: v }))}
+              {renderStatusSelect(editForm.status, (v) => setEditForm({ ...editForm, status: v }), t)}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderField("包含内容", editForm.includes, (v) => setEditForm({ ...editForm, includes: v }))}
-                {renderField("版权说明", editForm.copyright, (v) => setEditForm({ ...editForm, copyright: v }))}
+                {renderField(t("admin.drop.fieldIncludes"), editForm.includes, (v) => setEditForm({ ...editForm, includes: v }))}
+                {renderField(t("admin.drop.fieldCopyright"), editForm.copyright, (v) => setEditForm({ ...editForm, copyright: v }))}
               </div>
-              {renderField("交付说明", editForm.delivery, (v) => setEditForm({ ...editForm, delivery: v }))}
-              {renderField("介绍信息", editForm.description, (v) => setEditForm({ ...editForm, description: v }), "", true)}
-              <div>{renderUploadBox(editForm.image_url, editUploading, handleEditUpload, editForm.focus_x, editForm.focus_y)}</div>
+              {renderField(t("admin.drop.fieldDelivery"), editForm.delivery, (v) => setEditForm({ ...editForm, delivery: v }))}
+              {renderField(t("admin.drop.fieldDescription"), editForm.description, (v) => setEditForm({ ...editForm, description: v }), "", true)}
+              <div>{renderUploadBox(editForm.image_url, editUploading, handleEditUpload, editForm.focus_x, editForm.focus_y, t)}</div>
               {editForm.image_url && (
-                <div>{renderFocusPicker(editForm.image_url, editForm.focus_x, editForm.focus_y, (x, y) => setEditForm({ ...editForm, focus_x: x, focus_y: y }))}</div>
+                <div>{renderFocusPicker(editForm.image_url, editForm.focus_x, editForm.focus_y, (x, y) => setEditForm({ ...editForm, focus_x: x, focus_y: y }), t)}</div>
               )}
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
@@ -631,7 +650,7 @@ export default function DropItemsManagement() {
                 onClick={() => setEditing(null)}
                 className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
               >
-                取消
+                {t("admin.drop.cancel")}
               </button>
               <button
                 onClick={handleUpdate}
@@ -639,7 +658,7 @@ export default function DropItemsManagement() {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-lw-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                {editSaving ? "保存中..." : "保存修改"}
+                {editSaving ? t("admin.drop.saving") : t("admin.drop.saveEdit")}
               </button>
             </div>
           </div>
@@ -651,14 +670,14 @@ export default function DropItemsManagement() {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-sm">
             <div className="px-6 py-4 border-b border-gray-100">
-              <h3 className="text-base font-semibold text-lw-black">删除掉落</h3>
+              <h3 className="text-base font-semibold text-lw-black">{t("admin.drop.deleteTitle")}</h3>
             </div>
             <div className="px-6 py-5">
               <p className="text-sm text-gray-600">
-                确定要删除掉落「{deleting.title}」吗？
+                {t("admin.drop.deleteConfirmStart")}{deleting.title}{t("admin.drop.deleteConfirmEnd")}
               </p>
               <p className="text-xs text-gray-400 mt-2">
-                删除后立即从前端掉落界面消失，此操作不可恢复。
+                {t("admin.drop.deleteWarn")}
               </p>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
@@ -666,7 +685,7 @@ export default function DropItemsManagement() {
                 onClick={() => setDeleting(null)}
                 className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
               >
-                取消
+                {t("admin.drop.cancel")}
               </button>
               <button
                 onClick={handleDelete}
@@ -674,7 +693,7 @@ export default function DropItemsManagement() {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
               >
                 {deleteSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                {deleteSaving ? "删除中..." : "确认删除"}
+                {deleteSaving ? t("admin.drop.deleting") : t("admin.drop.confirmDelete")}
               </button>
             </div>
           </div>

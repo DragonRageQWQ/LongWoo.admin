@@ -27,30 +27,39 @@ import {
 } from "@/actions/notification-actions";
 import type { NotificationTargetRole } from "@/lib/notification-utils";
 import { formatDate } from "@/lib/utils";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 // 目标群体选项
 const targetOptions: Array<{
   value: NotificationTargetRole;
   label: string;
+  i18nKey: string;
   description: string;
+  i18nDescKey: string;
   icon: React.ElementType;
 }> = [
   {
     value: "all",
     label: "全体用户",
+    i18nKey: "admin.notice.targetAll",
     description: "所有已注册用户（含管理员）",
+    i18nDescKey: "admin.notice.targetAllDesc",
     icon: Users,
   },
   {
     value: "admin",
     label: "全体管理员",
+    i18nKey: "admin.notice.targetAdmin",
     description: "所有管理员",
+    i18nDescKey: "admin.notice.targetAdminDesc",
     icon: Shield,
   },
   {
     value: "user",
     label: "全体普通成员",
+    i18nKey: "admin.notice.targetUser",
     description: "所有普通用户",
+    i18nDescKey: "admin.notice.targetUserDesc",
     icon: User,
   },
 ];
@@ -80,6 +89,13 @@ const targetLabels: Record<NotificationTargetRole, string> = {
   user: "全体普通成员",
 };
 
+// 目标群体标签的 i18n key（渲染处用 t() 转换，避免模块级常量引用 hook）
+const TARGET_LABEL_KEYS: Record<NotificationTargetRole, string> = {
+  all: "admin.notice.targetAll",
+  admin: "admin.notice.targetAdmin",
+  user: "admin.notice.targetUser",
+};
+
 interface ToastState {
   type: "success" | "error";
   message: string;
@@ -90,6 +106,7 @@ export default function NotificationManagement({
 }: {
   isSuperAdmin?: boolean;
 }) {
+  const { t } = useLanguage();
   // 发送表单
   const [targetRole, setTargetRole] = useState<NotificationTargetRole>("all");
   const [title, setTitle] = useState("");
@@ -171,11 +188,11 @@ export default function NotificationManagement({
   const handleSaveEdit = async () => {
     if (!editing?.batch_id || editSaving) return;
     if (!editTitle.trim()) {
-      setToast({ type: "error", message: "请输入标题" });
+      setToast({ type: "error", message: t("admin.notice.err.titleRequired") });
       return;
     }
     if (!editContent.trim()) {
-      setToast({ type: "error", message: "请输入内容" });
+      setToast({ type: "error", message: t("admin.notice.err.contentRequired") });
       return;
     }
 
@@ -187,15 +204,15 @@ export default function NotificationManagement({
         content: editContent,
       });
       if (result.success) {
-        setToast({ type: "success", message: "公告已静默修改" });
+        setToast({ type: "success", message: t("admin.notice.err.silentUpdated") });
         setEditing(null);
         loadHistory();
       } else {
-        setToast({ type: "error", message: result.error || "修改失败" });
+        setToast({ type: "error", message: result.error || t("admin.notice.err.updateFailed") });
       }
     } catch (err) {
       console.error("修改公告异常:", err);
-      setToast({ type: "error", message: "修改时发生未知错误" });
+      setToast({ type: "error", message: t("admin.notice.err.updateUnknown") });
     } finally {
       setEditSaving(false);
     }
@@ -209,15 +226,15 @@ export default function NotificationManagement({
     try {
       const result = await deleteSentNotification({ batchId: deleting.batch_id });
       if (result.success) {
-        setToast({ type: "success", message: "公告已删除" });
+        setToast({ type: "success", message: t("admin.notice.err.deleteSuccess") });
         setDeleting(null);
         loadHistory();
       } else {
-        setToast({ type: "error", message: result.error || "删除失败" });
+        setToast({ type: "error", message: result.error || t("admin.notice.err.deleteFailed") });
       }
     } catch (err) {
       console.error("删除公告异常:", err);
-      setToast({ type: "error", message: "删除时发生未知错误" });
+      setToast({ type: "error", message: t("admin.notice.err.deleteUnknown") });
     } finally {
       setDeleteSaving(false);
     }
@@ -228,11 +245,11 @@ export default function NotificationManagement({
     if (sending) return;
 
     if (!title.trim()) {
-      setToast({ type: "error", message: "请输入标题" });
+      setToast({ type: "error", message: t("admin.notice.err.titleRequired") });
       return;
     }
     if (!content.trim()) {
-      setToast({ type: "error", message: "请输入内容" });
+      setToast({ type: "error", message: t("admin.notice.err.contentRequired") });
       return;
     }
 
@@ -248,11 +265,11 @@ export default function NotificationManagement({
         setContent("");
         loadHistory();
       } else {
-        setToast({ type: "error", message: result.error || "发送失败" });
+        setToast({ type: "error", message: result.error || t("admin.notice.err.sendFailed") });
       }
     } catch (err) {
       console.error("发送通知异常:", err);
-      setToast({ type: "error", message: "发送时发生未知错误" });
+      setToast({ type: "error", message: t("admin.notice.err.sendUnknown") });
     } finally {
       setSending(false);
     }
@@ -282,9 +299,9 @@ export default function NotificationManagement({
 
       {/* 标题 */}
       <div>
-        <h1 className="text-xl font-bold text-lw-black">通知管理</h1>
+        <h1 className="text-xl font-bold text-lw-black">{t("admin.notice.title")}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          向全体用户、管理员或普通成员发送通知与站内信
+          {t("admin.notice.subtitle")}
         </p>
       </div>
 
@@ -293,7 +310,7 @@ export default function NotificationManagement({
         <div className="p-4 sm:p-5 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 text-lw-accent" />
-            <h2 className="text-sm font-semibold text-lw-black">发送通知</h2>
+            <h2 className="text-sm font-semibold text-lw-black">{t("admin.notice.send")}</h2>
           </div>
         </div>
 
@@ -301,7 +318,7 @@ export default function NotificationManagement({
           {/* 目标群体选择 */}
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">
-              发送对象
+              {t("admin.notice.target")}
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {targetOptions.map((opt) => {
@@ -328,10 +345,10 @@ export default function NotificationManagement({
                           isActive ? "text-lw-accent" : "text-lw-black"
                         }`}
                       >
-                        {opt.label}
+                        {t(opt.i18nKey)}
                       </p>
                       <p className="text-xs text-gray-400 truncate">
-                        {opt.description}
+                        {t(opt.i18nDescKey)}
                       </p>
                     </div>
                   </button>
@@ -343,14 +360,14 @@ export default function NotificationManagement({
           {/* 标题 */}
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">
-              标题（最多100字）
+              {t("admin.notice.titleLabel")}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={100}
-              placeholder="如：系统维护通知"
+              placeholder={t("admin.notice.titlePh")}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors"
             />
           </div>
@@ -358,14 +375,14 @@ export default function NotificationManagement({
           {/* 内容 */}
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">
-              内容（最多2000字）
+              {t("admin.notice.contentLabel")}
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               maxLength={2000}
               rows={5}
-              placeholder="请输入通知内容..."
+              placeholder={t("admin.notice.contentPh")}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors resize-y"
             />
             <p className="text-xs text-gray-400 mt-1 text-right">
@@ -385,7 +402,7 @@ export default function NotificationManagement({
               ) : (
                 <Send className="w-4 h-4" />
               )}
-              {sending ? "发送中..." : "发送通知"}
+              {sending ? t("admin.notice.sending") : t("admin.notice.send")}
             </button>
           </div>
         </div>
@@ -396,19 +413,19 @@ export default function NotificationManagement({
         <div className="p-4 sm:p-5 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <History className="w-5 h-5 text-lw-accent" />
-            <h2 className="text-sm font-semibold text-lw-black">发送历史</h2>
+            <h2 className="text-sm font-semibold text-lw-black">{t("admin.notice.history")}</h2>
           </div>
         </div>
 
         {historyLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-5 h-5 text-lw-accent animate-spin" />
-            <span className="ml-2 text-sm text-gray-400">加载中...</span>
+            <span className="ml-2 text-sm text-gray-400">{t("admin.notice.loading")}</span>
           </div>
         ) : history.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
             <Bell className="w-10 h-10 mb-2 text-gray-300" />
-            <p className="text-sm">暂无发送记录</p>
+            <p className="text-sm">{t("admin.notice.empty")}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -422,7 +439,7 @@ export default function NotificationManagement({
                     {record.title}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {targetLabels[record.target_role]} · {record.recipient_count}人
+                    {t(TARGET_LABEL_KEYS[record.target_role])} · {record.recipient_count}{t("admin.notice.people")}
                     · {formatDate(record.created_at)}
                   </p>
                 </div>
@@ -430,14 +447,14 @@ export default function NotificationManagement({
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => openEdit(record)}
-                      title="修改公告（静默）"
+                      title={t("admin.notice.editTip")}
                       className="p-1.5 text-gray-400 hover:text-lw-accent hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setDeleting(record)}
-                      title="删除公告"
+                      title={t("admin.notice.deleteTip")}
                       className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -457,10 +474,10 @@ export default function NotificationManagement({
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-lw-accent" />
               <h2 className="text-sm font-semibold text-lw-black">
-                委托单通知历史
+                {t("admin.notice.orderHistory")}
               </h2>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-lw-accent">
-                估价/接单/回复等
+                {t("admin.notice.orderHistoryTag")}
               </span>
             </div>
             {orderHistory.length > 8 && (
@@ -470,11 +487,11 @@ export default function NotificationManagement({
               >
                 {orderHistoryExpanded ? (
                   <>
-                    收起 <ChevronUp className="w-3 h-3" />
+                    {t("admin.notice.collapse")} <ChevronUp className="w-3 h-3" />
                   </>
                 ) : (
                   <>
-                    展开全部（{orderHistory.length}）{" "}
+                    {t("admin.notice.expandAll")}（{orderHistory.length}）{" "}
                     <ChevronDown className="w-3 h-3" />
                   </>
                 )}
@@ -486,12 +503,12 @@ export default function NotificationManagement({
         {orderHistoryLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-5 h-5 text-lw-accent animate-spin" />
-            <span className="ml-2 text-sm text-gray-400">加载中...</span>
+            <span className="ml-2 text-sm text-gray-400">{t("admin.notice.loading")}</span>
           </div>
         ) : orderHistory.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
             <Package className="w-10 h-10 mb-2 text-gray-300" />
-            <p className="text-sm">暂无委托单通知记录</p>
+            <p className="text-sm">{t("admin.notice.orderEmpty")}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -517,7 +534,7 @@ export default function NotificationManagement({
                   </div>
                   <div className="flex-shrink-0 text-right">
                     <p className="text-xs text-gray-400">
-                      {record.recipient_count}人
+                      {record.recipient_count}{t("admin.notice.people")}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {formatDate(record.created_at)}
@@ -538,22 +555,22 @@ export default function NotificationManagement({
           />
           <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-lw-black">修改公告</h3>
+              <h3 className="text-base font-bold text-lw-black">{t("admin.notice.editModalTitle")}</h3>
               <button
                 onClick={() => !editSaving && setEditing(null)}
                 className="p-1 text-gray-400 hover:text-gray-600 rounded-md cursor-pointer"
-                aria-label="关闭"
+                aria-label={t("admin.notice.close")}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <p className="text-xs text-gray-400 mb-4">
-              静默修改：仅更新标题与内容，用户已读状态保持不变，不产生新通知。
+              {t("admin.notice.silentHint")}
             </p>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                  标题（最多100字）
+                  {t("admin.notice.titleLabel")}
                 </label>
                 <input
                   type="text"
@@ -565,7 +582,7 @@ export default function NotificationManagement({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                  内容（最多2000字）
+                  {t("admin.notice.contentLabel")}
                 </label>
                 <textarea
                   value={editContent}
@@ -585,7 +602,7 @@ export default function NotificationManagement({
                 disabled={editSaving}
                 className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
               >
-                取消
+                {t("admin.notice.cancel")}
               </button>
               <button
                 onClick={handleSaveEdit}
@@ -597,7 +614,7 @@ export default function NotificationManagement({
                 ) : (
                   <CheckCircle className="w-4 h-4" />
                 )}
-                {editSaving ? "保存中..." : "保存修改"}
+                {editSaving ? t("admin.notice.saving") : t("admin.notice.saveEdit")}
               </button>
             </div>
           </div>
@@ -615,10 +632,10 @@ export default function NotificationManagement({
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
               <Trash2 className="w-6 h-6 text-red-500" />
             </div>
-            <h3 className="text-base font-bold text-lw-black">删除公告</h3>
+            <h3 className="text-base font-bold text-lw-black">{t("admin.notice.deleteTitle")}</h3>
             <p className="text-sm text-gray-500 mt-2">
-              确定删除「{deleting.title}」吗？该公告将从
-              {deleting.recipient_count}位用户的铃铛中移除，且无法恢复。
+              {t("admin.notice.deleteConfirmStart")}{deleting.title}{t("admin.notice.deleteConfirmMid")}
+              {deleting.recipient_count}{t("admin.notice.deleteConfirmEnd")}
             </p>
             <div className="flex justify-end gap-2 mt-6">
               <button
@@ -626,7 +643,7 @@ export default function NotificationManagement({
                 disabled={deleteSaving}
                 className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
               >
-                取消
+                {t("admin.notice.cancel")}
               </button>
               <button
                 onClick={handleConfirmDelete}
@@ -638,7 +655,7 @@ export default function NotificationManagement({
                 ) : (
                   <Trash2 className="w-4 h-4" />
                 )}
-                {deleteSaving ? "删除中..." : "确认删除"}
+                {deleteSaving ? t("admin.notice.deleting") : t("admin.notice.confirmDelete")}
               </button>
             </div>
           </div>

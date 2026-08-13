@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>购买自设兽装 - 第1步上传设定图 | LongWoo 工作室</title>
-    <meta name="description" content="LongWoo兽装定制第一步 - 浏览并选择您的兽装定制选项，开始专属定制之旅。">
+    <meta name="description" data-i18n-meta="order1.docDesc" content="LongWoo兽装定制第一步 - 浏览并选择您的兽装定制选项，开始专属定制之旅。">
     <meta name="robots" content="index, follow">
     <!-- 预连接 Supabase API -->
     <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
+    <!-- LW-I18N 语言切换（未上线：切换器隐藏，?lang=en 可预览） -->
+    <script src="/js/i18n/i18n-init.js" defer></script>
 </head>
-<body>
+<body data-i18n-doc-title="order1.docTitle">
 
   <!-- Top Navigation -->
   <div class="top-nav">
@@ -20,7 +22,8 @@
         <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
     </button>
-    <span class="top-nav-title">购买自设兽装</span>
+    <span class="top-nav-title" data-i18n="order1.title">购买自设兽装</span>
+    <span data-lang-slot></span>
     <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -29,36 +32,36 @@
 
   <!-- Info Section -->
   <div class="info-section">
-    <h1 class="info-title">购买 自设兽装</h1>
-    <p class="info-subtitle">预计 4-6 周后交付*</p>
-    <p class="info-price">首次购置价格依照15000RMB-25000RMB区间计算</p>
+    <h1 class="info-title" data-i18n="order1.title">购买 自设兽装</h1>
+    <p class="info-subtitle" data-i18n="order1.subtitle">预计 4-6 周后交付*</p>
+    <p class="info-price" data-i18n="order1.price">首次购置价格依照15000RMB-25000RMB区间计算</p>
   </div>
 
   <!-- Step Indicator -->
   <div class="step-indicator">
     <div class="step-item">
       <div class="step-circle active">1</div>
-      <div class="step-label active">上传设定图</div>
+      <div class="step-label active" data-i18n="order1.step1">上传设定图</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">2</div>
-      <div class="step-label">选配内容</div>
+      <div class="step-label" data-i18n="order1.step2">选配内容</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">3</div>
-      <div class="step-label">折抵权益</div>
+      <div class="step-label" data-i18n="order1.step3">折抵权益</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">4</div>
-      <div class="step-label">联系方式</div>
+      <div class="step-label" data-i18n="order1.step4">联系方式</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">5</div>
-      <div class="step-label">等待估价</div>
+      <div class="step-label" data-i18n="order1.step5">等待估价</div>
     </div>
   </div>
 
@@ -74,8 +77,8 @@
             <polyline points="16 12 12 16 8 12"></polyline>
             <line x1="12" y1="8" x2="12" y2="16"></line>
           </svg>
-          <p class="upload-text">点击上传设定图</p>
-          <p class="upload-hint">支持 JPG / PNG / WEBP</p>
+          <p class="upload-text" data-i18n="order1.uploadText">点击上传设定图</p>
+          <p class="upload-hint" data-i18n="order1.uploadHint">支持 JPG / PNG / WEBP</p>
         </div>
         <div class="upload-preview" id="uploadPreview" style="display:none;">
           <img id="previewImage" alt="设定图预览" loading="lazy" decoding="async" width="480" height="300">
@@ -91,13 +94,13 @@
 
     <!-- Right Column: Form Content -->
     <div class="form-column">
-      <h2 class="step-title">第一步：请上传设定图</h2>
+      <h2 class="step-title" data-i18n="order1.stepTitle">第一步：请上传设定图</h2>
 
       <div class="upload-status" id="uploadStatus" style="display:none;">
         <svg class="status-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
-        <span class="status-text">上传完成</span>
+        <span class="status-text" data-i18n="order1.uploadDone">上传完成</span>
       </div>
 
       <div class="uploaded-file-info" id="fileInfo" style="display:none;">
@@ -105,7 +108,7 @@
         <div class="file-size" id="fileSize"></div>
       </div>
 
-      <button class="next-step-btn" id="nextStepBtn" type="button" disabled>下一步：选配内容</button>
+      <button class="next-step-btn" id="nextStepBtn" type="button" disabled data-i18n="order1.nextBtn">下一步：选配内容</button>
     </div>
   </div>
 
@@ -124,7 +127,7 @@
           <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10"/>
         </svg>
       </div>
-      <span class="nav-item-label">购买兽装</span>
+      <span class="nav-item-label" data-i18n="nav.buyFursuit">购买兽装</span>
     </a>
 
     <!-- 龙灵工坊（原 AI 助手） -->
@@ -138,7 +141,7 @@
           <path d="M8 13C9.2 14.5 10.6 15.2 12 15.2C13.4 15.2 14.8 14.5 16 13"/>
         </svg>
       </div>
-      <span class="nav-item-label">龙灵工坊</span>
+      <span class="nav-item-label" data-i18n="nav.lingWork">龙灵工坊</span>
     </a>
 
     <!-- 购买掉落 -->
@@ -151,7 +154,7 @@
           <path d="M4 19H20"/>
         </svg>
       </div>
-      <span class="nav-item-label">购买掉落</span>
+      <span class="nav-item-label" data-i18n="nav.buyDrop">购买掉落</span>
     </a>
 
     <!-- 查询进度&售后 -->
@@ -162,7 +165,7 @@
           <path d="M12 7V12L15 15"/>
         </svg>
       </div>
-      <span class="nav-item-label">进度&售后</span>
+      <span class="nav-item-label" data-i18n="nav.progress">进度&售后</span>
     </a>
 
     <!-- 个人中心（原我的订单） -->
@@ -173,7 +176,7 @@
           <circle cx="12" cy="7" r="4"/>
         </svg>
       </div>
-      <span class="nav-item-label">个人中心</span>
+      <span class="nav-item-label" data-i18n="nav.profile">个人中心</span>
     </a>
 
   </nav>

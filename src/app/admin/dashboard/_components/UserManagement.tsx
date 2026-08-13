@@ -21,6 +21,7 @@ import {
 } from "@/actions/admin-actions";
 import { formatDate } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 // 分页大小
 const PAGE_SIZE = 10;
@@ -41,10 +42,10 @@ interface UserItem {
 type RoleFilterValue = "all" | "user" | "admin";
 
 // 角色筛选选项
-const roleFilterOptions: Array<{ value: RoleFilterValue; label: string }> = [
-  { value: "all", label: "全部" },
-  { value: "user", label: "普通用户" },
-  { value: "admin", label: "管理员" },
+const roleFilterOptions: Array<{ value: RoleFilterValue; label: string; i18nKey: string }> = [
+  { value: "all", label: "全部", i18nKey: "admin.user.filterAll" },
+  { value: "user", label: "普通用户", i18nKey: "admin.user.filterUser" },
+  { value: "admin", label: "管理员", i18nKey: "admin.user.filterAdmin" },
 ];
 
 // Toast 提示状态
@@ -61,6 +62,7 @@ interface ConfirmState {
 }
 
 export default function UserManagement() {
+  const { t } = useLanguage();
   // 当前用户权限（由 listAllUsers 一次请求下发，不再单独串行请求）
   const [isZeroUser, setIsZeroUser] = useState(false);
   // 零号用户 UID — 安全加固（FIND-09）：由服务端下发，不在前端硬编码
@@ -113,7 +115,7 @@ export default function UserManagement() {
       });
 
       if (!result.success) {
-        setError(result.error || "获取用户列表失败");
+        setError(result.error || t("admin.user.err.fetchListFailed"));
         setUsers([]);
         setTotalCount(0);
         return;
@@ -127,13 +129,13 @@ export default function UserManagement() {
       }
     } catch (err) {
       console.error("加载用户列表异常:", err);
-      setError("加载用户列表时发生未知错误");
+      setError(t("admin.user.err.loadListUnknown"));
       setUsers([]);
       setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [appliedKeyword, roleFilter, currentPage]);
+  }, [appliedKeyword, roleFilter, currentPage, t]);
 
   // 挂载即拉取，并在搜索/筛选/分页变化时重新拉取
   useEffect(() => {
@@ -218,14 +220,14 @@ export default function UserManagement() {
       } else {
         setToast({
           type: "error",
-          message: result.error || "操作失败，请稍后重试",
+          message: result.error || t("admin.user.err.operationFailed"),
         });
       }
     } catch (err) {
       console.error("角色操作异常:", err);
       setToast({
         type: "error",
-        message: "操作时发生未知错误",
+        message: t("admin.user.err.operationUnknown"),
       });
     } finally {
       setActionLoading(false);
@@ -239,7 +241,7 @@ export default function UserManagement() {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
           <ShieldCheck className="w-3 h-3" />
-          超级管理员
+          {t("admin.user.superAdmin")}
         </span>
       );
     }
@@ -248,14 +250,14 @@ export default function UserManagement() {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
           <Shield className="w-3 h-3" />
-          管理员
+          {t("admin.user.admin")}
         </span>
       );
     }
     // 普通用户：蓝色「普通用户」
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-        普通用户
+        {t("admin.user.user")}
       </span>
     );
   };
@@ -277,7 +279,7 @@ export default function UserManagement() {
           className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-red-600 border border-red-300 rounded-md hover:bg-red-50 transition-colors cursor-pointer"
         >
           <ShieldOff className="w-3.5 h-3.5" />
-          撤销管理员
+          {t("admin.user.revoke")}
         </button>
       );
     }
@@ -288,7 +290,7 @@ export default function UserManagement() {
         className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-green-600 border border-green-300 rounded-md hover:bg-green-50 transition-colors cursor-pointer"
       >
         <ShieldCheck className="w-3.5 h-3.5" />
-        授予管理员
+        {t("admin.user.grant")}
       </button>
     );
   };
@@ -322,7 +324,7 @@ export default function UserManagement() {
             <button
               onClick={() => setToast(null)}
               className="text-gray-400 hover:text-gray-600 flex-shrink-0"
-              aria-label="关闭提示"
+              aria-label={t("admin.user.closeToast")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -343,14 +345,14 @@ export default function UserManagement() {
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="按邮箱或昵称搜索..."
+                placeholder={t("admin.user.searchPh")}
                 className="w-full pl-10 pr-10 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors"
               />
               {searchKeyword && (
                 <button
                   onClick={handleClearSearch}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  aria-label="清除搜索"
+                  aria-label={t("admin.user.clearSearch")}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -361,7 +363,7 @@ export default function UserManagement() {
               className="px-5 py-2 bg-lw-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <Search className="w-4 h-4" />
-              搜索
+              {t("admin.user.search")}
             </button>
           </div>
 
@@ -377,7 +379,7 @@ export default function UserManagement() {
                     : "bg-white text-gray-600 hover:bg-gray-100"
                 }`}
               >
-                {opt.label}
+                {t(opt.i18nKey)}
               </button>
             ))}
           </div>
@@ -388,7 +390,7 @@ export default function UserManagement() {
           // 加载状态
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 text-lw-accent animate-spin" />
-            <span className="ml-2 text-sm text-gray-400">加载中...</span>
+            <span className="ml-2 text-sm text-gray-400">{t("admin.user.loading")}</span>
           </div>
         ) : error ? (
           // 错误状态（含重试）
@@ -399,7 +401,7 @@ export default function UserManagement() {
               onClick={fetchUsers}
               className="px-4 py-2 text-sm text-lw-accent border border-lw-accent rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
             >
-              重试
+              {t("admin.user.retry")}
             </button>
           </div>
         ) : users.length === 0 ? (
@@ -408,8 +410,8 @@ export default function UserManagement() {
             <Users className="w-12 h-12 mb-3 text-gray-300" />
             <p className="text-sm">
               {appliedKeyword || roleFilter !== "all"
-                ? "没有符合条件的用户"
-                : "暂无用户数据"}
+                ? t("admin.user.noMatch")
+                : t("admin.user.empty")}
             </p>
           </div>
         ) : (
@@ -423,19 +425,19 @@ export default function UserManagement() {
                       UID
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      头像/昵称
+                      {t("admin.user.colAvatar")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      邮箱
+                      {t("admin.user.colEmail")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      角色
+                      {t("admin.user.colRole")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      注册时间
+                      {t("admin.user.colCreated")}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      操作
+                      {t("admin.user.colAction")}
                     </th>
                   </tr>
                 </thead>
@@ -465,7 +467,7 @@ export default function UserManagement() {
                             </div>
                           )}
                           <span className="text-sm font-medium text-lw-black">
-                            {user.display_name || "未设置"}
+                            {user.display_name || t("admin.user.notSet")}
                           </span>
                         </div>
                       </td>
@@ -508,7 +510,7 @@ export default function UserManagement() {
                       )}
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-lw-black truncate">
-                          {user.display_name || "未设置"}
+                          {user.display_name || t("admin.user.notSet")}
                         </p>
                         <p className="text-xs text-gray-400">
                           UID: {user.uid ?? "-"}
@@ -533,15 +535,17 @@ export default function UserManagement() {
             {/* 分页控件 */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50">
               <p className="text-sm text-gray-500">
-                共 <span className="font-medium text-lw-black">{totalCount}</span>{" "}
-                条，第 {currentPage}/{totalPages} 页
+                {t("admin.user.total")}{" "}
+                <span className="font-medium text-lw-black">{totalCount}</span>{" "}
+                {t("admin.user.items")}，{t("admin.user.page")}{" "}
+                {currentPage}/{totalPages} {t("admin.user.pageUnit")}
               </p>
               <div className="flex items-center gap-1">
                 <button
                   onClick={handlePrevPage}
                   disabled={currentPage <= 1}
                   className="p-1.5 text-gray-500 hover:text-lw-black hover:bg-gray-100 rounded-md transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="上一页"
+                  aria-label={t("admin.user.prev")}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -552,7 +556,7 @@ export default function UserManagement() {
                   onClick={handleNextPage}
                   disabled={currentPage >= totalPages}
                   className="p-1.5 text-gray-500 hover:text-lw-black hover:bg-gray-100 rounded-md transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="下一页"
+                  aria-label={t("admin.user.next")}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -577,7 +581,7 @@ export default function UserManagement() {
               onClick={closeConfirm}
               disabled={actionLoading}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 disabled:opacity-50"
-              aria-label="关闭"
+              aria-label={t("admin.user.close")}
             >
               <X className="w-5 h-5" />
             </button>
@@ -600,26 +604,26 @@ export default function UserManagement() {
               <div>
                 <h3 className="text-base font-semibold text-lw-black">
                   {confirmState.action === "grant"
-                    ? "授予管理员权限"
-                    : "撤销管理员权限"}
+                    ? t("admin.user.grantTitle")
+                    : t("admin.user.revokeTitle")}
                 </h3>
-                <p className="text-sm text-gray-400 mt-0.5">请确认以下操作</p>
+                <p className="text-sm text-gray-400 mt-0.5">{t("admin.user.confirmHint")}</p>
               </div>
             </div>
 
             {/* 目标用户信息 */}
             <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 flex-shrink-0">用户:</span>
+                <span className="text-sm text-gray-500 flex-shrink-0">{t("admin.user.userLabel")}</span>
                 <span className="text-sm font-medium text-lw-black truncate">
-                  {confirmState.user.display_name || "未设置"}
+                  {confirmState.user.display_name || t("admin.user.notSet")}
                 </span>
                 <span className="text-xs text-gray-400 flex-shrink-0">
                   (UID: {confirmState.user.uid})
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 flex-shrink-0">邮箱:</span>
+                <span className="text-sm text-gray-500 flex-shrink-0">{t("admin.user.emailLabel")}</span>
                 <span className="text-sm text-gray-600 truncate">
                   {confirmState.user.email}
                 </span>
@@ -629,8 +633,8 @@ export default function UserManagement() {
             {/* 操作说明 */}
             <p className="text-sm text-gray-500 leading-relaxed">
               {confirmState.action === "grant"
-                ? "授予后，该用户将拥有管理后台访问权限，可管理委托订单等。此操作不可被普通管理员撤销。"
-                : "撤销后，该用户将失去管理后台访问权限，无法再访问管理功能。"}
+                ? t("admin.user.grantDesc")
+                : t("admin.user.revokeDesc")}
             </p>
 
             {/* 操作按钮 */}
@@ -640,7 +644,7 @@ export default function UserManagement() {
                 disabled={actionLoading}
                 className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
               >
-                取消
+                {t("admin.user.cancel")}
               </button>
               <button
                 onClick={handleConfirmAction}
@@ -654,7 +658,7 @@ export default function UserManagement() {
                 {actionLoading && (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 )}
-                {confirmState.action === "grant" ? "确认授予" : "确认撤销"}
+                {confirmState.action === "grant" ? t("admin.user.confirmGrant") : t("admin.user.confirmRevoke")}
               </button>
             </div>
           </div>

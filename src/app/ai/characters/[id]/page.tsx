@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from '@/components/providers/SessionProvider'
+import { useLanguage } from '@/components/i18n/LanguageProvider'
 import type { AiCharacter, AiChatMessage } from '@/types/database'
 
 // ===== 内联 SVG 图标 =====
@@ -59,6 +60,7 @@ function Avatar({ src, name, size, className }: { src?: string | null; name: str
 export default function CharacterChatPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
+  const { t } = useLanguage()
   const characterId = params.id
   // 当前登录用户信息（用于对话中显示用户头像）
   const { profile: userProfile } = useSession()
@@ -99,12 +101,12 @@ export default function CharacterChatPage() {
         } else if (data.error === '未登录') {
           router.push('/login')
         } else {
-          setError(data.error || '加载失败')
+          setError(data.error || t('ai.detail.err.loadFailed'))
         }
       })
-      .catch(() => setError('网络错误，请稍后重试'))
+      .catch(() => setError(t('ai.detail.err.networkError')))
       .finally(() => setLoading(false))
-  }, [characterId, router])
+  }, [characterId, router, t])
 
   // 滚动到底部
   useEffect(() => {
@@ -162,15 +164,15 @@ export default function CharacterChatPage() {
       } else {
         // 失败：移除临时消息并显示错误
         setMessages(prev => prev.filter(m => m.id !== tempUserMsg.id))
-        setError(data.error || '发送失败，请稍后重试')
+        setError(data.error || t('ai.detail.err.sendFailed'))
       }
     } catch {
       setMessages(prev => prev.filter(m => m.id !== tempUserMsg.id))
-      setError('网络错误，请稍后重试')
+      setError(t('ai.detail.err.networkError'))
     } finally {
       setSending(false)
     }
-  }, [input, sending, characterId])
+  }, [input, sending, characterId, t])
 
   // 清空对话
   const handleClear = useCallback(async () => {
@@ -198,14 +200,14 @@ export default function CharacterChatPage() {
           }])
         }
       } else {
-        setError(data.error || '清空失败')
+        setError(data.error || t('ai.detail.err.clearFailed'))
       }
     } catch {
-      setError('网络错误，请稍后重试')
+      setError(t('ai.detail.err.networkError'))
     } finally {
       setClearing(false)
     }
-  }, [characterId, clearing, character])
+  }, [characterId, clearing, character, t])
 
   // 键盘发送
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -220,13 +222,13 @@ export default function CharacterChatPage() {
       <div className="page-wrapper">
         <header className="top-bar">
           <div className="top-bar-left">
-            <Link href="/ai/characters" className="top-back" aria-label="返回"><BackIcon /></Link>
-            <h1 className="top-title">龙灵工坊</h1>
+            <Link href="/ai/characters" className="top-back" aria-label={t('ai.detail.back')}><BackIcon /></Link>
+            <h1 className="top-title">{t('nav.lingWork')}</h1>
           </div>
         </header>
         <div className="loading-wrap">
           <div className="spinner" />
-          <span>正在召唤角色…</span>
+          <span>{t('ai.detail.loading')}</span>
         </div>
       </div>
     )
@@ -237,41 +239,41 @@ export default function CharacterChatPage() {
       <div className="page-wrapper">
         <header className="top-bar">
           <div className="top-bar-left">
-            <Link href="/ai/characters" className="top-back" aria-label="返回"><BackIcon /></Link>
-            <h1 className="top-title">龙灵工坊</h1>
+            <Link href="/ai/characters" className="top-back" aria-label={t('ai.detail.back')}><BackIcon /></Link>
+            <h1 className="top-title">{t('nav.lingWork')}</h1>
           </div>
         </header>
         <div className="empty-wrap">
           <p className="empty-desc">{error}</p>
-          <Link href="/ai/characters" className="btn-primary">返回角色列表</Link>
+          <Link href="/ai/characters" className="btn-primary">{t('ai.detail.backToList')}</Link>
         </div>
       </div>
     )
   }
 
-  const charName = character?.name || '角色'
+  const charName = character?.name || t('ai.detail.characterDefault')
   const charAvatar = character?.avatar_url || null
   const userAvatar = userProfile?.avatar_url || null
-  const userDisplayName = userProfile?.display_name || '我'
+  const userDisplayName = userProfile?.display_name || t('ai.detail.me')
 
   return (
     <div className="page-wrapper">
       <header className="top-bar">
         <div className="top-bar-left">
-          <Link href="/ai/characters" className="top-back" aria-label="返回"><BackIcon /></Link>
+          <Link href="/ai/characters" className="top-back" aria-label={t('ai.detail.back')}><BackIcon /></Link>
           <div>
-            <h1 className="top-title">龙灵工坊</h1>
+            <h1 className="top-title">{t('nav.lingWork')}</h1>
           </div>
         </div>
         <div className="top-actions">
-          <Link href="/ai/characters/new" className="chat-create-btn" title="创建新角色" aria-label="创建新角色">
+          <Link href="/ai/characters/new" className="chat-create-btn" title={t('ai.detail.createTitle')} aria-label={t('ai.detail.createTitle')}>
             <PlusIcon />
-            新建
+            {t('ai.detail.new')}
           </Link>
-          <button className="icon-btn" onClick={handleClear} disabled={clearing} title="清空对话" aria-label="清空对话">
+          <button className="icon-btn" onClick={handleClear} disabled={clearing} title={t('ai.detail.clearTitle')} aria-label={t('ai.detail.clearTitle')}>
             <TrashIcon />
           </button>
-          <Link href={`/ai/characters/${characterId}/edit`} className="icon-btn" title="调整角色设定" aria-label="调整角色设定">
+          <Link href={`/ai/characters/${characterId}/edit`} className="icon-btn" title={t('ai.detail.editTitle')} aria-label={t('ai.detail.editTitle')}>
             <EditIcon />
           </Link>
         </div>
@@ -283,11 +285,11 @@ export default function CharacterChatPage() {
           <div className="chat-header-info">
             <h2 className="chat-header-name">{charName}</h2>
             <p className="chat-header-status">
-              {character?.user_nickname ? `叫你「${character.user_nickname}」` : '和你的角色对话'}
+              {character?.user_nickname ? `叫你「${character.user_nickname}」` : t('ai.detail.chatStatus')}
             </p>
           </div>
           <Link href={`/ai/characters/${characterId}/edit`} className="btn-ghost" style={{ fontSize: 'var(--font-size-xs)', padding: '6px 12px', flexShrink: 0 }}>
-            调整设定
+            {t('ai.detail.adjust')}
           </Link>
         </div>
 
@@ -295,7 +297,7 @@ export default function CharacterChatPage() {
           {messages.length === 0 && (
             <div className="chat-empty-hint">
               <p className="chat-greeting">和{charName}打个招呼吧</p>
-              <p>它会以你设定的人设回应你</p>
+              <p>{t('ai.detail.greetingHint')}</p>
             </div>
           )}
 
@@ -339,7 +341,7 @@ export default function CharacterChatPage() {
             className="chat-send-btn"
             onClick={handleSend}
             disabled={sending || !input.trim()}
-            aria-label="发送"
+            aria-label={t('ai.detail.send')}
           >
             <SendIcon />
           </button>

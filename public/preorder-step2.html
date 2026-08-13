@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>购买预设兽装(掉落) - 第2步填写联系信息 | LongWoo 工作室</title>
-    <meta name="description" content="LongWoo预设兽装购买 - 确认订单信息。">
+    <meta name="description" data-i18n-meta="pre2.docDesc" content="LongWoo预设兽装购买 - 确认订单信息。">
     <meta name="robots" content="index, follow">
     <!-- 预连接 Supabase API -->
     <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
     <link rel="stylesheet" href="/css/theme.css">
+    <!-- LW-I18N 语言切换（未上线：切换器隐藏，?lang=en 可预览） -->
+    <script src="/js/i18n/i18n-init.js" defer></script>
 </head>
-<body>
+<body data-i18n-doc-title="pre2.docTitle">
 
   <!-- Top Navigation -->
   <div class="top-nav">
@@ -20,7 +22,8 @@
         <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
     </button>
-    <span class="top-nav-title">购买预设兽装</span>
+    <span class="top-nav-title" data-i18n="pre2.topNavTitle">购买预设兽装</span>
+    <span data-lang-slot></span>
     <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -29,9 +32,9 @@
 
   <!-- Info Section -->
   <div class="info-section">
-    <h1 class="info-title">购买 预设兽装 (掉落)</h1>
-    <p class="info-subtitle">成品部分立即交付 剩余部分预计 4-6 周后交付*</p>
-    <p class="info-price">购置价格依照每件设定单独定价计算</p>
+    <h1 class="info-title" data-i18n="pre2.infoTitle">购买 预设兽装 (掉落)</h1>
+    <p class="info-subtitle" data-i18n="pre2.infoSubtitle">成品部分立即交付 剩余部分预计 4-6 周后交付*</p>
+    <p class="info-price" data-i18n="pre2.infoPrice">购置价格依照每件设定单独定价计算</p>
   </div>
 
   <!-- Step Indicator (3 steps, step 2 active) -->
@@ -42,17 +45,17 @@
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
-      <div class="step-label completed">选择设定</div>
+      <div class="step-label completed" data-i18n="pre2.step1">选择设定</div>
     </div>
     <div class="step-line filled"></div>
     <div class="step-item">
       <div class="step-circle active">2</div>
-      <div class="step-label active">填写信息</div>
+      <div class="step-label active" data-i18n="pre2.step2">填写信息</div>
     </div>
     <div class="step-line"></div>
     <div class="step-item">
       <div class="step-circle inactive">3</div>
-      <div class="step-label">提交订单</div>
+      <div class="step-label" data-i18n="pre2.step3">提交订单</div>
     </div>
   </div>
 
@@ -87,63 +90,63 @@
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          第一步：请选择你喜欢的设定
+          <span data-i18n="pre2.lockedStep1Title">第一步：请选择你喜欢的设定</span>
         </div>
-        <div class="locked-step-status">已选择: 百丈冰</div>
+        <div class="locked-step-status"><span data-i18n="pre2.lockedStep1Status">已选择:</span> 百丈冰</div>
       </div>
 
       <!-- Current Step 2: Fill in contact information -->
-      <h2 class="current-step-title">第二步：填写您的数据与联系方式</h2>
+      <h2 class="current-step-title" data-i18n="pre2.stepTitle">第二步：填写您的数据与联系方式</h2>
 
       <!-- Product details summary -->
       <div class="product-details">
-        <div class="product-detail-item">含 双视图/标准全装/定制外衣/定制道具</div>
-        <div class="product-detail-item">全部版权&copy;转让/可商用*</div>
-        <div class="product-detail-item">成品部分（含头/手）立即交付</div>
-        <div class="product-detail-item">剩余部分预计 4-6 周后交付*</div>
+        <div class="product-detail-item" data-i18n="pre2.detailIncludes">含 双视图/标准全装/定制外衣/定制道具</div>
+        <div class="product-detail-item" data-i18n="pre2.detailCopyright">全部版权&copy;转让/可商用*</div>
+        <div class="product-detail-item" data-i18n="pre2.detailDelivery1">成品部分（含头/手）立即交付</div>
+        <div class="product-detail-item" data-i18n="pre2.detailDelivery2">剩余部分预计 4-6 周后交付*</div>
       </div>
 
       <!-- Form fields (two column layout) -->
       <div class="form-grid">
         <div class="form-group full-width">
-          <label class="form-label">姓名 <span class="req-star">*</span></label>
-          <input class="form-input" id="dropName" type="text" placeholder="请输入您的姓名" autocomplete="name">
+          <label class="form-label"><span data-i18n="pre2.labelName">姓名</span> <span class="req-star">*</span></label>
+          <input class="form-input" id="dropName" type="text" data-i18n-ph="pre2.phName" placeholder="请输入您的姓名" autocomplete="name">
         </div>
         <div class="form-group full-width">
-          <label class="form-label">手机号 <span class="req-star">*</span></label>
-          <input class="form-input" id="dropPhone" type="tel" maxlength="11" placeholder="请输入手机号" autocomplete="tel">
+          <label class="form-label"><span data-i18n="pre2.labelPhone">手机号</span> <span class="req-star">*</span></label>
+          <input class="form-input" id="dropPhone" type="tel" maxlength="11" data-i18n-ph="pre2.phPhone" placeholder="请输入手机号" autocomplete="tel">
         </div>
         <div class="form-group">
-          <label class="form-label">身高(CM)</label>
-          <input class="form-input" id="dropHeight" type="number" placeholder="例如: 175">
+          <label class="form-label" data-i18n="pre2.labelHeight">身高(CM)</label>
+          <input class="form-input" id="dropHeight" type="number" data-i18n-ph="pre2.phHeight" placeholder="例如: 175">
         </div>
         <div class="form-group">
-          <label class="form-label">体重(KG)</label>
-          <input class="form-input" id="dropWeight" type="number" placeholder="例如: 70">
+          <label class="form-label" data-i18n="pre2.labelWeight">体重(KG)</label>
+          <input class="form-input" id="dropWeight" type="number" data-i18n-ph="pre2.phWeight" placeholder="例如: 70">
         </div>
         <div class="form-group">
-          <label class="form-label">胸围(CM)</label>
-          <input class="form-input" id="dropChest" type="number" placeholder="例如: 96">
+          <label class="form-label" data-i18n="pre2.labelChest">胸围(CM)</label>
+          <input class="form-input" id="dropChest" type="number" data-i18n-ph="pre2.phChest" placeholder="例如: 96">
         </div>
         <div class="form-group">
-          <label class="form-label">腰围(CM)</label>
-          <input class="form-input" id="dropWaist" type="number" placeholder="例如: 80">
+          <label class="form-label" data-i18n="pre2.labelWaist">腰围(CM)</label>
+          <input class="form-input" id="dropWaist" type="number" data-i18n-ph="pre2.phWaist" placeholder="例如: 80">
         </div>
         <div class="form-group">
-          <label class="form-label">臀围(CM)</label>
-          <input class="form-input" id="dropHip" type="number" placeholder="例如: 94">
+          <label class="form-label" data-i18n="pre2.labelHip">臀围(CM)</label>
+          <input class="form-input" id="dropHip" type="number" data-i18n-ph="pre2.phHip" placeholder="例如: 94">
         </div>
         <div class="form-group">
-          <label class="form-label">鞋码</label>
-          <input class="form-input" id="dropShoe" type="text" placeholder="例如: 42">
+          <label class="form-label" data-i18n="pre2.labelShoe">鞋码</label>
+          <input class="form-input" id="dropShoe" type="text" data-i18n-ph="pre2.phShoe" placeholder="例如: 42">
         </div>
         <div class="form-group full-width">
           <label class="form-label">Email <span class="req-star">*</span></label>
           <input class="form-input" id="dropEmail" type="email" placeholder="your-email@example.com" autocomplete="email">
         </div>
         <div class="form-group full-width">
-          <label class="form-label">任意平台可以联系到您的账号</label>
-          <textarea class="form-input" id="dropSocial" placeholder="请填写您常用的社交媒体账号或其他联系方式"></textarea>
+          <label class="form-label" data-i18n="pre2.labelSocial">任意平台可以联系到您的账号</label>
+          <textarea class="form-input" id="dropSocial" data-i18n-ph="pre2.phSocial" placeholder="请填写您常用的社交媒体账号或其他联系方式"></textarea>
         </div>
       </div>
 
@@ -154,15 +157,15 @@
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
         </div>
-        <span class="checkbox-label">我已经阅读并同意 <a href="#">购买协议</a></span>
+        <span class="checkbox-label"><span data-i18n="pre2.agreeText">我已经阅读并同意</span> <a href="#" data-i18n="pre2.agreeLink">购买协议</a></span>
       </div>
 
       <p class="form-tip" id="dropFormTip"></p>
 
       <!-- Action buttons -->
       <div class="action-buttons">
-        <button class="btn-back" onclick="history.back()">返回</button>
-        <button class="btn-submit" id="dropSubmitBtn" type="button" onclick="submitPreorder()">提 交</button>
+        <button class="btn-back" onclick="history.back()" data-i18n="pre2.backBtn">返回</button>
+        <button class="btn-submit" id="dropSubmitBtn" type="button" onclick="submitPreorder()" data-i18n="pre2.submitBtn">提 交</button>
       </div>
 
     </div>
@@ -178,7 +181,7 @@
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
         <polyline points="9 22 9 12 15 12 15 22"></polyline>
       </svg>
-      <span>首页</span>
+      <span data-i18n="nav.home">首页</span>
     </button>
     <button class="nav-item" aria-label="产品">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -187,14 +190,14 @@
         <rect x="3" y="14" width="7" height="7" rx="1"></rect>
         <rect x="14" y="14" width="7" height="7" rx="1"></rect>
       </svg>
-      <span>产品</span>
+      <span data-i18n="nav.products">产品</span>
     </button>
     <button class="nav-item" aria-label="估价">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="12" y1="1" x2="12" y2="23"></line>
         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
       </svg>
-      <span>估价</span>
+      <span data-i18n="nav.estimate">估价</span>
     </button>
     <button class="nav-item" aria-label="订单">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -204,14 +207,14 @@
         <line x1="16" y1="17" x2="8" y2="17"></line>
         <polyline points="10 9 9 9 8 9"></polyline>
       </svg>
-      <span>订单</span>
+      <span data-i18n="nav.orders">订单</span>
     </button>
     <button class="nav-item" aria-label="我的">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
         <circle cx="12" cy="7" r="4"></circle>
       </svg>
-      <span>我的</span>
+      <span data-i18n="nav.mine">我的</span>
     </button>
   </div>
 

@@ -31,6 +31,7 @@ import {
   updatePassword,
 } from "@/actions/profile-actions";
 import { listMyOrders, claimOrder } from "@/actions/order-actions";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { formatDate, statusLabels } from "@/lib/utils";
 import type { Profile, Order } from "@/types/database";
 import FeedbackSection from "@/components/profile/FeedbackSection";
@@ -38,6 +39,7 @@ import BottomNav from "@/components/layout/BottomNav";
 import PasswordResetModal from "@/components/auth/PasswordResetModal";
 
 export default function ProfilePage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -83,14 +85,14 @@ export default function ProfilePage() {
     setClaimError(null);
     setClaimSuccess(null);
     if (!claimNo.trim() || !claimPhone.trim()) {
-      setClaimError("请填写订单号和手机号");
+      setClaimError(t("profile.err.claimRequired"));
       return;
     }
     setClaimLoading(true);
     try {
       const result = await claimOrder(claimNo.trim(), claimPhone.trim());
       if (result.success) {
-        setClaimSuccess("认领成功！该委托单已绑定到您的账号");
+        setClaimSuccess(t("profile.err.claimSuccess"));
         setClaimNo("");
         setClaimPhone("");
         // 刷新订单列表
@@ -102,10 +104,10 @@ export default function ProfilePage() {
         }
         setOrdersLoading(false);
       } else {
-        setClaimError(result.error || "认领失败");
+        setClaimError(result.error || t("profile.err.claimFailed"));
       }
     } catch {
-      setClaimError("认领时发生未知错误");
+      setClaimError(t("profile.err.claimUnknown"));
     } finally {
       setClaimLoading(false);
     }
@@ -122,13 +124,13 @@ export default function ProfilePage() {
         if (result.success && result.profile) {
           setProfile(result.profile);
         } else if (result.success && result.session) {
-          setError("用户资料初始化失败，请退出后重新登录");
+          setError(t("profile.err.profileInitFailed"));
         } else {
           router.push("/login");
           return;
         }
       } catch {
-        if (mounted) setError("加载用户信息失败");
+        if (mounted) setError(t("profile.err.loadProfileFailed"));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -138,6 +140,7 @@ export default function ProfilePage() {
     return () => {
       mounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   // 加载我的订单
@@ -153,10 +156,10 @@ export default function ProfilePage() {
           setOrders((result.data || []) as Order[]);
           setOrdersError(null);
         } else {
-          setOrdersError(result.error || "加载订单失败");
+          setOrdersError(result.error || t("profile.err.ordersLoadFailed"));
         }
       } catch {
-        if (mounted) setOrdersError("加载订单时发生未知错误");
+        if (mounted) setOrdersError(t("profile.err.ordersLoadUnknown"));
       } finally {
         if (mounted) setOrdersLoading(false);
       }
@@ -166,6 +169,7 @@ export default function ProfilePage() {
     return () => {
       mounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const refreshProfile = async () => {
@@ -201,11 +205,11 @@ export default function ProfilePage() {
   const handleSaveName = async () => {
     const trimmed = nameInput.trim();
     if (!trimmed) {
-      setNameError("昵称不能为空");
+      setNameError(t("profile.err.nameRequired"));
       return;
     }
     if (trimmed.length > 20) {
-      setNameError("昵称长度不能超过20个字符");
+      setNameError(t("profile.err.nameTooLong"));
       return;
     }
 
@@ -218,11 +222,11 @@ export default function ProfilePage() {
         setEditingName(false);
         setNameInput("");
       } else {
-        setNameError(result.error ?? "更新失败");
+        setNameError(result.error ?? t("profile.err.updateFailed"));
       }
     } catch (e) {
       console.error("[Profile] updateDisplayName exception:", e);
-      setNameError("操作时发生未知错误，请稍后重试");
+      setNameError(t("profile.err.operationUnknownRetry"));
     } finally {
       setNameLoading(false);
     }
@@ -250,10 +254,10 @@ export default function ProfilePage() {
       if (result.success && result.avatarUrl) {
         await refreshProfile();
       } else {
-        setAvatarError(result.error ?? "头像上传失败");
+        setAvatarError(result.error ?? t("profile.err.avatarUploadFailed"));
       }
     } catch {
-      setAvatarError("操作时发生未知错误");
+      setAvatarError(t("profile.err.operationUnknown"));
     } finally {
       setAvatarLoading(false);
     }
@@ -284,28 +288,28 @@ export default function ProfilePage() {
 
     // C4: 如果用户已有密码，必须输入当前密码
     if (profile?.has_password && !oldPassword) {
-      setPasswordError("请输入当前密码");
+      setPasswordError(t("profile.err.passwordCurrentRequired"));
       return;
     }
     if (!passwordInput) {
-      setPasswordError("请输入新密码");
+      setPasswordError(t("profile.err.passwordNewRequired"));
       return;
     }
     if (passwordInput.length < 6) {
-      setPasswordError("密码长度至少6位");
+      setPasswordError(t("profile.err.passwordTooShort"));
       return;
     }
     if (passwordInput.length > 64) {
-      setPasswordError("密码长度不能超过64位");
+      setPasswordError(t("profile.err.passwordTooLong"));
       return;
     }
     // 密码复杂度：至少包含字母和数字
     if (!/[a-zA-Z]/.test(passwordInput) || !/\d/.test(passwordInput)) {
-      setPasswordError("密码必须包含字母和数字");
+      setPasswordError(t("profile.err.passwordComplexity"));
       return;
     }
     if (passwordInput !== passwordConfirm) {
-      setPasswordError("两次输入的密码不一致");
+      setPasswordError(t("profile.err.passwordMismatch"));
       return;
     }
 
@@ -318,7 +322,7 @@ export default function ProfilePage() {
       if (result.success) {
         // 修改密码成功：Supabase 会撤销旧 session，需重新登录
         if (result.sessionInvalidated) {
-          setPasswordSuccess("密码设置成功，请重新登录");
+          setPasswordSuccess(t("profile.err.passwordSetRelogin"));
           setTimeout(() => {
             window.location.href = "/login?changed=1";
           }, 1200);
@@ -328,13 +332,13 @@ export default function ProfilePage() {
           setOldPassword("");
           setPasswordInput("");
           setPasswordConfirm("");
-          setPasswordSuccess("密码设置成功");
+          setPasswordSuccess(t("profile.err.passwordSetSuccess"));
         }
       } else {
-        setPasswordError(result.error ?? "设置密码失败");
+        setPasswordError(result.error ?? t("profile.err.passwordSetFailed"));
       }
     } catch {
-      setPasswordError("操作时发生未知错误");
+      setPasswordError(t("profile.err.operationUnknown"));
     } finally {
       setPasswordLoading(false);
     }
@@ -354,7 +358,7 @@ export default function ProfilePage() {
         <div className="text-center">
           <p className="text-sm text-red-500 mb-4">{error}</p>
           <Link href="/login" className="text-sm text-lw-accent hover:underline">
-            返回登录
+            {t("profile.backToLogin")}
           </Link>
         </div>
       </div>
@@ -373,7 +377,9 @@ export default function ProfilePage() {
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-lw-black">个人中心</h1>
+              <h1 className="text-base font-bold text-lw-black">
+                {t("nav.profile")}
+              </h1>
               <p className="text-xs text-gray-400">LongWoo Studio</p>
             </div>
           </div>
@@ -383,7 +389,7 @@ export default function ProfilePage() {
               className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-lw-accent transition-colors"
             >
               <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">返回首页</span>
+              <span className="hidden sm:inline">{t("profile.backHome")}</span>
             </Link>
             <button
               onClick={handleLogout}
@@ -391,7 +397,7 @@ export default function ProfilePage() {
               className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50"
             >
               <LogOut className="w-4 h-4" />
-              {loggingOut ? "退出中..." : "退出登录"}
+              {loggingOut ? t("header.loggingOut") : t("header.logout")}
             </button>
           </div>
         </div>
@@ -409,13 +415,13 @@ export default function ProfilePage() {
                 onClick={handleAvatarClick}
                 disabled={avatarLoading}
                 className="relative w-16 h-16 rounded-full bg-gradient-to-br from-lw-accent to-blue-600 flex items-center justify-center text-white text-xl font-bold overflow-hidden cursor-pointer disabled:opacity-60 group"
-                title="点击修改头像"
+                title={t("profile.changeAvatarTip")}
               >
                 {profile?.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={profile.avatar_url}
-                    alt="头像"
+                    alt={t("profile.avatarAlt")}
                     className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
@@ -456,7 +462,7 @@ export default function ProfilePage() {
                     maxLength={20}
                     autoFocus
                     disabled={nameLoading}
-                    placeholder="输入新昵称"
+                    placeholder={t("profile.nicknamePlaceholder")}
                     className="w-48 px-3 py-1.5 text-base font-bold text-lw-black bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors"
                   />
                   <button
@@ -470,7 +476,7 @@ export default function ProfilePage() {
                     ) : (
                       <CheckCircle className="w-3.5 h-3.5" />
                     )}
-                    保存
+                    {t("profile.save")}
                   </button>
                   <button
                     type="button"
@@ -479,19 +485,19 @@ export default function ProfilePage() {
                     className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
-                    取消
+                    {t("profile.cancel")}
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-lg font-bold text-lw-black">
-                    {profile?.display_name ?? "新用户"}
+                    {profile?.display_name ?? t("profile.newUser")}
                   </h2>
                   <button
                     type="button"
                     onClick={handleStartEditName}
                     className="flex items-center justify-center w-6 h-6 text-gray-400 hover:text-lw-accent hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
-                    title="修改昵称"
+                    title={t("profile.editNickname")}
                   >
                     <Edit className="w-3.5 h-3.5" />
                   </button>
@@ -502,7 +508,7 @@ export default function ProfilePage() {
                         : "bg-blue-50 text-blue-600"
                     }`}
                   >
-                    {isAdmin ? "管理员" : "普通用户"}
+                    {isAdmin ? t("profile.admin") : t("profile.user")}
                   </span>
                 </div>
               )}
@@ -532,7 +538,9 @@ export default function ProfilePage() {
 
         {/* 快捷入口 */}
         <section>
-          <h3 className="text-sm font-medium text-gray-400 mb-3">快捷入口</h3>
+          <h3 className="text-sm font-medium text-gray-400 mb-3">
+            {t("profile.quickLinks")}
+          </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {/* 管理员才能看到工作台 */}
             {isAdmin && (
@@ -543,8 +551,12 @@ export default function ProfilePage() {
                 <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
                   <Package className="w-5 h-5 text-blue-600" />
                 </div>
-                <p className="text-sm font-medium text-lw-black">工作台</p>
-                <p className="text-xs text-gray-400 mt-0.5">管理订单与委托</p>
+                <p className="text-sm font-medium text-lw-black">
+                  {t("profile.dashboard")}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {t("profile.manageOrdersDesc")}
+                </p>
                 <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-lw-accent mt-2 transition-colors" />
               </Link>
             )}
@@ -558,8 +570,12 @@ export default function ProfilePage() {
                 <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3">
                   <Settings className="w-5 h-5 text-purple-600" />
                 </div>
-                <p className="text-sm font-medium text-lw-black">管理后台</p>
-                <p className="text-xs text-gray-400 mt-0.5">系统数据概览</p>
+                <p className="text-sm font-medium text-lw-black">
+                  {t("header.enterAdmin")}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {t("profile.adminOverviewDesc")}
+                </p>
                 <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-lw-accent mt-2 transition-colors" />
               </Link>
             )}
@@ -572,8 +588,12 @@ export default function ProfilePage() {
               <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center mb-3">
                 <Package className="w-5 h-5 text-green-600" />
               </div>
-              <p className="text-sm font-medium text-lw-black">购买自设兽装</p>
-              <p className="text-xs text-gray-400 mt-0.5">开始定制您的专属兽装</p>
+              <p className="text-sm font-medium text-lw-black">
+                {t("profile.buyFursuit")}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {t("profile.startCustomizeDesc")}
+              </p>
               <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-lw-accent mt-2 transition-colors" />
             </Link>
 
@@ -585,8 +605,12 @@ export default function ProfilePage() {
               <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center mb-3">
                 <Sparkles className="w-5 h-5 text-indigo-600" />
               </div>
-              <p className="text-sm font-medium text-lw-black">龙灵工坊</p>
-              <p className="text-xs text-gray-400 mt-0.5">创建 AI 角色自由对话</p>
+              <p className="text-sm font-medium text-lw-black">
+                {t("nav.lingWork")}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {t("profile.lingWorkDesc")}
+              </p>
               <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-lw-accent mt-2 transition-colors" />
             </Link>
 
@@ -598,8 +622,12 @@ export default function ProfilePage() {
               <div className="w-10 h-10 rounded-lg bg-cyan-50 flex items-center justify-center mb-3">
                 <Bot className="w-5 h-5 text-cyan-600" />
               </div>
-              <p className="text-sm font-medium text-lw-black">AI 助手</p>
-              <p className="text-xs text-gray-400 mt-0.5">兽装定制相关问题咨询</p>
+              <p className="text-sm font-medium text-lw-black">
+                {t("profile.aiAssistant")}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {t("profile.aiAssistantDesc")}
+              </p>
               <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-lw-accent mt-2 transition-colors" />
             </Link>
 
@@ -611,8 +639,12 @@ export default function ProfilePage() {
               <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center mb-3">
                 <Clock className="w-5 h-5 text-orange-600" />
               </div>
-              <p className="text-sm font-medium text-lw-black">查询订单</p>
-              <p className="text-xs text-gray-400 mt-0.5">查看订单进度</p>
+              <p className="text-sm font-medium text-lw-black">
+                {t("profile.queryOrder")}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {t("profile.viewOrderProgress")}
+              </p>
               <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-lw-accent mt-2 transition-colors" />
             </Link>
           </div>
@@ -621,20 +653,22 @@ export default function ProfilePage() {
         {/* 我的订单 */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-400">我的订单</h3>
+            <h3 className="text-sm font-medium text-gray-400">
+              {t("profile.myOrders")}
+            </h3>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setClaimOpen(true)}
                 className="text-xs text-gray-500 hover:text-lw-accent flex items-center gap-0.5 transition-colors cursor-pointer"
               >
                 <Gift className="w-3 h-3" />
-                认领历史订单
+                {t("profile.claimOrder")}
               </button>
               <Link
                 href="/order/query"
                 className="text-xs text-lw-accent hover:underline flex items-center gap-0.5"
               >
-                查询更多
+                {t("profile.viewMore")}
                 <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
@@ -651,7 +685,7 @@ export default function ProfilePage() {
                 href="/order/query"
                 className="inline-flex items-center gap-1 text-sm text-lw-accent hover:underline"
               >
-                前往查询订单
+                {t("profile.goToQueryOrder")}
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -660,13 +694,15 @@ export default function ProfilePage() {
               <div className="w-12 h-12 mx-auto rounded-full bg-gray-50 flex items-center justify-center mb-3">
                 <Package className="w-6 h-6 text-gray-300" />
               </div>
-              <p className="text-sm text-gray-500 mb-1">暂无订单</p>
-              <p className="text-xs text-gray-400 mb-4">完成首笔定制，开启您的专属兽装之旅</p>
+              <p className="text-sm text-gray-500 mb-1">{t("profile.noOrders")}</p>
+              <p className="text-xs text-gray-400 mb-4">
+                {t("profile.noOrdersDesc")}
+              </p>
               <Link
                 href="/order-step1.html"
                 className="inline-flex items-center gap-1 text-sm font-medium text-lw-accent hover:underline"
               >
-                去购买自设兽装
+                {t("profile.goBuyFursuit")}
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -700,7 +736,9 @@ export default function ProfilePage() {
                         </span>
                       </div>
                       <p className="text-xs text-gray-400 mt-1 truncate">
-                        {order.service_types?.name || "自设兽装定制"} ·{" "}
+                        {order.service_types?.name ||
+                          t("profile.fursuitCustomization")}{" "}
+                        ·{" "}
                         {formatDate(order.created_at)}
                       </p>
                     </div>
@@ -708,7 +746,7 @@ export default function ProfilePage() {
                       href={`/order/query?no=${encodeURIComponent(order.order_no)}&phone=${encodeURIComponent(order.customer_phone || '')}`}
                       className="text-xs text-gray-400 hover:text-lw-accent flex-shrink-0 flex items-center gap-0.5"
                     >
-                      查看详情
+                      {t("profile.viewDetails")}
                       <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
@@ -720,39 +758,41 @@ export default function ProfilePage() {
 
         {/* 账号信息 */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-50 p-6">
-          <h3 className="text-sm font-medium text-gray-400 mb-4">账号信息</h3>
+          <h3 className="text-sm font-medium text-gray-400 mb-4">
+            {t("profile.accountInfo")}
+          </h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between py-2 border-b border-gray-50">
-              <span className="text-sm text-gray-500">用户UID</span>
+              <span className="text-sm text-gray-500">{t("profile.userUid")}</span>
               <span className="text-sm text-gray-700 font-mono">
-                {profile?.uid != null ? profile.uid : "未分配"}
+                {profile?.uid != null ? profile.uid : t("profile.notAssigned")}
               </span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-gray-50">
-              <span className="text-sm text-gray-500">用户ID</span>
+              <span className="text-sm text-gray-500">{t("profile.userId")}</span>
               <span className="text-sm text-gray-700 font-mono">
                 {profile?.id.slice(0, 8)}...
               </span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-gray-50">
-              <span className="text-sm text-gray-500">注册时间</span>
+              <span className="text-sm text-gray-500">{t("profile.registeredAt")}</span>
               <span className="text-sm text-gray-700">
                 {profile?.created_at
                   ? new Date(profile.created_at).toLocaleDateString("zh-CN")
-                  : "未知"}
+                  : t("profile.unknown")}
               </span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-gray-50">
-              <span className="text-sm text-gray-500">账号状态</span>
+              <span className="text-sm text-gray-500">{t("profile.accountStatus")}</span>
               <span className="text-sm text-green-600 flex items-center gap-1">
                 <CheckCircle className="w-3.5 h-3.5" />
-                {profile?.is_active ? "正常" : "已禁用"}
+                {profile?.is_active ? t("profile.active") : t("profile.disabled")}
               </span>
             </div>
             <div className="flex items-center justify-between py-2">
-              <span className="text-sm text-gray-500">账号角色</span>
+              <span className="text-sm text-gray-500">{t("profile.accountRole")}</span>
               <span className="text-sm text-gray-700">
-                {isAdmin ? "管理员" : "普通用户"}
+                {isAdmin ? t("profile.admin") : t("profile.user")}
               </span>
             </div>
           </div>
@@ -760,21 +800,25 @@ export default function ProfilePage() {
 
         {/* 账号安全（密码管理） */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-50 p-6">
-          <h3 className="text-sm font-medium text-gray-400 mb-4">账号安全</h3>
+          <h3 className="text-sm font-medium text-gray-400 mb-4">
+            {t("profile.accountSecurity")}
+          </h3>
 
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-gray-400" />
               <span className="text-sm text-gray-700">
-                {profile?.has_password ? "登录密码" : "尚未设置密码"}
+                {profile?.has_password
+                  ? t("profile.loginPassword")
+                  : t("profile.noPasswordYet")}
               </span>
               {profile?.has_password ? (
                 <span className="px-1.5 py-0.5 text-xs text-green-600 bg-green-50 rounded">
-                  已设置
+                  {t("profile.passwordSet")}
                 </span>
               ) : (
                 <span className="px-1.5 py-0.5 text-xs text-orange-600 bg-orange-50 rounded">
-                  未设置
+                  {t("profile.passwordNotSet")}
                 </span>
               )}
             </div>
@@ -786,10 +830,10 @@ export default function ProfilePage() {
                     type="button"
                     onClick={() => setResetOpen(true)}
                     className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-lw-accent transition-colors cursor-pointer"
-                    title="不记得当前密码时，通过邮箱验证码重置"
+                    title={t("profile.forgotPasswordTip")}
                   >
                     <KeyRound className="w-3.5 h-3.5" />
-                    忘记密码？
+                    {t("login.forgot")}
                   </button>
                 )}
                 <button
@@ -798,7 +842,9 @@ export default function ProfilePage() {
                   className="flex items-center gap-1.5 text-sm text-lw-accent hover:text-blue-700 transition-colors cursor-pointer"
                 >
                   <Lock className="w-3.5 h-3.5" />
-                  {profile?.has_password ? "修改密码" : "设置密码"}
+                  {profile?.has_password
+                    ? t("profile.changePassword")
+                    : t("profile.setPassword")}
                 </button>
               </div>
             )}
@@ -819,7 +865,7 @@ export default function ProfilePage() {
               {profile?.has_password && (
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">
-                    当前密码
+                    {t("profile.currentPassword")}
                   </label>
                   <input
                     type="password"
@@ -831,14 +877,16 @@ export default function ProfilePage() {
                     maxLength={64}
                     autoFocus
                     disabled={passwordLoading}
-                    placeholder="请输入当前密码"
+                    placeholder={t("profile.currentPasswordPlaceholder")}
                     className="w-full px-3 py-2 text-sm text-lw-black bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors disabled:opacity-60"
                   />
                 </div>
               )}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  {profile?.has_password ? "新密码" : "设置密码"}
+                  {profile?.has_password
+                    ? t("profile.newPassword")
+                    : t("profile.setPassword")}
                 </label>
                 <input
                   type="password"
@@ -850,13 +898,13 @@ export default function ProfilePage() {
                   maxLength={64}
                   autoFocus={!profile?.has_password}
                   disabled={passwordLoading}
-                  placeholder="至少6位密码"
+                  placeholder={t("profile.passwordMinHint")}
                   className="w-full px-3 py-2 text-sm text-lw-black bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors disabled:opacity-60"
                 />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  确认密码
+                  {t("profile.confirmPassword")}
                 </label>
                 <input
                   type="password"
@@ -867,7 +915,7 @@ export default function ProfilePage() {
                   }}
                   maxLength={64}
                   disabled={passwordLoading}
-                  placeholder="再次输入密码"
+                  placeholder={t("profile.confirmPasswordPlaceholder")}
                   className="w-full px-3 py-2 text-sm text-lw-black bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors disabled:opacity-60"
                 />
               </div>
@@ -891,7 +939,9 @@ export default function ProfilePage() {
                   ) : (
                     <Upload className="w-4 h-4" />
                   )}
-                  {passwordLoading ? "保存中..." : "保存密码"}
+                  {passwordLoading
+                    ? t("profile.saving")
+                    : t("profile.savePassword")}
                 </button>
                 <button
                   type="button"
@@ -900,12 +950,12 @@ export default function ProfilePage() {
                   className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
-                  取消
+                  {t("profile.cancel")}
                 </button>
               </div>
 
               <p className="text-xs text-gray-400 pt-1">
-                提示：密码长度 6-64 位。设置后可使用邮箱 + 密码直接登录。
+                {t("profile.passwordHint")}
               </p>
             </div>
           )}
@@ -940,7 +990,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-lw-black flex items-center gap-2">
                 <Gift className="w-4 h-4 text-lw-accent" />
-                认领历史订单
+                {t("profile.claimOrder")}
               </h3>
               <button
                 onClick={() => {
@@ -949,36 +999,36 @@ export default function ProfilePage() {
                   setClaimSuccess(null);
                 }}
                 className="p-1 text-gray-400 hover:text-gray-600 rounded-md cursor-pointer"
-                aria-label="关闭"
+                aria-label={t("profile.close")}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-              将您之前未登录状态下提交的委托单绑定到当前账号，绑定后可在「我的订单」查看进度并接收站内通知。
+              {t("profile.claimDesc")}
             </p>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">
-                  委托单号
+                  {t("query.orderNoLabel")}
                 </label>
                 <input
                   value={claimNo}
                   onChange={(e) => setClaimNo(e.target.value)}
-                  placeholder="例如 LW202608110032"
+                  placeholder={t("profile.claimNoPlaceholder")}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-lw-accent/30 focus:border-lw-accent"
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">
-                  下单手机号
+                  {t("profile.claimPhoneLabel")}
                 </label>
                 <input
                   value={claimPhone}
                   onChange={(e) =>
                     setClaimPhone(e.target.value.replace(/\D/g, ""))
                   }
-                  placeholder="请输入下单时填写的手机号"
+                  placeholder={t("profile.claimPhonePlaceholder")}
                   inputMode="numeric"
                   maxLength={11}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-lw-accent/30 focus:border-lw-accent"
@@ -998,7 +1048,7 @@ export default function ProfilePage() {
                 {claimLoading && (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 )}
-                {claimLoading ? "认领中..." : "确认认领"}
+                {claimLoading ? t("profile.claiming") : t("profile.confirmClaim")}
               </button>
             </div>
           </div>
