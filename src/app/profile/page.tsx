@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { listMyOrders } from "@/actions/order-actions";
@@ -19,29 +18,22 @@ export const metadata = {
  * 交互（编辑昵称/头像/密码/认领/退出）仍由客户端组件处理。
  */
 export default async function ProfilePage() {
-  // 服务端鉴权：未登录重定向（middleware 已做路由级拦截，此处纵深防御）
+  // 服务端鉴权 + 数据预取并行（PERF-04）：
+  // getCurrentUser（鉴权 + profiles）与 listMyOrders（订单）无相互依赖（listMyOrders
+  // 内部 getCurrentUser 由 React.cache 同请求去重，profiles 查询仅执行一次），
+  // Promise.all 使两次 Supabase 查询并行，SSR 时间从串行 2 RTT 降为 1 RTT 时长。
+  const [currentUser, ordersResult] = await Promise.all([
+    getCurrentUser(),
+    listMyOrders(20).catch(() => ({ success: false as const, error: "加载订单失败" })),
+  ]);
+
   // getCurrentUser 内部校验 is_active，非激活用户返回 null
-  const currentUser = await getCurrentUser();
   if (!currentUser) {
     redirect("/login");
   }
 
-  // 读取语言 cookie（保持与根布局一致；ProfileShell 内部用客户端 useLanguage）
-  void cookies();
-
-  // 服务端预取订单列表（listMyOrders 内部 getCurrentUser 由 React.cache 同请求去重）
-  let orders: Order[] = [];
-  let ordersError: string | null = null;
-  try {
-    const result = await listMyOrders(20);
-    if (result.success && result.data) {
-      orders = result.data;
-    } else {
-      ordersError = result.error ?? null;
-    }
-  } catch {
-    ordersError = "加载订单失败";
-  }
+  const orders = ordersResult.success && ordersResult.data ? ordersResult.data : [];
+  const ordersError = ordersResult.success ? null : (ordersResult.error ?? "加载订单失败");
 
   return (
     <ProfileShell
