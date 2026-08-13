@@ -139,7 +139,8 @@ export async function getSystemSettings(): Promise<{
       contactEmail: CONTACT_EMAIL,
     },
     security: {
-      jwtSecret: !!process.env.SUPABASE_JWT_SECRET,
+      // JWT 本地校验：支持 SUPABASE_JWT_SECRET（HS256）或 SUPABASE_JWT_PUBLIC_JWKS（ES256）任一配置即视为已配置
+      jwtSecret: !!(process.env.SUPABASE_JWT_SECRET || process.env.SUPABASE_JWT_PUBLIC_JWKS),
       uploadTokenSecret: !!process.env.UPLOAD_TOKEN_SECRET,
       cronSecret: !!process.env.CRON_SECRET,
       csrfEnabled: true,
