@@ -200,6 +200,9 @@ npm run build:static-css   # 重新生成 public 静态页 CSS
 - 使用 admin Supabase 客户端前必须先完成应用层授权；service role 会绕过 RLS。
 - 状态变更必须沿用条件更新和合法状态机，避免并发覆盖或跳级。
 - 当前工作区已有未提交的 OTP、Cookie 与迁移改动；维护时不要覆盖这些改动，并确保 `add_attempts_to_otp_codes.sql` 已在目标数据库应用。
+- **已知技术债（2026-08 上线前检查记录，非紧急）**：
+  1. RLS 书写规范：多数策略未显式写 `TO authenticated/anon` 子句。经审计无实际漏洞（`auth.uid() = id` 与 `current_user_role() = 'admin'` 在匿名下天然拒绝），但后续新增/修改策略时按官方规范显式声明角色并"一策略一动词"。
+  2. Middleware 性能：`getProfileAccess`（`src/middleware.ts`）对受保护路径每请求用 service_role 联网查询 `profiles(role, is_active)`，每次请求多一次数据库往返。非安全漏洞（service_role 仅服务端使用）；若后续优化，优先方案是把角色同步到 JWT `app_metadata`（Supabase trigger + middleware 本地读取），需配套数据迁移。
 
 ## 13. 建议的测试清单
 
