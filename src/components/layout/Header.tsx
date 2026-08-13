@@ -3,13 +3,24 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, LogOut, Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Menu, X, LogOut, Loader2, Bell } from "lucide-react";
 import Button from "@/components/ui/Button";
-import NotificationBell from "@/components/layout/NotificationBell";
 import { logoutUser } from "@/actions/auth-actions";
 import { useSession, clearSessionCache } from "@/components/providers/SessionProvider";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import LangSwitcher from "@/components/i18n/LangSwitcher";
+
+// 性能优化（PERF-02）：通知铃铛（弹窗 + 列表）按需加载，
+// 不进入首屏 JS（用户点击铃铛时才拉取对应 chunk）。
+const NotificationBell = dynamic(() => import("@/components/layout/NotificationBell"), {
+  ssr: false,
+  loading: () => (
+    <div className="relative p-1.5 text-gray-400" aria-hidden="true">
+      <Bell className="w-4.5 h-4.5" />
+    </div>
+  ),
+});
 
 const navLinks = [
   { label: "首页", i18nKey: "nav.home", href: "/" },

@@ -197,10 +197,27 @@ export async function middleware(request: NextRequest) {
  *
  * 复用 admin 客户端单例（createAdminClient），避免每次请求都创建新的 SupabaseClient。
  * 使用 service_role key 绕过 RLS 读取 profiles 表。
+ *
+ * 性能优化（PERF-01）：结果按 userId 做模块级 TTL 缓存（60s）。
+ * 受保护路径（/profile、/admin、/ai 等）每个请求都会进入 middleware，
+ * 未缓存时每次额外一次到 Supabase 的网络往返（RTT），是"进入页面卡顿"的主因之一。
+ * 缓存后热请求零网络；60s TTL 兼顾管理员授权/停用操作的生效延迟（刷新页面即更新）。
+ * 注：serverless 实例每次冷启动缓存为空（首次请求 1 次 RTT，可接受）。
  */
+const profileAccessCache = new Map<
+  string,
+  { data: { isAdmin: boolean; isActive: boolean }; at: number }
+>()
+const PROFILE_CACHE_TTL_MS = 60_000
+const PROFILE_CACHE_MAX = 500
+
 async function getProfileAccess(
   userId: string
 ): Promise<{ isAdmin: boolean; isActive: boolean } | null> {
+  const cached = profileAccessCache.get(userId)
+  if (cached && Date.now() - cached.at < PROFILE_CACHE_TTL_MS) {
+    return cached.data
+  }
   try {
     // 复用 admin 客户端单例
     const admin = createAdminClient()
@@ -212,10 +229,16 @@ async function getProfileAccess(
       .single()
 
     if (!profile) return null
-    return {
+    const result = {
       isAdmin: profile.role === 'admin',
       isActive: profile.is_active === true,
     }
+    // 写入缓存；超上限时清空（防内存增长）
+    if (profileAccessCache.size >= PROFILE_CACHE_MAX) {
+      profileAccessCache.clear()
+    }
+    profileAccessCache.set(userId, { data: result, at: Date.now() })
+    return result
   } catch {
     return null
   }
