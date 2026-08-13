@@ -69,8 +69,8 @@ export function LanguageProvider({
   useEffect(() => {
     // 挂载后按 URL 参数/localStorage 修正一次；此为 hydration-safe 的标准模式，
     // SSR 首帧已与服务端 initialLang 一致，此处仅为客户端覆盖（URL/localStorage 优先级更高）
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     const detected = detectLang()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (detected !== lang) setLangState(detected)
   }, [])
 
