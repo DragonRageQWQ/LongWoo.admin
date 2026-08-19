@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
@@ -44,10 +43,22 @@ interface StatCard {
   label: string;
   i18nKey: string;
   value: number;
-  icon: React.ElementType;
+  // 图标用 key 而非组件引用：fetchStats 结果经 unstable_cache 序列化缓存，
+  // 组件引用会被序列化为空对象导致渲染失败（Element type is invalid）。
+  iconKey: StatIconKey;
   iconBg: string;
   iconColor: string;
 }
+
+type StatIconKey = "clipboard" | "clock" | "package" | "circle";
+
+// 图标 key → 组件映射（模块级，UI 与数据分离）
+const STAT_ICONS: Record<StatIconKey, React.ElementType> = {
+  clipboard: ClipboardPlus,
+  clock: Clock,
+  package: PackageCheck,
+  circle: CircleCheck,
+};
 
 interface TrendItem {
   date: string;
@@ -56,8 +67,6 @@ interface TrendItem {
 }
 
 async function fetchStats() {
-  const supabase = await createClient();
-
   // 今日起止时间
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -73,18 +82,19 @@ async function fetchStats() {
   sevenDaysAgo.setHours(0, 0, 0, 0);
   const sevenDaysAgoISO = sevenDaysAgo.toISOString();
 
-  // 使用 RPC 函数获取各状态订单数量（替代多次并行 count 查询）
-  // 同时并行查询今日新增数量和7天趋势数据
+  // 全部统计查询使用 admin 客户端（service_role）：
+  // 不依赖会话 cookie（unstable_cache 缓存上下文无法访问 cookies()，修复缓存后数据加载失败），
+  // 且本组件已通过 getCurrentUser 完成管理员鉴权。
   const admin = createAdminClient();
   const [statusCountsResult, todayResult, recentOrdersResult] =
     await Promise.all([
       admin.rpc("get_order_status_counts"),
-      supabase
+      admin
         .from("orders")
         .select("id", { count: "exact", head: true })
         .gte("created_at", todayStartISO)
         .lt("created_at", todayEndISO),
-      supabase
+      admin
         .from("orders")
         .select("created_at")
         .gte("created_at", sevenDaysAgoISO)
@@ -131,7 +141,7 @@ async function fetchStats() {
       label: "今日新增委托",
       i18nKey: "admin.stats.todayNew",
       value: todayResult.count ?? 0,
-      icon: ClipboardPlus,
+      iconKey: "clipboard",
       iconBg: "bg-blue-50",
       iconColor: "text-blue-600",
     },
@@ -139,7 +149,7 @@ async function fetchStats() {
       label: "待估价委托",
       i18nKey: "admin.stats.pending",
       value: statusCounts.get("pending") ?? 0,
-      icon: Clock,
+      iconKey: "clock",
       iconBg: "bg-yellow-50",
       iconColor: "text-yellow-600",
     },
@@ -147,7 +157,7 @@ async function fetchStats() {
       label: "已接单委托",
       i18nKey: "admin.stats.accepted",
       value: statusCounts.get("accepted") ?? 0,
-      icon: PackageCheck,
+      iconKey: "package",
       iconBg: "bg-green-50",
       iconColor: "text-green-600",
     },
@@ -155,7 +165,7 @@ async function fetchStats() {
       label: "已完成委托",
       i18nKey: "admin.stats.completed",
       value: statusCounts.get("completed") ?? 0,
-      icon: CircleCheck,
+      iconKey: "circle",
       iconBg: "bg-gray-100",
       iconColor: "text-gray-600",
     },
@@ -224,7 +234,7 @@ export default async function StatsOverview() {
           {/* 统计卡片 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat) => {
-              const Icon = stat.icon;
+              const Icon = STAT_ICONS[stat.iconKey];
               return (
                 <div
                   key={stat.i18nKey}
