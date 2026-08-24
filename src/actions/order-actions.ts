@@ -942,6 +942,11 @@ export async function queryOrderByNo(
   }
 
   const supabase = await createClient()
+  // 附件/回复查询使用 admin client：查询接口以「订单号+手机号」双因子校验凭证，
+  // 未登录/匿名用户会被 order_attachments / order_replies 的 RLS 策略（仅 admin 或
+  // 登录用户可读）过滤为空，导致查询结果看不到设定图与回复。凭证已在服务端验证，
+  // 与 claimOrder 的 admin client 用法一致；返回时手机号/邮箱已脱敏。
+  const admin = createAdminClient()
 
   try {
     const { data: order, error: orderError } = await supabase
@@ -958,12 +963,12 @@ export async function queryOrderByNo(
     // 性能优化：附件与回复查询相互独立，改为并行执行（Promise.all），
     // 原串行实现多花费 1 个 RTT（约 40-100ms）
     const [attachmentResult, repliesResult] = await Promise.all([
-      supabase
+      admin
         .from('order_attachments')
         .select('*')
         .eq('order_id', order.id)
         .order('created_at', { ascending: true }),
-      supabase
+      admin
         .from('order_replies')
         .select('*, profiles(display_name, avatar_url)')
         .eq('order_id', order.id)

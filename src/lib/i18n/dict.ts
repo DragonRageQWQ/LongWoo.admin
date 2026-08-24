@@ -50,6 +50,8 @@ export const I18N_DICTS: Record<Lang, Record<string, string>> = {
     'query.note': '备注：',
     'query.deliveryLink': '交付链接',
     'query.replies': '回复记录',
+    'query.designImage': '设定图',
+    'query.designImageMissing': '设定图上传未成功，如有疑问请联系客服',
 
     // 登录页
     'login.title': '欢迎回来',
@@ -110,6 +112,8 @@ export const I18N_DICTS: Record<Lang, Record<string, string>> = {
     'query.note': 'Note: ',
     'query.deliveryLink': 'Delivery Link',
     'query.replies': 'Replies',
+    'query.designImage': 'Design Image',
+    'query.designImageMissing': 'Design image failed to upload. Please contact support if needed.',
 
     'login.title': 'Welcome Back',
     'login.subtitle': 'Choose a sign-in method to enter your dashboard',

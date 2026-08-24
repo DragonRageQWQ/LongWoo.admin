@@ -12,6 +12,10 @@ import {
   MessageSquare,
   FileText,
   CircleCheck,
+  Image as ImageIcon,
+  X,
+  Paperclip,
+  CircleAlert,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -28,6 +32,16 @@ type QueryResult = Order & {
   replies?: OrderReply[];
 };
 
+// 从需求描述中提取【设定图】文件名（静态页下单时写入 requirements，
+// 兼容附件上传失败仅剩文件名的历史订单）
+function extractDesignRefName(requirements: string | null): string | null {
+  if (!requirements) return null;
+  const m = requirements.match(/【设定图】([^\n]+)/);
+  if (!m) return null;
+  const name = m[1].trim();
+  return name && name !== "无" ? name : null;
+}
+
 export default function OrderQueryPage() {
   const { t } = useLanguage();
   const [orderNo, setOrderNo] = useState("");
@@ -35,6 +49,13 @@ export default function OrderQueryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<QueryResult | null>(null);
+  // 设定图放大查看
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+
+  // 从需求描述解析【设定图】文件名
+  const designRefName = result
+    ? extractDesignRefName(result.requirements)
+    : null;
 
   const handleQuery = useCallback(async (no: string, phoneNo: string) => {
     setError(null);
@@ -241,6 +262,82 @@ export default function OrderQueryPage() {
                 </div>
               </div>
 
+              {/* 设定图（附件缩略图 + 点击放大；兼容仅剩文件名的历史订单） */}
+              <div className="pt-4 border-t border-gray-50">
+                <div className="flex items-start gap-2.5">
+                  <ImageIcon className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="text-xs text-gray-400">
+                        {t("query.designImage")}
+                      </p>
+                      {designRefName && (
+                        <span className="text-xs text-gray-300 truncate">
+                          （{designRefName}）
+                        </span>
+                      )}
+                      {result.attachments && result.attachments.length > 0 && (
+                        <span className="text-xs text-gray-300">
+                          ({result.attachments.length})
+                        </span>
+                      )}
+                    </div>
+                    {result.attachments && result.attachments.length > 0 ? (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                        {result.attachments.map((att) => {
+                          const isImage =
+                            att.file_type?.startsWith("image/") ||
+                            /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(
+                              att.file_name
+                            );
+                          return (
+                            <div
+                              key={att.id}
+                              className={`group relative aspect-square bg-gray-50 rounded-lg border border-gray-200 overflow-hidden ${
+                                isImage
+                                  ? "cursor-pointer hover:border-lw-accent transition-colors"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                isImage && setEnlargedImage(att.file_path)
+                              }
+                            >
+                              {isImage ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={att.file_path}
+                                  alt={att.file_name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center p-2">
+                                  <Paperclip className="w-8 h-8 text-gray-300 mb-1" />
+                                  <span className="text-xs text-gray-500 text-center truncate w-full">
+                                    {att.file_name}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                                {att.file_name}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : designRefName ? (
+                      <div className="text-sm text-amber-600 flex items-start gap-2">
+                        <CircleAlert className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <span>{t("query.designImageMissing")}</span>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">
+                        {t("query.notSpecified")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* 估价信息 */}
               {result.estimated_price !== null && (
                 <div className="pt-4 border-t border-gray-50">
@@ -313,6 +410,29 @@ export default function OrderQueryPage() {
 
       {/* 底部固定导航栏（与首页一致） */}
       <BottomNav />
+
+      {/* 设定图放大查看 */}
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-lg cursor-pointer"
+            onClick={() => setEnlargedImage(null)}
+            aria-label="关闭"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={enlargedImage}
+            alt={t("query.designImage")}
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
