@@ -76,6 +76,34 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // ===== 静态资源 HTTP 长缓存（性能优化） =====
+      // assets 图片文件名带唯一随机后缀，内容不变，可 immutable 缓存 1 年
+      {
+        source: '/assets/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      // css/js 更新时 URL 不变，用 7 天 + SWR 平衡缓存命中与更新时效
+      {
+        source: '/css/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' },
+        ],
+      },
+      {
+        source: '/js/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' },
+        ],
+      },
+      // 静态 HTML 页面内容可能更新，缓存 1 小时
+      {
+        source: '/:path*.html',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=3600' },
+        ],
+      },
     ];
   },
   // 构建时类型检查：启用以捕获类型错误
