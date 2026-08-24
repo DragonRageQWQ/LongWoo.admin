@@ -59,6 +59,16 @@ function extractPriceSummary(requirements: string | null): {
   return { detail: detailMatch[1].trim(), extras: extraLines };
 }
 
+// 从需求描述中提取【设定图】文件名（静态页下单时写入 requirements，
+// 兼容附件上传失败仅剩文件名的历史订单）
+function extractDesignRefName(requirements: string | null): string | null {
+  if (!requirements) return null;
+  const m = requirements.match(/【设定图】([^\n]+)/);
+  if (!m) return null;
+  const name = m[1].trim();
+  return name && name !== "无" ? name : null;
+}
+
 interface OrderDetailModalProps {
   orderId: string;
   onClose: (needRefresh: boolean) => void;
@@ -121,7 +131,8 @@ export default function OrderDetailModal({
   variant = "admin",
 }: OrderDetailModalProps) {
   const showLogs = variant === "admin";
-  const showImageEnlarge = variant === "admin";
+  // 设定图缩略图点击放大：admin 与 studio 均支持（查看用户提交的原图）
+  const showImageEnlarge = true;
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -244,6 +255,11 @@ export default function OrderDetailModal({
   const handleClose = () => {
     onClose(dataChanged);
   };
+
+  // 从需求描述解析【设定图】文件名（兼容附件上传失败仅剩文件名的历史订单）
+  const designRefName = order
+    ? extractDesignRefName(order.requirements)
+    : null;
 
   const refreshDetail = () => {
     setLoading(true);
@@ -545,16 +561,23 @@ export default function OrderDetailModal({
                     )}
                   </div>
 
-                  {/* 附件列表 */}
-                  {order.attachments && order.attachments.length > 0 && (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-sm font-semibold text-lw-black mb-3 flex items-center gap-2">
-                        <Paperclip className="w-4 h-4 text-lw-accent" />
-                        设计图附件
+                  {/* 设定图（从需求描述解析文件名 + attachments 图片；始终显示） */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-semibold text-lw-black mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-lw-accent" />
+                      设定图
+                      {designRefName && (
+                        <span className="text-xs text-gray-400 font-normal truncate">
+                          （{designRefName}）
+                        </span>
+                      )}
+                      {order.attachments && order.attachments.length > 0 && (
                         <span className="text-xs text-gray-400 font-normal">
                           ({order.attachments.length})
                         </span>
-                      </h3>
+                      )}
+                    </h3>
+                    {order.attachments && order.attachments.length > 0 ? (
                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                         {order.attachments.map((att) => {
                           const isImage =
@@ -600,8 +623,17 @@ export default function OrderDetailModal({
                           );
                         })}
                       </div>
-                    </div>
-                  )}
+                    ) : designRefName ? (
+                      <div className="text-sm text-amber-600 flex items-start gap-2">
+                        <CircleAlert className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <span>
+                          设定图上传未成功（{designRefName}），建议联系客户重新提交设定图。
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">无</p>
+                    )}
+                  </div>
 
                   {/* 操作日志（仅 admin 模式显示） */}
                   {showLogs && order.logs && order.logs.length > 0 && (

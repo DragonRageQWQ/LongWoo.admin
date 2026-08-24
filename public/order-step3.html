@@ -913,7 +913,7 @@
 
             if (result.orderId && result.uploadToken && designRefImage) {
               try {
-                await fetch('/api/order/upload-attachment', {
+                var upRes = await fetch('/api/order/upload-attachment', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -923,8 +923,14 @@
                     dataUrl: designRefImage
                   })
                 });
+                var upResult = await upRes.json().catch(function () { return { success: false }; });
+                if (!upRes.ok || !upResult.success) {
+                  // 上传失败：不再静默吞错，明确告知用户（不阻断下单跳转）
+                  var failTip = (upResult && upResult.error) ? upResult.error : '图片过大或格式不支持';
+                  alert('设定图上传失败：' + failTip + '。文件名已随订单保存，您可稍后登录个人中心补充设定图，或联系客服协助上传。');
+                }
               } catch (e) {
-                // 上传失败静默处理，不阻断跳转
+                alert('设定图上传失败（网络异常）。文件名已随订单保存，您可稍后登录个人中心补充设定图，或联系客服协助上传。');
               }
             }
 

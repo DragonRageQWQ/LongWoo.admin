@@ -573,10 +573,60 @@
         return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
       }
 
+      // 大图压缩：canvas 重编码 JPEG，确保 base64 字节数在服务端 5MB 限制内。
+      // 上传接口 ATTACHMENT_MAX_SIZE = 5MB，手机原图（3-10MB）直接转 base64 会超限，
+      // 导致设定图上传失败、后台仅剩文件名。此处按估算字节数渐进降质压缩。
+      function compressImage(dataUrl, maxTargetBytes) {
+        return new Promise(function(resolve) {
+          var img = new Image();
+          img.onload = function() {
+            try {
+              // 长边限制 1920px（覆盖 2 倍屏大图查看场景）
+              var MAX_EDGE = 1920;
+              var w = img.width, h = img.height;
+              if (w > MAX_EDGE || h > MAX_EDGE) {
+                var scale = Math.min(MAX_EDGE / w, MAX_EDGE / h);
+                w = Math.round(w * scale);
+                h = Math.round(h * scale);
+              }
+              var canvas = document.createElement('canvas');
+              canvas.width = w;
+              canvas.height = h;
+              var ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, w, h);
+              var quality = 0.85;
+              var out = canvas.toDataURL('image/jpeg', quality);
+              // base64 字符数 * 3/4 ≈ 解码后字节数；渐进降质直到达标（保底 0.45）
+              var estBytes = Math.floor(out.length * 3 / 4);
+              while (estBytes > maxTargetBytes && quality > 0.45) {
+                quality -= 0.1;
+                out = canvas.toDataURL('image/jpeg', quality);
+                estBytes = Math.floor(out.length * 3 / 4);
+              }
+              resolve({ dataUrl: out, compressed: true });
+            } catch (err) {
+              resolve({ dataUrl: dataUrl, compressed: false });
+            }
+          };
+          img.onerror = function() { resolve({ dataUrl: dataUrl, compressed: false }); };
+          img.src = dataUrl;
+        });
+      }
+
       function showFile(file) {
         var reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
           var dataUrl = e.target.result;
+          // 估算解码后字节数；超过 4MB 时压缩（预留余量到 5MB 上限），确保上传成功
+          var estBytes = Math.floor(dataUrl.length * 3 / 4);
+          if (estBytes > 4 * 1024 * 1024) {
+            try {
+              var compressed = await compressImage(dataUrl, 4 * 1024 * 1024);
+              if (compressed.compressed) dataUrl = compressed.dataUrl;
+            } catch (err) {
+              // 压缩失败时回退原图
+            }
+          }
           previewImage.src = dataUrl;
           uploadPlaceholder.style.display = 'none';
           uploadPreview.style.display = 'flex';
