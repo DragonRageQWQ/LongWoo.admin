@@ -550,6 +550,41 @@
     .next-step-btn:not(:disabled):hover {
       opacity: 0.85;
     }
+
+    /* 移动端响应式：竖屏单列布局，避免左右两列挤压 */
+    @media (max-width: 768px) {
+      .main-content {
+        flex-direction: column;
+        padding: var(--space-sm);
+        gap: var(--space-sm);
+      }
+      .upload-column {
+        flex: none;
+        max-width: 100%;
+        width: 100%;
+      }
+      .upload-zone {
+        min-height: auto;
+        max-width: 240px;
+        margin: 0 auto;
+        padding: var(--space-lg) var(--space-sm);
+      }
+      .step-indicator {
+        padding: var(--space-sm);
+        margin: var(--space-sm);
+        overflow-x: auto;
+      }
+      .step-label {
+        font-size: 9px;
+      }
+      .step-circle {
+        width: 24px;
+        height: 24px;
+      }
+      .info-section {
+        padding: var(--space-md) var(--space-sm) var(--space-sm);
+      }
+    }
   </style>
 
   <script>

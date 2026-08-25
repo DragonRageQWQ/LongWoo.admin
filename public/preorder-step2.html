@@ -884,6 +884,42 @@
     .bottom-spacer {
       height: calc(var(--bottom-nav-height) + var(--space-lg));
     }
+
+    /* 移动端响应式：竖屏单列布局，避免左右两列挤压 */
+    @media (max-width: 768px) {
+      .main-content {
+        flex-direction: column;
+        padding: var(--space-sm);
+        gap: var(--space-sm);
+      }
+      .product-column {
+        flex: none;
+        max-width: 100%;
+        width: 100%;
+      }
+      .product-card {
+        max-width: 260px;
+        margin: 0 auto;
+      }
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .step-indicator {
+        padding: var(--space-sm);
+        margin: var(--space-sm);
+        overflow-x: auto;
+      }
+      .step-label {
+        font-size: 9px;
+      }
+      .step-circle {
+        width: 24px;
+        height: 24px;
+      }
+      .info-section {
+        padding: var(--space-md) var(--space-sm) var(--space-sm);
+      }
+    }
   </style>
 <script src="/js/common.js" defer></script>
 </body>

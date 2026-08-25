@@ -751,6 +751,8 @@
       padding: var(--space-md);
       background-color: var(--color-surface);
       border-radius: var(--radius-md);
+      content-visibility: auto;
+      contain-intrinsic-size: 180px;
     }
 
     .price-row {
@@ -873,6 +875,44 @@
       margin-top: 4px;
       word-break: break-all;
       text-align: center;
+    }
+
+    /* 移动端响应式：竖屏单列布局，避免左右两列挤压 */
+    @media (max-width: 768px) {
+      .main-content {
+        flex-direction: column;
+        padding: var(--space-sm);
+        gap: var(--space-sm);
+      }
+      .locked-column {
+        flex: none;
+        max-width: 100%;
+        width: 100%;
+      }
+      .locked-zone {
+        min-height: auto;
+        padding: var(--space-sm);
+      }
+      .locked-thumbnail {
+        max-width: 240px;
+        margin: 0 auto;
+        margin-bottom: var(--space-sm);
+      }
+      .step-indicator {
+        padding: var(--space-sm);
+        margin: var(--space-sm);
+        overflow-x: auto;
+      }
+      .step-label {
+        font-size: 9px;
+      }
+      .step-circle {
+        width: 24px;
+        height: 24px;
+      }
+      .info-section {
+        padding: var(--space-md) var(--space-sm) var(--space-sm);
+      }
     }
   </style>
 
