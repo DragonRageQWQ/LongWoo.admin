@@ -736,56 +736,6 @@
       height: 100%;
       object-fit: cover;
     }
-
-    /* 移动端响应式：竖屏单列布局，图片与表单上下排列，避免重叠溢出 */
-    @media (max-width: 768px) {
-      .main-content {
-        flex-direction: column;
-        padding: var(--space-sm);
-        gap: var(--space-sm);
-      }
-      .locked-column,
-      .image-column,
-      .upload-column {
-        flex: none;
-        max-width: 100%;
-        width: 100%;
-      }
-      .locked-zone,
-      .image-zone-locked {
-        min-height: auto;
-        padding: var(--space-sm);
-      }
-      .locked-thumbnail,
-      .image-zone-locked {
-        max-width: 240px;
-        margin: 0 auto;
-      }
-      .locked-thumbnail {
-        margin-bottom: var(--space-sm);
-      }
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-      .step-indicator {
-        padding: var(--space-sm);
-        margin: var(--space-sm);
-        overflow-x: auto;
-      }
-      .step-label {
-        font-size: 9px;
-      }
-      .step-circle {
-        width: 24px;
-        height: 24px;
-      }
-      .info-section {
-        padding: var(--space-md) var(--space-sm) var(--space-sm);
-      }
-      .price-summary {
-        margin: var(--space-sm);
-      }
-    }
   </style>
 
   <script>
