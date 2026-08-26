@@ -45,7 +45,7 @@ const navItems: NavItem[] = [
   { key: "feedback", label: "反馈管理", i18nKey: "admin.sidebar.nav.feedback", icon: MessageSquare },
   { key: "works", label: "作品管理", i18nKey: "admin.sidebar.nav.works", icon: ImageIcon, superAdminOnly: true },
   { key: "drops", label: "掉落管理", i18nKey: "admin.sidebar.nav.drops", icon: ShoppingBag },
-  { key: "gray-test", label: "灰度测试", i18nKey: "admin.sidebar.nav.grayTest", icon: FlaskConical, superAdminOnly: true, href: "/gray-test" },
+  { key: "gray-test", label: "灰度测试", i18nKey: "admin.sidebar.nav.grayTest", icon: FlaskConical, href: "/gray-test" },
   { key: "settings", label: "系统设置", i18nKey: "admin.sidebar.nav.settings", icon: Settings },
 ];
 

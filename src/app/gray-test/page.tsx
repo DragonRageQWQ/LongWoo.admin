@@ -1,16 +1,18 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, ZERO_USER_UID } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
-import GrayTestCanvas from "./GrayTestCanvas";
+import Link from "next/link";
+import { FlaskConical, ArrowRight, LayoutDashboard } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth";
+import { grayTestEntries } from "@/lib/gray-test-config";
+
 /**
- * 灰度测试页（仅超级管理员 uid=10001 可访问）
+ * 灰度测试 · 中间页（所有管理员可访问）
  *
- * 用途：灰度测试入口页面。
+ * 功能：列出全部灰度测试入口（test1 / test2 / ...），
+ *       管理员在此页自行选择要跳转的测试页面。
+ * 入口列表：由 src/lib/gray-test-config.ts 配置驱动，新增测试页仅需追加条目。
+ *
  * 权限：服务端二次鉴权（纵深防御）——未登录跳转登录页，
- *      非超级管理员跳转个人中心。middleware 已做路由级保护。
- *
- * 背景库：动态读取 works 表所有启用作品的 image_url。
- *        管理后台新增/删除/替换作品时，本页背景库自动同步，无需额外维护。
+ *      非管理员跳转个人中心。middleware 已做路由级保护。
  */
 export const metadata = {
   title: "灰度测试 | LongWoo",
@@ -19,46 +21,89 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function GrayTestPage() {
-  // 服务端二次鉴权：必须是 uid=10001 的超级管理员
+export default async function GrayTestHubPage() {
+  // 服务端二次鉴权：所有 admin 角色均可访问（放权）
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     redirect("/login");
   }
-  if (currentUser.uid !== ZERO_USER_UID) {
+  if (currentUser.role !== "admin") {
     redirect("/profile");
   }
 
-  // 背景库 = works 表启用作品的图片（管理后台增删作品自动同步）
-  let images: string[] = [];
-  try {
-    const admin = createAdminClient();
-    const { data, error } = await admin
-      .from("works")
-      .select("image_url")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true });
-
-    if (!error && data) {
-      images = data
-        .map((w) => {
-          const raw = w.image_url;
-          if (typeof raw !== "string" || raw.length === 0) return null;
-          // 相对路径（public/assets/...）规范化为根路径，避免基于页面路径解析错误
-          if (raw.startsWith("assets/")) return `/${raw}`;
-          return raw;
-        })
-        .filter((url): url is string => url !== null);
-    }
-  } catch (err) {
-    console.error("[灰度测试] 加载背景库失败:", err);
-  }
-
   return (
-    <main className="w-screen h-screen overflow-hidden bg-gray-950 flex items-center justify-center">
-      {/* PC 端 16:9 画布居中；移动端全屏 */}
-      <div className="w-full h-full">
-        <GrayTestCanvas images={images} />
+    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      {/* 顶部装饰：与画布页一致的深色渐变氛围 */}
+      <div
+        className="pointer-events-none fixed inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59,130,246,0.15), transparent), radial-gradient(ellipse 60% 40% at 80% 110%, rgba(139,92,246,0.12), transparent)",
+        }}
+        aria-hidden="true"
+      />
+
+      {/* 头部 */}
+      <header className="relative z-10 border-b border-white/5">
+        <div className="max-w-5xl mx-auto w-full px-6 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-400/20 flex items-center justify-center">
+              <FlaskConical className="w-5 h-5 text-blue-300" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight">灰度测试 · 中间页</h1>
+              <p className="text-xs text-slate-400 mt-0.5">
+                选择要进入的测试页面，每个选项对应一个独立的测试入口
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/admin/dashboard"
+            className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-100 transition-colors px-3 py-2 rounded-lg hover:bg-white/5"
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span className="hidden sm:inline">返回管理后台</span>
+          </Link>
+        </div>
+      </header>
+
+      {/* 测试入口卡片网格 */}
+      <div className="relative z-10 flex-1 max-w-5xl mx-auto w-full px-6 py-8">
+        {grayTestEntries.length === 0 ? (
+          <div className="text-center py-24">
+            <p className="text-slate-500 text-sm">暂无测试入口，请在 src/lib/gray-test-config.ts 中添加</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {grayTestEntries.map((entry) => (
+              <Link
+                key={entry.id}
+                href={entry.href}
+                className="group relative flex flex-col gap-3 rounded-2xl bg-white/[0.04] border border-white/10 p-5 backdrop-blur-sm transition-all duration-200 hover:bg-white/[0.08] hover:border-blue-400/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/5"
+              >
+                {/* 选项编号徽标 */}
+                <span className="inline-flex w-fit items-center rounded-full bg-blue-500/15 border border-blue-400/25 px-2.5 py-0.5 text-xs font-semibold text-blue-300">
+                  {entry.label}
+                </span>
+
+                <div className="flex-1">
+                  <h2 className="text-base font-semibold text-slate-100">{entry.title}</h2>
+                  <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">{entry.description}</p>
+                </div>
+
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-blue-300">
+                  进入测试
+                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* 底部说明 */}
+        <p className="text-xs text-slate-600 mt-8 leading-relaxed">
+          新增测试入口：编辑 src/lib/gray-test-config.ts 中的 grayTestEntries 数组即可，无需改动页面代码。
+        </p>
       </div>
     </main>
   );
