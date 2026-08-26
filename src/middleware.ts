@@ -249,8 +249,11 @@ export const config = {
   // - 排除 _next 静态资源、图片优化、favicon、robots、sitemap
   // - 排除 public 静态文件（.html/.css/.js/.png 等，由静态服务器直服，
   //   其中 public/*.html 的 CSP 由 next.config.ts 的 'unsafe-inline' 配置兜底）
-  // - 排除 '/'（首页经 rewrite 指向 index.html 静态页，同样由 next.config 兜底）
+  // - 排除 '/'（安全加固 N-01）：首页经 rewrite 指向 index.html 静态页，其
+  //   内联脚本不带 nonce，若命中本中间件会被 nonce CSP 拦截导致功能失效。
+  //   matcher 的 lookahead 中 '^$' 专门匹配 '/' 之后的空路径，使首页跳过中间件，
+  //   仅由 next.config 的 'unsafe-inline' CSP 兜底。
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|index.html|.*\\.(?:png|jpg|jpeg|svg|gif|webp|avif|css|js|mjs|ico|mp4|woff2?|ttf|html)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|index.html|^$|.*\\.(?:png|jpg|jpeg|svg|gif|webp|avif|css|js|mjs|ico|mp4|woff2?|ttf|html)$).*)',
   ],
 }

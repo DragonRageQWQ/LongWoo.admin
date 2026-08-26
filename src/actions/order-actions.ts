@@ -930,26 +930,28 @@ export async function queryOrderByNo(
     return { success: false, error: '委托单号格式不正确' }
   }
 
-  // 速率限制：基于 IP + 手机号组合，1分钟内最多查询5次（数据库版）
+  // 速率限制（安全加固 N-04）：双键限流，防单号枚举。
+  // 单号格式为 LW+日期+4位序列（可预测），攻击者若掌握目标手机号，可枚举当日
+  // 单号批量查询以获取订单内容。仅按 IP 限流可被轮换 IP 绕过，因此增加
+  // 「手机号维度」强限制：同一手机号 1 分钟内最多 5 次查询，与 IP 无关。
   const ip = await getClientIp()
-  const rateLimitResult = await checkRateLimit(
-    `query:${ip}:${phone.trim()}`,
-    5,
-    RATE_LIMIT_ORDER_WINDOW
-  )
-  if (!rateLimitResult.allowed) {
+  const [phoneLimitResult, ipLimitResult] = await Promise.all([
+    checkRateLimit(`query:phone:${phone.trim()}`, 5, RATE_LIMIT_ORDER_WINDOW),
+    checkRateLimit(`query:ip:${ip}`, 20, RATE_LIMIT_ORDER_WINDOW),
+  ])
+  if (!phoneLimitResult.allowed || !ipLimitResult.allowed) {
     return { success: false, error: '查询过于频繁，请稍后再试' }
   }
 
-  const supabase = await createClient()
-  // 附件/回复查询使用 admin client：查询接口以「订单号+手机号」双因子校验凭证，
-  // 未登录/匿名用户会被 order_attachments / order_replies 的 RLS 策略（仅 admin 或
-  // 登录用户可读）过滤为空，导致查询结果看不到设定图与回复。凭证已在服务端验证，
-  // 与 claimOrder 的 admin client 用法一致；返回时手机号/邮箱已脱敏。
+  // 安全加固（N-04/H5）：主查询与附件/回复统一使用 admin client（service_role）。
+  // 认证凭据为「订单号 + 手机号」双因子同时匹配（服务端校验），与 claimOrder 一致；
+  // orders 表 RLS 未对匿名/游客开放 SELECT（orders_select_own 仅 admin 与归属者可见），
+  // 若用 anon client 查询，游客提交订单后将永远查不到进度（功能失效）。
+  // 返回数据已脱敏（手机号/邮箱），且上方手机号维度限流限制枚举面。
   const admin = createAdminClient()
 
   try {
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await admin
       .from('orders')
       .select('*, service_types(*)')
       .eq('order_no', trimmedOrderNo)
@@ -1231,10 +1233,15 @@ const ORDER_EXPORT_COLUMNS = [
 // CSV 转义：包裹含逗号/引号/换行的字段
 function csvEscape(value: unknown): string {
   const str = value == null ? '' : String(value)
-  if (/[",\n\r]/.test(str)) {
-    return '"' + str.replace(/"/g, '""') + '"'
+  // 安全加固（N-03）：防 CSV 公式注入（CSV Injection）。
+  // Excel/WPS 会将单元格开头为 = + - @（或 \t \r）的内容解析为公式执行，
+  // 客户姓名/需求描述等用户可控字段可借此注入恶意公式（如 =HYPERLINK(...)）。
+  // 对这类字段前置单引号 '，使其按纯文本处理。
+  const sanitized = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str
+  if (/[",\n\r]/.test(sanitized)) {
+    return '"' + sanitized.replace(/"/g, '""') + '"'
   }
-  return str
+  return sanitized
 }
 
 /**
