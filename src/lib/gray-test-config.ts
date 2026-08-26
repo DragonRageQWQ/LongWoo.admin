@@ -28,4 +28,12 @@ export const grayTestEntries: GrayTestEntry[] = [
     description: "原灰度测试页：随机作品背景 + 毛玻璃蒙版调节 + 背景随机切换",
     href: "/gray-test/test1",
   },
+  {
+    id: "test2",
+    label: "test2",
+    title: "新首页交互原型（侧边栏选项卡）",
+    description:
+      "Agent智能体 / Fursuit委托兽装 / Web Shop / Check / About 五选项卡单页无缝切换（非线性字体动效），左下角气泡集成登录、站内信与语言切换",
+    href: "/gray-test/test2",
+  },
 ]
