@@ -89,9 +89,15 @@
   bottom: 25%;
   left: 0;
   right: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+}
+
+/* 菜单槽位：绝对定位 + JS 驱动位移/缩放/透明度（温和挤压） */
+.gt2-nav-slot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  will-change: transform, opacity;
+  transition: transform 0.65s var(--gt2-ease), opacity 0.45s var(--gt2-ease);
 }
 
 /* ---------- 选项卡：双层文字交叉淡入实现字重连续过渡 ---------- */
