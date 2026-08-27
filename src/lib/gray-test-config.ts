@@ -36,4 +36,11 @@ export const grayTestEntries: GrayTestEntry[] = [
       "Agent智能体 / Fursuit委托兽装 / Web Shop / Check / About 五选项卡单页无缝切换（非线性字体动效），左下角气泡集成登录、站内信与语言切换",
     href: "/gray-test/test2",
   },
+  {
+    id: "sampler",
+    label: "new",
+    title: "毛布取样器",
+    description: "毛布材质在线取样入口（待开发，暂未开放）",
+    href: "",
+  },
 ]

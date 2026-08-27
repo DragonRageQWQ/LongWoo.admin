@@ -76,26 +76,49 @@ export default async function GrayTestHubPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {grayTestEntries.map((entry) => (
-              <Link
-                key={entry.id}
-                href={entry.href}
-                className="group relative flex flex-col gap-3 rounded-2xl bg-white/[0.04] border border-white/10 p-5 backdrop-blur-sm transition-all duration-200 hover:bg-white/[0.08] hover:border-blue-400/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/5"
-              >
-                {/* 选项编号徽标 */}
-                <span className="inline-flex w-fit items-center rounded-full bg-blue-500/15 border border-blue-400/25 px-2.5 py-0.5 text-xs font-semibold text-blue-300">
-                  {entry.label}
-                </span>
+              entry.href ? (
+                <Link
+                  key={entry.id}
+                  href={entry.href}
+                  className="group relative flex flex-col gap-3 rounded-2xl bg-white/[0.04] border border-white/10 p-5 backdrop-blur-sm transition-all duration-200 hover:bg-white/[0.08] hover:border-blue-400/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/5"
+                >
+                  {/* 选项编号徽标 */}
+                  <span className="inline-flex w-fit items-center rounded-full bg-blue-500/15 border border-blue-400/25 px-2.5 py-0.5 text-xs font-semibold text-blue-300">
+                    {entry.label}
+                  </span>
 
-                <div className="flex-1">
-                  <h2 className="text-base font-semibold text-slate-100">{entry.title}</h2>
-                  <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">{entry.description}</p>
+                  <div className="flex-1">
+                    <h2 className="text-base font-semibold text-slate-100">{entry.title}</h2>
+                    <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">{entry.description}</p>
+                  </div>
+
+                  <span className="inline-flex items-center gap-1 text-sm font-medium text-blue-300">
+                    进入测试
+                    <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  </span>
+                </Link>
+              ) : (
+                <div
+                  key={entry.id}
+                  className="relative flex flex-col gap-3 rounded-2xl bg-white/[0.02] border border-white/5 p-5 opacity-80"
+                  aria-disabled="true"
+                >
+                  {/* 选项编号徽标 */}
+                  <span className="inline-flex w-fit items-center rounded-full bg-white/10 border border-white/10 px-2.5 py-0.5 text-xs font-semibold text-slate-300">
+                    {entry.label}
+                  </span>
+
+                  <div className="flex-1">
+                    <h2 className="text-base font-semibold text-slate-200">{entry.title}</h2>
+                    <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">{entry.description}</p>
+                  </div>
+
+                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500">
+                    敬请期待
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80" />
+                  </span>
                 </div>
-
-                <span className="inline-flex items-center gap-1 text-sm font-medium text-blue-300">
-                  进入测试
-                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                </span>
-              </Link>
+              )
             ))}
           </div>
         )}
