@@ -68,7 +68,7 @@
 
 .gt2-brand-name {
   display: block;
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1.1;
@@ -85,8 +85,8 @@
 
 .gt2-nav {
   position: absolute;
-  top: 20%;
-  bottom: 20%;
+  top: 30%;
+  bottom: 30%;
   left: 0;
   right: 0;
   display: flex;
@@ -99,7 +99,7 @@
   position: relative;
   display: block;
   width: 100%;
-  text-align: left;
+  text-align: center;
   padding: 12px 8px;
   border: 0;
   background: none;
@@ -140,6 +140,7 @@
 .gt2-w-b {
   position: absolute;
   left: 0;
+  right: 0;
   top: 0;
   font-weight: 700;
   opacity: 0;
@@ -151,12 +152,12 @@
 }
 
 .gt2-nav-item[data-active="true"] .gt2-nav-en {
-  font-size: 31px;
+  font-size: 39px;
   color: var(--gt2-ink);
 }
 
 .gt2-nav-item[data-active="true"] .gt2-nav-zh {
-  font-size: 22px;
+  font-size: 30px;
   color: #404040;
 }
 
