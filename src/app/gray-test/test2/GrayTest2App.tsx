@@ -124,20 +124,19 @@ export default function GrayTest2App() {
             </button>
           ))}
         </nav>
-
-        <div className="gt2-rise" style={{ "--i": 6 } as React.CSSProperties}>
-          <UserBubble lang={lang} onLangChange={setLang} />
-        </div>
       </aside>
 
       <main className="gt2-main">
-        <a className="gt2-back-hub" href="/gray-test">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M19 12H5" />
-            <path d="M12 19l-7-7 7-7" />
-          </svg>
-          GRAY TEST
-        </a>
+        <div className="gt2-top-actions">
+          <a className="gt2-back-hub" href="/gray-test">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M19 12H5" />
+              <path d="M12 19l-7-7 7-7" />
+            </svg>
+            GRAY TEST
+          </a>
+          <UserBubble lang={lang} onLangChange={setLang} />
+        </div>
 
         <div className="gt2-panels">
           <section className="gt2-panel" data-active={active === "agent"} inert={!isActive("agent")}>

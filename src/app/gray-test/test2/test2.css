@@ -1026,8 +1026,19 @@ textarea.gt2-input {
 }
 
 /* ============================================================
-   左下角三联气泡（语言 / 铃铛 / 登录）— 仿旧首页右上角形态
+   右上角操作条：返回入口 + 三联气泡（语言 / 铃铛 / 登录）
+   与旧首页顶栏右上角位置一致
    ============================================================ */
+.gt2-top-actions {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .gt2-dock {
   position: relative;
   display: flex;
@@ -1121,7 +1132,6 @@ textarea.gt2-input {
 
 /* ---------- 登录 / 用户胶囊 ---------- */
 .gt2-dock-pill {
-  flex: 1;
   min-width: 0;
   height: 40px;
   display: flex;
@@ -1227,11 +1237,11 @@ textarea.gt2-input {
   white-space: nowrap;
 }
 
-/* ---------- 弹出面板（向上展开） ---------- */
+/* ---------- 弹出面板（向下展开） ---------- */
 @keyframes gt2-pop {
   from {
     opacity: 0;
-    transform: translate3d(0, 12px, 0) scale(0.92);
+    transform: translate3d(0, -12px, 0) scale(0.92);
   }
   to {
     opacity: 1;
@@ -1245,30 +1255,23 @@ textarea.gt2-input {
   flex-shrink: 0;
 }
 
-.gt2-dock-pop.gt2-dock-user {
-  flex: 1;
-  min-width: 0;
-}
-
 .gt2-dock-panel {
   position: absolute;
-  bottom: calc(100% + 14px);
-  left: -6px;
+  top: calc(100% + 12px);
+  right: 0;
   width: 296px;
   padding: 7px;
   background: #fff;
   border: 1px solid #ececec;
   border-radius: 20px;
   box-shadow: 0 30px 70px -22px rgba(0, 0, 0, 0.3), 0 4px 14px -6px rgba(0, 0, 0, 0.08);
-  transform-origin: 24% 100%;
+  transform-origin: 100% 0%;
   animation: gt2-pop 0.45s var(--gt2-spring) both;
   z-index: 60;
 }
 
-/* 账户菜单：右对齐，避免超出侧边栏右缘 */
+/* 账户菜单：右对齐，宽度收窄 */
 .gt2-dock-panel--account {
-  left: auto;
-  right: -6px;
   width: 186px;
 }
 
@@ -1497,13 +1500,9 @@ textarea.gt2-input {
 }
 
 /* ============================================================
-   返回灰度测试入口（右上角浮动）
+   返回灰度测试入口（右上角操作条内）
    ============================================================ */
 .gt2-back-hub {
-  position: absolute;
-  top: 22px;
-  right: 24px;
-  z-index: 35;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -1660,10 +1659,27 @@ textarea.gt2-input {
     grid-template-columns: 1fr;
   }
 
-  .gt2-back-hub {
+  .gt2-top-actions {
     top: 21px;
     right: 16px;
+    gap: 9px;
+  }
+
+  .gt2-back-hub {
     padding: 8px 13px;
+  }
+
+  .gt2-dock-panel {
+    width: min(296px, calc(100vw - 28px));
+  }
+
+  /* 窄屏收起未登录胶囊的双行文案，避免与汉堡按钮挤压 */
+  .gt2-dock-pill--signup {
+    padding: 0 6px 0 5px;
+  }
+
+  .gt2-dock-pill--signup .gt2-dock-pill-text {
+    display: none;
   }
 }
 
