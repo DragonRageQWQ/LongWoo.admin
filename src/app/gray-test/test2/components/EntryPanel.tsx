@@ -23,13 +23,20 @@ export default function EntryPanel({ entry, mark }: { entry: Gt2EntryCopy; mark:
           ))}
         </ul>
         <div className="gt2-entry-cta gt2-stagger" style={{ "--i": 4 } as React.CSSProperties}>
-          <a className="gt2-btn-solid" href={entry.href}>
-            {entry.cta}
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M5 12h14" />
-              <path d="M12 5l7 7-7 7" />
-            </svg>
-          </a>
+          {entry.href ? (
+            <a className="gt2-btn-solid" href={entry.href}>
+              {entry.cta}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14" />
+                <path d="M12 5l7 7-7 7" />
+              </svg>
+            </a>
+          ) : (
+            <button type="button" className="gt2-btn-solid" aria-disabled="true">
+              {entry.cta}
+              <span className="gt2-entry-pending">敬请期待</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

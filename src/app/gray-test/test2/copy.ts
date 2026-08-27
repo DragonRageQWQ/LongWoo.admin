@@ -1,5 +1,5 @@
 export type Gt2Lang = "zh" | "en";
-export type Gt2TabId = "agent" | "fursuit" | "shop" | "check" | "about";
+export type Gt2TabId = "agent" | "fursuit" | "shop" | "check" | "about" | "sampler";
 
 export const GT2_TABS: { id: Gt2TabId; en: string; zh: string }[] = [
   { id: "agent", en: "Agent", zh: "智能体" },
@@ -7,6 +7,7 @@ export const GT2_TABS: { id: Gt2TabId; en: string; zh: string }[] = [
   { id: "shop", en: "Web Shop", zh: "在线商店" },
   { id: "check", en: "Check", zh: "查询" },
   { id: "about", en: "About", zh: "关于" },
+  { id: "sampler", en: "Fabric Sampler", zh: "毛布取样器" },
 ];
 
 export const GT2_TAB_STORAGE_KEY = "lw_gt2_tab";
@@ -74,7 +75,7 @@ export interface Gt2Copy {
     errImgType: string;
     errImgLarge: string;
   };
-  entries: Record<"shop" | "check" | "about", Gt2EntryCopy>;
+  entries: Record<"shop" | "check" | "about" | "sampler", Gt2EntryCopy>;
   bubble: {
     signupEn: string;
     signupZh: string;
@@ -187,6 +188,15 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         cta: "前往个人中心",
         href: "/profile",
       },
+      sampler: {
+        kicker: "06 / FABRIC SWATCH",
+        title: "毛布取样器",
+        titleEn: "Fabric Sampler",
+        desc: "选取心仪的毛布材质样本，为你的角色定制独一无二的触感与质感。",
+        features: ["毛布材质样本展示", "颜色与质感参考", "定制选料引导"],
+        cta: "进入取样器",
+        href: "",
+      },
     },
     bubble: {
       signupEn: "Sign up",
@@ -297,6 +307,15 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         features: ["Profile management", "Order history", "Notifications & security"],
         cta: "Go to Profile",
         href: "/profile",
+      },
+      sampler: {
+        kicker: "06 / FABRIC SWATCH",
+        title: "Fabric Sampler",
+        titleEn: "毛布取样器",
+        desc: "Browse fabric material samples to craft a one-of-a-kind feel for your character.",
+        features: ["Fabric material samples", "Color & texture reference", "Custom material guidance"],
+        cta: "Open Sampler",
+        href: "",
       },
     },
     bubble: {
