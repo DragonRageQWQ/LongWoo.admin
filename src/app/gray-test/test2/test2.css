@@ -42,11 +42,11 @@
 .gt2-sidebar {
   position: relative;
   z-index: 30;
-  width: 264px;
+  width: 220px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  padding: 36px 28px 28px;
+  padding: 36px 20px 28px;
   background: linear-gradient(to right, #f4f4f3 0%, #fafafa 55%, #ffffff 100%);
   border-right: 1px solid var(--gt2-line);
 }
@@ -85,8 +85,8 @@
 
 .gt2-nav {
   position: absolute;
-  top: 30%;
-  bottom: 30%;
+  top: 25%;
+  bottom: 25%;
   left: 0;
   right: 0;
   display: flex;
