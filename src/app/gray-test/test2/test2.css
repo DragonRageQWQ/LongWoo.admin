@@ -68,7 +68,7 @@
 
 .gt2-brand-name {
   display: block;
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1.1;
@@ -154,12 +154,12 @@
 }
 
 .gt2-nav-item[data-active="true"] .gt2-nav-en {
-  font-size: 23px;
+  font-size: 31px;
   color: var(--gt2-ink);
 }
 
 .gt2-nav-item[data-active="true"] .gt2-nav-zh {
-  font-size: 14.5px;
+  font-size: 22px;
   color: #404040;
 }
 
