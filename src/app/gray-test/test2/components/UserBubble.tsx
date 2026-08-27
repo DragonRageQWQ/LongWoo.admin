@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, ChevronDown, Loader2, LogOut, Shield } from "lucide-react";
+import { Bell, Loader2, LogOut, Shield, UserRound } from "lucide-react";
 import { useSession, clearSessionCache } from "@/components/providers/SessionProvider";
 import { logoutUser } from "@/actions/auth-actions";
 import { formatDate } from "@/lib/utils";
@@ -21,6 +21,8 @@ function extractOrderNo(content: string): string {
   return match ? match[1] : "";
 }
 
+type PanelId = "none" | "notif" | "account";
+
 export default function UserBubble({
   lang,
   onLangChange,
@@ -31,8 +33,7 @@ export default function UserBubble({
   const c = COPY[lang].bubble;
   const { profile } = useSession();
 
-  const [open, setOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
+  const [panel, setPanel] = useState<PanelId>("none");
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -62,21 +63,21 @@ export default function UserBubble({
   }, []);
 
   useEffect(() => {
-    if (open && profile) {
+    if (panel === "notif" && profile) {
       setLoading(true);
       fetchNotifications().finally(() => setLoading(false));
     }
-  }, [open, profile, fetchNotifications]);
+  }, [panel, profile, fetchNotifications]);
 
   useEffect(() => {
-    if (!open) return;
+    if (panel === "none") return;
     const onDown = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        setPanel("none");
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") setPanel("none");
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
@@ -84,7 +85,7 @@ export default function UserBubble({
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [panel]);
 
   const handleRead = useCallback(async (id: string) => {
     try {
@@ -119,7 +120,7 @@ export default function UserBubble({
       if (!item.is_read) handleRead(item.id);
       const orderNo = extractOrderNo(item.content);
       if (orderNo) {
-        setOpen(false);
+        setPanel("none");
         window.location.assign(`/order/query?no=${encodeURIComponent(orderNo)}`);
       }
     },
@@ -138,171 +139,156 @@ export default function UserBubble({
   }, []);
 
   const displayName = profile?.display_name || "";
+  const isAdmin = profile?.role === "admin";
 
   return (
-    <div className="gt2-bubble" ref={wrapRef}>
-      {open && (
-        <div className="gt2-bubble-panel">
-          {/* 语言切换 */}
-          <div className="gt2-bubble-sec">
-            <div className="gt2-lang-seg" role="group" aria-label={c.langLabel}>
-              <button type="button" data-on={lang === "zh"} onClick={() => onLangChange("zh")}>
-                中文
-              </button>
-              <button type="button" data-on={lang === "en"} onClick={() => onLangChange("en")}>
-                EN
-              </button>
-            </div>
-          </div>
-
-          {/* 站内信 */}
-          <div className="gt2-bubble-sec">
-            <button
-              type="button"
-              className="gt2-bubble-row"
-              data-open={notifOpen}
-              onClick={() => setNotifOpen((v) => !v)}
-            >
-              <Bell />
-              {c.notifLabel}
-              {profile && unread > 0 && <span className="gt2-bubble-badge">{unread > 99 ? "99+" : unread}</span>}
-              <ChevronDown className="gt2-bubble-chevron" />
-            </button>
-
-            <div className="gt2-notif-wrap" data-open={notifOpen}>
-              <div className="gt2-notif-clip">
-                {!profile ? (
-                  <div className="gt2-notif-empty">{c.notifLoginHint}</div>
-                ) : loading ? (
-                  <div className="gt2-notif-empty">
-                    <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                  </div>
-                ) : loadError ? (
-                  <div className="gt2-notif-empty">
-                    <button type="button" className="gt2-mini-btn" onClick={fetchNotifications}>
-                      {c.retry}
-                    </button>
-                  </div>
-                ) : items.length === 0 ? (
-                  <div className="gt2-notif-empty">{c.notifEmpty}</div>
-                ) : (
-                  <>
-                    <div className="gt2-notif-list">
-                      {items.map((item) => {
-                        const orderNo = extractOrderNo(item.content);
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            className={`gt2-notif-item ${item.is_read ? "read" : ""}`}
-                            onClick={() => handleOpenNotif(item)}
-                          >
-                            <div className="gt2-notif-item-head">
-                              <span className="gt2-notif-dot" />
-                              <span className="gt2-notif-title">{item.title}</span>
-                              <span className="gt2-notif-time">{formatDate(item.created_at)}</span>
-                            </div>
-                            <div className="gt2-notif-content">{item.content}</div>
-                            {orderNo && (
-                              <span className="gt2-notif-order">
-                                <code>{orderNo}</code>
-                                {c.viewOrder} →
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="gt2-notif-foot">
-                      <span className="gt2-field-count" style={{ marginLeft: 0 }}>
-                        {items.length}
-                      </span>
-                      {unread > 0 && (
-                        <button type="button" onClick={handleReadAll}>
-                          {c.readAll}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* 账户 */}
-          <div className="gt2-bubble-sec">
-            {profile ? (
-              <>
-                <div className="gt2-account-user">
-                  <div className="gt2-account-avatar">
-                    {profile.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={profile.avatar_url} alt={displayName} />
-                    ) : (
-                      <span>{displayName.charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="gt2-account-name">{displayName}</div>
-                    <div className="gt2-account-meta">
-                      {profile.role === "admin" ? "ADMIN" : "MEMBER"}
-                    </div>
-                  </div>
-                </div>
-                <div className="gt2-account-actions">
-                  {profile.role === "admin" && (
-                    <Link className="gt2-mini-btn" href="/admin/dashboard">
-                      <Shield className="h-3.5 w-3.5" />
-                      {c.adminPanel}
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    className="gt2-mini-btn gt2-mini-btn--danger"
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                  >
-                    {loggingOut ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
-                    {loggingOut ? c.loggingOut : c.logout}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="gt2-account-actions">
-                <Link className="gt2-mini-btn gt2-mini-btn--dark" href="/login">
-                  {c.loginBtn}
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 圆形气泡按钮 */}
+    <div className="gt2-dock" ref={wrapRef}>
+      {/* 1. 语言切换圆：中 / En 点击直接切换 */}
       <button
         type="button"
-        className="gt2-bubble-btn"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-label={profile ? displayName : c.signupEn}
+        className="gt2-dock-circle gt2-dock-lang"
+        onClick={() => onLangChange(lang === "zh" ? "en" : "zh")}
+        aria-label={c.langLabel}
+        title={c.langLabel}
       >
+        <span data-on={lang === "zh"}>中</span>
+        <i aria-hidden="true">/</i>
+        <span data-on={lang === "en"}>En</span>
+      </button>
+
+      {/* 2. 站内信铃铛圆：点击向上弹出通知面板 */}
+      <div className="gt2-dock-pop">
+        <button
+          type="button"
+          className="gt2-dock-circle"
+          onClick={() => setPanel((p) => (p === "notif" ? "none" : "notif"))}
+          aria-expanded={panel === "notif"}
+          aria-label={c.notifLabel}
+          title={c.notifLabel}
+        >
+          <Bell strokeWidth={1.8} />
+          {profile && unread > 0 && (
+            <span className="gt2-dock-badge">{unread > 99 ? "99+" : unread}</span>
+          )}
+        </button>
+
+        {panel === "notif" && (
+          <div className="gt2-dock-panel gt2-dock-panel--notif">
+            <div className="gt2-dock-panel-head">
+              <span>{c.notifLabel}</span>
+              <span className="gt2-field-count">{items.length}</span>
+              {unread > 0 && (
+                <button type="button" className="gt2-dock-readall" onClick={handleReadAll}>
+                  {c.readAll}
+                </button>
+              )}
+            </div>
+
+            {!profile ? (
+              <div className="gt2-notif-empty">{c.notifLoginHint}</div>
+            ) : loading ? (
+              <div className="gt2-notif-empty">
+                <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+              </div>
+            ) : loadError ? (
+              <div className="gt2-notif-empty">
+                <button type="button" className="gt2-notif-retry" onClick={fetchNotifications}>
+                  {c.retry}
+                </button>
+              </div>
+            ) : items.length === 0 ? (
+              <div className="gt2-notif-empty">{c.notifEmpty}</div>
+            ) : (
+              <div className="gt2-notif-list">
+                {items.map((item) => {
+                  const orderNo = extractOrderNo(item.content);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`gt2-notif-item ${item.is_read ? "read" : ""}`}
+                      onClick={() => handleOpenNotif(item)}
+                    >
+                      <div className="gt2-notif-item-head">
+                        <span className="gt2-notif-dot" />
+                        <span className="gt2-notif-title">{item.title}</span>
+                        <span className="gt2-notif-time">{formatDate(item.created_at)}</span>
+                      </div>
+                      <div className="gt2-notif-content">{item.content}</div>
+                      {orderNo && (
+                        <span className="gt2-notif-order">
+                          <code>{orderNo}</code>
+                          {c.viewOrder} →
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 3. 登录胶囊：未登录双行文案，登录后头像+昵称+账户菜单 */}
+      <div className="gt2-dock-pop gt2-dock-user">
         {profile ? (
           <>
-            {profile.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.avatar_url} alt={displayName} />
-            ) : (
-              <span className="gt2-bubble-initial">{displayName.charAt(0).toUpperCase()}</span>
+            <button
+              type="button"
+              className="gt2-dock-pill"
+              onClick={() => setPanel((p) => (p === "account" ? "none" : "account"))}
+              aria-expanded={panel === "account"}
+              aria-label={displayName}
+            >
+              <span className="gt2-dock-avatar">
+                {profile.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.avatar_url} alt={displayName} />
+                ) : (
+                  <span className="gt2-dock-initial">{displayName.charAt(0).toUpperCase()}</span>
+                )}
+              </span>
+              <span className="gt2-dock-username">{displayName}</span>
+            </button>
+
+            {panel === "account" && (
+              <div className="gt2-dock-panel gt2-dock-panel--account">
+                {isAdmin ? (
+                  <Link className="gt2-dock-menu-item" href="/admin/dashboard">
+                    <Shield />
+                    {c.adminPanel}
+                  </Link>
+                ) : (
+                  <Link className="gt2-dock-menu-item" href="/profile">
+                    <UserRound />
+                    {c.profileBtn}
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  className="gt2-dock-menu-item gt2-dock-menu-item--danger"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                >
+                  {loggingOut ? <Loader2 className="animate-spin" /> : <LogOut />}
+                  {loggingOut ? c.loggingOut : c.logout}
+                </button>
+              </div>
             )}
-            <span className="gt2-bubble-name">{displayName}</span>
           </>
         ) : (
-          <>
-            <span className="gt2-bubble-btn-en">{c.signupEn}</span>
-            <span className="gt2-bubble-btn-zh">{c.signupZh}</span>
-          </>
+          <Link className="gt2-dock-pill gt2-dock-pill--signup" href="/login">
+            <span className="gt2-dock-pill-icon">
+              <UserRound />
+            </span>
+            <span className="gt2-dock-pill-text">
+              <b>{c.signupEn}</b>
+              <small>{c.signupZh}</small>
+            </span>
+          </Link>
         )}
-      </button>
+      </div>
     </div>
   );
 }

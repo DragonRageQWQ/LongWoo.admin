@@ -1026,99 +1026,212 @@ textarea.gt2-input {
 }
 
 /* ============================================================
-   左下角气泡
+   左下角三联气泡（语言 / 铃铛 / 登录）— 仿旧首页右上角形态
    ============================================================ */
-.gt2-bubble {
+.gt2-dock {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
 }
 
-.gt2-bubble-btn {
-  width: 92px;
-  height: 92px;
+/* ---------- 圆形气泡（语言 / 铃铛） ---------- */
+.gt2-dock-circle {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
   border-radius: 50%;
   border: 1.5px solid var(--gt2-ink);
   background: transparent;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
   cursor: pointer;
   font-family: inherit;
-  overflow: hidden;
+  position: relative;
   transition: background 0.32s var(--gt2-ease), color 0.32s var(--gt2-ease),
     transform 0.4s var(--gt2-spring), box-shadow 0.35s var(--gt2-ease);
 }
 
-.gt2-bubble-btn:hover {
+.gt2-dock-circle:hover {
   background: var(--gt2-ink);
   color: #fff;
-  transform: scale(1.05);
-  box-shadow: 0 16px 34px -16px rgba(0, 0, 0, 0.4);
+  transform: scale(1.06);
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.35);
 }
 
-.gt2-bubble-btn:active {
+.gt2-dock-circle:active {
   transform: scale(0.96);
 }
 
-.gt2-bubble-btn-en {
-  font-size: 13.5px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+.gt2-dock-circle svg {
+  width: 17px;
+  height: 17px;
 }
 
-.gt2-bubble-btn-zh {
+/* 语言切换圆：中 / En，当前语言高亮 */
+.gt2-dock-lang {
+  gap: 1px;
   font-size: 11px;
-  color: var(--gt2-soft);
-  transition: color 0.32s var(--gt2-ease);
+  font-weight: 700;
 }
 
-.gt2-bubble-btn:hover .gt2-bubble-btn-zh {
-  color: rgba(255, 255, 255, 0.82);
+.gt2-dock-lang span {
+  color: #c6c6c6;
+  transition: color 0.3s var(--gt2-ease);
 }
 
-.gt2-bubble-btn img {
+.gt2-dock-lang span[data-on="true"] {
+  color: var(--gt2-ink);
+}
+
+.gt2-dock-lang i {
+  font-style: normal;
+  font-size: 9px;
+  color: #dcdcdc;
+  transform: translateY(-0.5px);
+}
+
+.gt2-dock-lang:hover span[data-on="true"] {
+  color: #fff;
+}
+
+.gt2-dock-lang:hover span:not([data-on="true"]) {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* 铃铛未读角标 */
+.gt2-dock-badge {
   position: absolute;
-  inset: 0;
+  top: -3px;
+  right: -3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2.5px var(--gt2-paper);
+  pointer-events: none;
+}
+
+/* ---------- 登录 / 用户胶囊 ---------- */
+.gt2-dock-pill {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px 0 5px;
+  border-radius: 999px;
+  border: 1.5px solid var(--gt2-ink);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+  color: var(--gt2-ink);
+  transition: background 0.32s var(--gt2-ease), color 0.32s var(--gt2-ease),
+    transform 0.4s var(--gt2-spring), box-shadow 0.35s var(--gt2-ease);
+}
+
+.gt2-dock-pill:hover {
+  background: var(--gt2-ink);
+  color: #fff;
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.35);
+}
+
+.gt2-dock-pill:active {
+  transform: scale(0.97);
+}
+
+/* 未登录：左实心圆图标 + 双行文案 */
+.gt2-dock-pill-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--gt2-ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.32s var(--gt2-ease), color 0.32s var(--gt2-ease);
+}
+
+.gt2-dock-pill-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.gt2-dock-pill--signup:hover .gt2-dock-pill-icon {
+  background: #fff;
+  color: var(--gt2-ink);
+}
+
+.gt2-dock-pill-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.gt2-dock-pill-text b {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  opacity: 0.48;
+}
+
+.gt2-dock-pill-text small {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 已登录：头像 + 昵称 */
+.gt2-dock-avatar {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--gt2-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gt2-dock-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.gt2-bubble-btn .gt2-bubble-initial {
-  font-size: 26px;
+.gt2-dock-initial {
+  font-size: 12px;
   font-weight: 700;
   color: #fff;
-  background: var(--gt2-ink);
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.gt2-bubble-btn:hover .gt2-bubble-initial {
-  background: #2e2e2e;
-}
-
-.gt2-bubble-btn .gt2-bubble-name {
-  position: absolute;
-  bottom: 9px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 10px;
+.gt2-dock-username {
+  font-size: 12px;
   font-weight: 600;
-  color: #fff;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
-  pointer-events: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* ---------- 气泡面板 ---------- */
+/* ---------- 弹出面板（向上展开） ---------- */
 @keyframes gt2-pop {
   from {
     opacity: 0;
-    transform: translate3d(-10px, 14px, 0) scale(0.88);
+    transform: translate3d(0, 12px, 0) scale(0.92);
   }
   to {
     opacity: 1;
@@ -1126,125 +1239,72 @@ textarea.gt2-input {
   }
 }
 
-.gt2-bubble-panel {
-  position: absolute;
-  left: 0;
-  bottom: calc(100% + 16px);
-  width: 302px;
-  padding: 9px;
-  background: #fff;
-  border: 1px solid #ececec;
-  border-radius: 22px;
-  box-shadow: 0 30px 70px -22px rgba(0, 0, 0, 0.3), 0 4px 14px -6px rgba(0, 0, 0, 0.08);
-  transform-origin: 14% 96%;
-  animation: gt2-pop 0.48s var(--gt2-spring) both;
-  z-index: 50;
-}
-
-.gt2-bubble-sec {
-  padding: 6px 8px;
-}
-
-.gt2-bubble-sec + .gt2-bubble-sec {
-  border-top: 1px solid #f2f2f2;
-}
-
-.gt2-bubble-row {
+.gt2-dock-pop {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border-radius: 14px;
-  font-size: 13.5px;
-  cursor: pointer;
-  border: 0;
-  background: none;
-  width: 100%;
-  font-family: inherit;
-  color: var(--gt2-ink);
-  text-align: left;
-  transition: background 0.22s var(--gt2-ease);
-}
-
-.gt2-bubble-row:hover {
-  background: #f7f7f7;
-}
-
-.gt2-bubble-row svg {
-  width: 16px;
-  height: 16px;
-  color: var(--gt2-soft);
   flex-shrink: 0;
 }
 
-.gt2-bubble-badge {
-  margin-left: auto;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--gt2-ink);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
+.gt2-dock-pop.gt2-dock-user {
+  flex: 1;
+  min-width: 0;
+}
+
+.gt2-dock-panel {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: -6px;
+  width: 296px;
+  padding: 7px;
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 20px;
+  box-shadow: 0 30px 70px -22px rgba(0, 0, 0, 0.3), 0 4px 14px -6px rgba(0, 0, 0, 0.08);
+  transform-origin: 24% 100%;
+  animation: gt2-pop 0.45s var(--gt2-spring) both;
+  z-index: 60;
+}
+
+/* 账户菜单：右对齐，避免超出侧边栏右缘 */
+.gt2-dock-panel--account {
+  left: auto;
+  right: -6px;
+  width: 186px;
+}
+
+.gt2-dock-panel-head {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  padding: 7px 10px 4px;
 }
 
-.gt2-bubble-chevron {
-  margin-left: auto;
-  transition: transform 0.4s var(--gt2-ease);
-  color: #c4c4c4 !important;
-}
-
-.gt2-bubble-row[data-open="true"] .gt2-bubble-chevron {
-  transform: rotate(180deg);
-}
-
-/* 语言分段切换 */
-.gt2-lang-seg {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: #f4f4f4;
-  border-radius: 999px;
-}
-
-.gt2-lang-seg button {
-  flex: 1;
-  padding: 8px 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  font-size: 12.5px;
-  font-weight: 600;
-  font-family: inherit;
+.gt2-dock-panel-head > span:first-child {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--gt2-soft);
+}
+
+.gt2-dock-panel-head .gt2-field-count {
+  margin-left: auto;
+}
+
+.gt2-dock-readall {
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--gt2-ink);
   cursor: pointer;
-  transition: background 0.3s var(--gt2-ease), color 0.3s var(--gt2-ease),
-    box-shadow 0.3s var(--gt2-ease);
+  padding: 3px 8px;
+  border-radius: 8px;
+  transition: background 0.22s var(--gt2-ease);
 }
 
-.gt2-lang-seg button[data-on="true"] {
-  background: var(--gt2-ink);
-  color: #fff;
-}
-
-/* 通知列表（grid-rows 展开动画） */
-.gt2-notif-wrap {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.5s var(--gt2-ease);
-}
-
-.gt2-notif-wrap[data-open="true"] {
-  grid-template-rows: 1fr;
-}
-
-.gt2-notif-clip {
-  overflow: hidden;
-  min-height: 0;
+.gt2-dock-readall:hover {
+  background: #f2f2f2;
 }
 
 .gt2-notif-list {
@@ -1375,106 +1435,65 @@ textarea.gt2-input {
   border-radius: 6px;
 }
 
-/* 账户区 */
-.gt2-account-user {
+/* ---------- 账户菜单项 ---------- */
+.gt2-dock-menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-}
-
-.gt2-account-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--gt2-ink);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.gt2-account-avatar img {
+  gap: 9px;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.gt2-account-name {
-  font-size: 14px;
-  font-weight: 600;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.gt2-account-meta {
-  font-family: var(--gt2-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  color: var(--gt2-mute);
-  margin-top: 2px;
-}
-
-.gt2-account-actions {
-  display: flex;
-  gap: 8px;
-  padding: 4px 8px 6px;
-}
-
-.gt2-account-actions > * {
-  flex: 1;
-}
-
-.gt2-mini-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 9px 10px;
-  border-radius: 11px;
-  border: 1px solid var(--gt2-line);
-  background: #fff;
-  font-size: 12.5px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  border: 0;
+  background: none;
   font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
   color: var(--gt2-ink);
   cursor: pointer;
   text-decoration: none;
-  transition: border-color 0.25s var(--gt2-ease), background 0.25s var(--gt2-ease),
-    color 0.25s var(--gt2-ease);
+  text-align: left;
+  transition: background 0.22s var(--gt2-ease);
 }
 
-.gt2-mini-btn:hover {
-  border-color: var(--gt2-ink);
+.gt2-dock-menu-item svg {
+  width: 14px;
+  height: 14px;
+  color: var(--gt2-soft);
+  flex-shrink: 0;
 }
 
-.gt2-mini-btn--dark {
-  background: var(--gt2-ink);
-  border-color: var(--gt2-ink);
-  color: #fff;
+.gt2-dock-menu-item:hover {
+  background: #f6f6f6;
 }
 
-.gt2-mini-btn--dark:hover {
-  background: #2e2e2e;
-}
-
-.gt2-mini-btn--danger {
+.gt2-dock-menu-item--danger {
   color: #b91c1c;
 }
 
-.gt2-mini-btn--danger:hover {
-  border-color: #b91c1c;
-  background: #fef2f2;
+.gt2-dock-menu-item--danger svg {
+  color: #b91c1c;
 }
 
-.gt2-mini-btn:disabled {
+.gt2-dock-menu-item:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* 通知加载失败重试按钮 */
+.gt2-notif-retry {
+  border: 1px solid var(--gt2-line);
+  border-radius: 9px;
+  background: #fff;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--gt2-ink);
+  cursor: pointer;
+  transition: border-color 0.22s var(--gt2-ease);
+}
+
+.gt2-notif-retry:hover {
+  border-color: var(--gt2-ink);
 }
 
 /* ============================================================

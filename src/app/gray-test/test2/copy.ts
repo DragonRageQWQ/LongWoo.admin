@@ -90,7 +90,7 @@ export interface Gt2Copy {
     logout: string;
     loggingOut: string;
     adminPanel: string;
-    loginBtn: string;
+    profileBtn: string;
   };
 }
 
@@ -203,7 +203,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       logout: "退出登录",
       loggingOut: "退出中…",
       adminPanel: "管理后台",
-      loginBtn: "登录 / 注册",
+      profileBtn: "个人中心",
     },
   },
   en: {
@@ -314,7 +314,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       logout: "Sign out",
       loggingOut: "Signing out…",
       adminPanel: "Admin",
-      loginBtn: "Sign in / Sign up",
+      profileBtn: "Profile",
     },
   },
 };
