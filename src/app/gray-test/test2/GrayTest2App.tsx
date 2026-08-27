@@ -1,15 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { COPY, GT2_TABS, GT2_TAB_STORAGE_KEY, type Gt2Lang, type Gt2TabId } from "./copy";
 import AgentPanel from "./components/AgentPanel";
 import FursuitPanel from "./components/FursuitPanel";
 import EntryPanel from "./components/EntryPanel";
 import UserBubble from "./components/UserBubble";
 import "./test2.css";
-
-/** 挤压位移的距离衰减系数：紧邻全量、越远越轻 */
-const NAV_FALLOFF = [0, 1, 0.6, 0.32, 0.15];
 
 function NavLabel({ text }: { text: string }) {
   return (
@@ -24,74 +21,6 @@ export default function GrayTest2App() {
   const [active, setActive] = useState<Gt2TabId>("agent");
   const [lang, setLang] = useState<Gt2Lang>("zh");
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const activeIdx = GT2_TABS.findIndex((t) => t.id === active);
-  const navRef = useRef<HTMLElement>(null);
-  const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  /**
-   * 挤压布局引擎：按选中项实时计算每个菜单槽位的位移/缩放/透明度。
-   * 选中项以槽心为轴膨胀；其余项背离选中项位移，距离越远衰减越轻，
-   * 位移量超夸张（≥40px），且钳制在容器边界内。
-   */
-  const applyNavLayout = useCallback(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-    const H = nav.clientHeight;
-    if (H <= 0) return;
-    const slots = slotRefs.current;
-    const N = slots.length;
-    if (N === 0) return;
-
-    const heights = slots.map((el) => el?.offsetHeight ?? 0);
-    const hBase = Math.min(...heights);
-    const hSel = heights[activeIdx] ?? hBase;
-    const delta = hSel - hBase;
-    const maxPush = Math.max(40, Math.round(delta * 1.15));
-
-    slots.forEach((el, j) => {
-      if (!el) return;
-      const d = Math.min(Math.abs(activeIdx - j), NAV_FALLOFF.length - 1);
-      const f = NAV_FALLOFF[d];
-      const top = (H * (j + 0.5)) / N - heights[j] / 2;
-
-      let ty = 0;
-      let scale = 1;
-      let opacity = 1;
-      if (j === activeIdx) {
-        ty = -delta / 2; // 以槽心为中心双向膨胀
-      } else {
-        let push = Math.sign(activeIdx - j) * maxPush * f;
-        push = Math.max(-top, Math.min(push, H - heights[j] - top));
-        ty = push;
-        scale = 1 - 0.07 * f; // 微缩增强层次
-        opacity = 1 - 0.22 * f; // 淡出增强层次
-      }
-
-      el.style.transform = `translate3d(0, ${ty.toFixed(1)}px, 0) scale(${scale.toFixed(3)})`;
-      el.style.opacity = opacity.toFixed(3);
-      el.style.zIndex = j === activeIdx ? "2" : "1";
-    });
-  }, [activeIdx]);
-
-  // 选中变化时：DOM 应用新字号后立即重算（过渡前拿到目标值）
-  useLayoutEffect(() => {
-    applyNavLayout();
-  }, [applyNavLayout]);
-
-  // 初始挂载 + 窗口/容器尺寸变化 + 字体过渡结束后校准
-  useEffect(() => {
-    applyNavLayout();
-    const timer = window.setTimeout(applyNavLayout, 680);
-    const ro = new ResizeObserver(() => applyNavLayout());
-    if (navRef.current) ro.observe(navRef.current);
-    window.addEventListener("resize", applyNavLayout);
-    return () => {
-      window.clearTimeout(timer);
-      ro.disconnect();
-      window.removeEventListener("resize", applyNavLayout);
-    };
-  }, [applyNavLayout]);
 
   useEffect(() => {
     try {
@@ -166,31 +95,24 @@ export default function GrayTest2App() {
           </div>
         </div>
 
-        <nav className="gt2-nav" aria-label="主导航" ref={navRef}>
+        <nav className="gt2-nav" aria-label="主导航">
           {GT2_TABS.map((tab, i) => (
-            <div
+            <button
               key={tab.id}
-              className="gt2-nav-slot"
-              ref={(el) => {
-                slotRefs.current[i] = el;
-              }}
+              type="button"
+              className="gt2-nav-item gt2-rise"
+              style={{ "--i": i + 1 } as React.CSSProperties}
+              data-active={active === tab.id}
+              onClick={() => select(tab.id)}
+              aria-current={active === tab.id ? "page" : undefined}
             >
-              <button
-                type="button"
-                className="gt2-nav-item gt2-rise"
-                style={{ "--i": i + 1 } as React.CSSProperties}
-                data-active={active === tab.id}
-                onClick={() => select(tab.id)}
-                aria-current={active === tab.id ? "page" : undefined}
-              >
-                <span className="gt2-nav-en">
-                  <NavLabel text={tab.en} />
-                </span>
-                <span className="gt2-nav-zh">
-                  <NavLabel text={tab.zh} />
-                </span>
-              </button>
-            </div>
+              <span className="gt2-nav-en">
+                <NavLabel text={tab.en} />
+              </span>
+              <span className="gt2-nav-zh">
+                <NavLabel text={tab.zh} />
+              </span>
+            </button>
           ))}
         </nav>
       </aside>
