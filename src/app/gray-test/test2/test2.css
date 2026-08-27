@@ -68,7 +68,7 @@
 
 .gt2-brand-name {
   display: block;
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1.1;
@@ -84,17 +84,21 @@
 }
 
 .gt2-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  left: 0;
+  right: 0;
+  overflow: hidden;
 }
 
-.gt2-nav::-webkit-scrollbar {
-  display: none;
+/* 菜单槽位：绝对定位 + 由 JS 驱动位移/缩放/透明度 */
+.gt2-nav-slot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  will-change: transform, opacity;
+  transition: transform 0.72s var(--gt2-spring), opacity 0.5s var(--gt2-ease);
 }
 
 /* ---------- 选项卡：双层文字交叉淡入实现字重连续过渡 ---------- */
@@ -154,12 +158,12 @@
 }
 
 .gt2-nav-item[data-active="true"] .gt2-nav-en {
-  font-size: 23px;
+  font-size: 31px;
   color: var(--gt2-ink);
 }
 
 .gt2-nav-item[data-active="true"] .gt2-nav-zh {
-  font-size: 14.5px;
+  font-size: 22px;
   color: #404040;
 }
 
