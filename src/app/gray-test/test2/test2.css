@@ -297,6 +297,7 @@
   font-size: clamp(88px, 14vw, 170px);
   font-weight: 700;
   line-height: 1;
+  max-width: 30vw;
   color: rgba(10, 10, 10, 0.045);
   letter-spacing: -0.04em;
   pointer-events: none;
@@ -430,6 +431,8 @@
 .gt2-agent-stage {
   position: relative;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .gt2-stage {
