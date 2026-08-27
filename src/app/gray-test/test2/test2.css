@@ -1052,15 +1052,6 @@ textarea.gt2-input {
   margin-top: 46px;
 }
 
-/* 占位入口（暂无链接）：按钮旁的小字提示 */
-.gt2-entry-pending {
-  margin-left: 10px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: var(--gt2-mute);
-  vertical-align: 2px;
-}
-
 /* ============================================================
    右上角操作条：返回入口 + 三联气泡（语言 / 铃铛 / 登录）
    与旧首页顶栏右上角位置一致

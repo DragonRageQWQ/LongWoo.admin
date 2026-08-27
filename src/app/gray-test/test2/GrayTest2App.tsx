@@ -276,9 +276,6 @@ export default function GrayTest2App() {
           <section className="gt2-panel" data-active={active === "about"} inert={!isActive("about")}>
             <EntryPanel entry={copy.entries.about} mark="05" />
           </section>
-          <section className="gt2-panel" data-active={active === "sampler"} inert={!isActive("sampler")}>
-            <EntryPanel entry={copy.entries.sampler} mark="06" />
-          </section>
         </div>
       </main>
     </div>
