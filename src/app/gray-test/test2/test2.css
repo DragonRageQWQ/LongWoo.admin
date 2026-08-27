@@ -137,8 +137,8 @@
   font-size: 15px;
   line-height: 1.25;
   color: #a3a3a3;
-  transition-property: font-size, color, transform;
-  transition-duration: 0.55s, 0.4s, 0.55s;
+  transition-property: font-size, color, transform, text-shadow;
+  transition-duration: 0.55s, 0.4s, 0.55s, 0.55s;
   transition-timing-function: var(--gt2-ease);
 }
 
@@ -149,8 +149,8 @@
   font-size: 12px;
   line-height: 1.3;
   color: #b9b9b9;
-  transition-property: font-size, color, transform;
-  transition-duration: 0.55s, 0.4s, 0.55s;
+  transition-property: font-size, color, transform, text-shadow;
+  transition-duration: 0.55s, 0.4s, 0.55s, 0.55s;
   transition-timing-function: var(--gt2-ease);
 }
 
@@ -177,11 +177,14 @@
 .gt2-nav-item[data-active="true"] .gt2-nav-en {
   font-size: 39px;
   color: var(--gt2-ink);
+  /* 聚光灯自上方照射：文字正下方投出柔和软阴影，双层加深近端接触感 */
+  text-shadow: 0 12px 24px rgba(10, 10, 10, 0.3), 0 5px 10px rgba(10, 10, 10, 0.18);
 }
 
 .gt2-nav-item[data-active="true"] .gt2-nav-zh {
   font-size: 30px;
   color: #404040;
+  text-shadow: 0 10px 20px rgba(10, 10, 10, 0.22), 0 4px 8px rgba(10, 10, 10, 0.13);
 }
 
 .gt2-nav-item[data-active="true"] .gt2-w-r {
