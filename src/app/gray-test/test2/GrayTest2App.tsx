@@ -28,6 +28,7 @@ export default function GrayTest2App() {
   const activeIdx = GT2_TABS.findIndex((t) => t.id === active);
   const navRef = useRef<HTMLElement>(null);
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const haloRef = useRef<HTMLDivElement | null>(null);
   const heightCache = useRef<{ active: number[]; idle: number[] } | null>(null);
 
   /**
@@ -101,6 +102,24 @@ export default function GrayTest2App() {
       el.style.opacity = opacity.toFixed(3);
       el.style.zIndex = j === activeIdx ? "2" : "1";
     });
+
+    // 聚光蒙版：定位到选中项的 flex 终态位置（按目标高度推导 space-between 终局），
+    // 与字号/挤压动效同用 0.55s spring，滑动与生长完全同步
+    const halo = haloRef.current;
+    if (halo) {
+      const heightsFinal = heights.map((h, j) => (j === activeIdx ? hSel : h));
+      const sumH = heightsFinal.reduce((a, b) => a + b, 0);
+      const gap = (H - sumH) / (N - 1);
+      let acc = 0;
+      let selTop = 0;
+      for (let j = 0; j < N; j += 1) {
+        if (j === activeIdx) selTop = acc;
+        acc += heightsFinal[j] + gap;
+      }
+      const bleed = 30;
+      halo.style.top = `${(selTop - bleed).toFixed(1)}px`;
+      halo.style.height = `${(hSel + bleed * 2).toFixed(1)}px`;
+    }
   }, [activeIdx]);
 
   // 选中变化时：立即用预测量的目标尺寸重算（推力与字号动画同步启动，无延迟）
@@ -200,6 +219,7 @@ export default function GrayTest2App() {
         </div>
 
         <nav className="gt2-nav" aria-label="主导航" ref={navRef}>
+          <div className="gt2-nav-halo" ref={haloRef} aria-hidden="true" />
           {GT2_TABS.map((tab, i) => (
             <div
               key={tab.id}

@@ -100,6 +100,18 @@
   transition: transform 0.55s var(--gt2-spring), opacity 0.4s var(--gt2-ease);
 }
 
+/* 选中项聚光蒙版：白色径向渐变向四周淡出，令周围灰底减淡、选中项主体更突出 */
+.gt2-nav-halo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse closest-side, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.5) 58%, rgba(255, 255, 255, 0) 100%);
+  transition: top 0.55s var(--gt2-spring), height 0.55s var(--gt2-spring);
+  will-change: top, height;
+}
+
 /* 高度测量模式：临时禁用一切过渡，读取字号切换后的目标尺寸 */
 .gt2-nav-item.gt2-measure,
 .gt2-nav-item.gt2-measure * {
