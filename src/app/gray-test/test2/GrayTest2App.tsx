@@ -30,8 +30,9 @@ export default function GrayTest2App() {
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   /**
-   * 温和挤压布局：选中项以槽心为轴小幅膨胀，
-   * 其余项背离选中项轻微位移，距离越远越轻，并伴轻微缩放/淡出。
+   * 温和挤压动效：基础排布完全交给 flex（space-between），
+   * JS 只在自然位置上叠加视觉层——邻居背离选中项轻推 + 微缩淡出。
+   * JS 失效时布局仍然正确（纯自然流）。
    */
   const applyNavLayout = useCallback(() => {
     const nav = navRef.current;
@@ -45,22 +46,21 @@ export default function GrayTest2App() {
     const heights = slots.map((el) => el?.offsetHeight ?? 0);
     const hBase = Math.min(...heights);
     const hSel = heights[activeIdx] ?? hBase;
-    const delta = hSel - hBase;
+    const delta = Math.max(0, hSel - hBase);
     const maxPush = Math.max(14, Math.round(delta * 0.4));
 
     slots.forEach((el, j) => {
       if (!el) return;
       const d = Math.min(Math.abs(activeIdx - j), NAV_FALLOFF.length - 1);
       const f = NAV_FALLOFF[d];
-      const top = (H * (j + 0.5)) / N - heights[j] / 2;
+      const top = el.offsetTop;
 
       let ty = 0;
       let scale = 1;
       let opacity = 1;
-      if (j === activeIdx) {
-        ty = -delta / 2; // 以槽心为中心双向膨胀
-      } else {
-        let push = Math.sign(activeIdx - j) * maxPush * f;
+      if (j !== activeIdx) {
+        // 背离选中项方向推开（上方上移、下方下移），并钳制在容器内
+        let push = Math.sign(j - activeIdx) * maxPush * f;
         push = Math.max(-top, Math.min(push, H - heights[j] - top));
         ty = push;
         scale = 1 - 0.04 * f; // 轻微微缩
