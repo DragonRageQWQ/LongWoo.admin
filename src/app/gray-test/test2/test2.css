@@ -97,7 +97,13 @@
 /* 菜单槽位：自然 flex 布局，JS 只叠加视觉位移/缩放/透明度（温和挤压） */
 .gt2-nav-slot {
   will-change: transform, opacity;
-  transition: transform 0.65s var(--gt2-ease), opacity 0.45s var(--gt2-ease);
+  transition: transform 0.55s var(--gt2-spring), opacity 0.4s var(--gt2-ease);
+}
+
+/* 高度测量模式：临时禁用一切过渡，读取字号切换后的目标尺寸 */
+.gt2-nav-item.gt2-measure,
+.gt2-nav-item.gt2-measure * {
+  transition: none !important;
 }
 
 /* ---------- 选项卡：双层文字交叉淡入实现字重连续过渡 ---------- */

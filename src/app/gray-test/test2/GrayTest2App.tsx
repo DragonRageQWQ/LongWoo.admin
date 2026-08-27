@@ -28,6 +28,35 @@ export default function GrayTest2App() {
   const activeIdx = GT2_TABS.findIndex((t) => t.id === active);
   const navRef = useRef<HTMLElement>(null);
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const heightCache = useRef<{ active: number[]; idle: number[] } | null>(null);
+
+  /**
+   * 预测量：临时禁用过渡，量出每个菜单在激活/非激活两种字号下的目标高度。
+   * 点击瞬间即可用目标尺寸算推力，无需等字号过渡完成（消除动效延迟）。
+   */
+  const measureHeights = useCallback(() => {
+    const slots = slotRefs.current;
+    const activeArr: number[] = [];
+    const idleArr: number[] = [];
+    slots.forEach((el) => {
+      const btn = el?.firstElementChild as HTMLElement | null;
+      if (!el || !btn) {
+        activeArr.push(0);
+        idleArr.push(0);
+        return;
+      }
+      const prev = btn.getAttribute("data-active");
+      btn.classList.add("gt2-measure");
+      btn.setAttribute("data-active", "true");
+      activeArr.push(el.offsetHeight);
+      btn.setAttribute("data-active", "false");
+      idleArr.push(el.offsetHeight);
+      if (prev === null) btn.removeAttribute("data-active");
+      else btn.setAttribute("data-active", prev);
+      btn.classList.remove("gt2-measure");
+    });
+    heightCache.current = { active: activeArr, idle: idleArr };
+  }, []);
 
   /**
    * 温和挤压动效：基础排布完全交给 flex（space-between），
@@ -43,9 +72,10 @@ export default function GrayTest2App() {
     const N = slots.length;
     if (N === 0) return;
 
-    const heights = slots.map((el) => el?.offsetHeight ?? 0);
+    const cache = heightCache.current;
+    const heights = cache ? cache.idle : slots.map((el) => el?.offsetHeight ?? 0);
     const hBase = Math.min(...heights);
-    const hSel = heights[activeIdx] ?? hBase;
+    const hSel = cache ? (cache.active[activeIdx] ?? hBase) : (slots[activeIdx]?.offsetHeight ?? hBase);
     const delta = Math.max(0, hSel - hBase);
     const maxPush = Math.max(14, Math.round(delta * 0.4));
 
@@ -73,24 +103,28 @@ export default function GrayTest2App() {
     });
   }, [activeIdx]);
 
-  // 选中变化时：DOM 应用新字号后立即重算（过渡前拿到目标值）
+  // 选中变化时：立即用预测量的目标尺寸重算（推力与字号动画同步启动，无延迟）
   useLayoutEffect(() => {
+    if (!heightCache.current) measureHeights();
     applyNavLayout();
-  }, [applyNavLayout]);
+  }, [applyNavLayout, measureHeights]);
 
-  // 初始挂载 + 窗口/容器尺寸变化 + 字体过渡结束后校准
+  // 挂载 + 尺寸变化（响应式断点会改字号）：重测后重排
   useEffect(() => {
+    measureHeights();
     applyNavLayout();
-    const timer = window.setTimeout(applyNavLayout, 680);
-    const ro = new ResizeObserver(() => applyNavLayout());
-    if (navRef.current) ro.observe(navRef.current);
-    window.addEventListener("resize", applyNavLayout);
-    return () => {
-      window.clearTimeout(timer);
-      ro.disconnect();
-      window.removeEventListener("resize", applyNavLayout);
+    const relayout = () => {
+      measureHeights();
+      applyNavLayout();
     };
-  }, [applyNavLayout]);
+    const ro = new ResizeObserver(relayout);
+    if (navRef.current) ro.observe(navRef.current);
+    window.addEventListener("resize", relayout);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", relayout);
+    };
+  }, [applyNavLayout, measureHeights]);
 
   useEffect(() => {
     try {
