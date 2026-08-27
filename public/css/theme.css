@@ -6,6 +6,9 @@
    3. no-scrollbar         - 隐藏滚动条工具类
    ============================================================ */
 
+/* 小米官方 CDN：MiSans VF 可变字体（按 unicode-range 分片加载，font-display: swap） */
+@import url('https://cdn-font.hyperos.mi.com/font/css?family=MiSans_VF:VF:Chinese_Simplify,Latin&display=swap');
+
 /* ===== 0. 图片版权保护（禁止保存/拖拽/长按） ===== */
 /* 所有图片禁止拖拽（防止拖到桌面/文件夹保存）、禁止选择、iOS 禁用长按保存菜单 */
 img {
@@ -65,7 +68,7 @@ picture, figure {
   --state-info: #3B82F6;
 
   /* Typography */
-  --font-family: 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-family: 'MiSans VF', 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
   --font-size-xs: 10px;
   --font-size-sm: 12px;
   --font-size-base: 14px;

@@ -46,9 +46,9 @@ export async function middleware(request: NextRequest) {
   const csp = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}'`,
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://cdn-font.hyperos.mi.com",
     "img-src 'self' data: https: blob:",
-    "font-src 'self' data:",
+    "font-src 'self' data: https://cdn-file.hyperos.mi.com",
     `connect-src 'self' ${supabaseUrl} ${supabaseWsUrl}`,
     "object-src 'none'",
     "frame-ancestors 'self'",

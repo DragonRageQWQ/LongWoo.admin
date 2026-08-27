@@ -64,9 +64,9 @@ const nextConfig: NextConfig = {
             value: [
               "default-src 'self'",
               scriptSrc,
-              "style-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline' https://cdn-font.hyperos.mi.com",
               "img-src 'self' data: https: blob:",
-              "font-src 'self' data:",
+              "font-src 'self' data: https://cdn-file.hyperos.mi.com",
               `connect-src ${connectSrc}`,
               "object-src 'none'",
               "frame-ancestors 'self'",

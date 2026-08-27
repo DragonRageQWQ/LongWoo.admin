@@ -38,6 +38,13 @@ export default async function RootLayout({
   return (
     <html lang={lang === "en" ? "en" : "zh-CN"} className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full">
+        <link rel="preconnect" href="https://cdn-font.hyperos.mi.com" />
+        <link rel="preconnect" href="https://cdn-file.hyperos.mi.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://cdn-font.hyperos.mi.com/font/css?family=MiSans_VF:VF:Chinese_Simplify,Latin&display=swap"
+          precedence="default"
+        />
         <ImageProtection />
         <LanguageProvider initialLang={lang}>
           <SessionProvider>{children}</SessionProvider>

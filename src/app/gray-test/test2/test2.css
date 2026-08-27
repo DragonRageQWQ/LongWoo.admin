@@ -19,7 +19,7 @@
   display: flex;
   background: var(--gt2-paper);
   color: var(--gt2-ink);
-  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-family: "MiSans VF", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   z-index: 0;
