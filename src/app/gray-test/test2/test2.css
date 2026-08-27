@@ -178,13 +178,13 @@
   font-size: 39px;
   color: var(--gt2-ink);
   /* 光源略偏左上：影子向右下偏移约 10px，与文字本体分离形成明确投影 */
-  text-shadow: 6px 12px 24px rgba(10, 10, 10, 0.45), 4px 8px 14px rgba(10, 10, 10, 0.28), 3px 6px 9px rgba(10, 10, 10, 0.2);
+  text-shadow: 7px 13px 9px rgba(10, 10, 10, 0.34), 5px 9px 5px rgba(10, 10, 10, 0.16);
 }
 
 .gt2-nav-item[data-active="true"] .gt2-nav-zh {
   font-size: 30px;
   color: #404040;
-  text-shadow: 5px 10px 20px rgba(10, 10, 10, 0.35), 3px 6px 11px rgba(10, 10, 10, 0.22), 2px 4px 7px rgba(10, 10, 10, 0.15);
+  text-shadow: 6px 11px 8px rgba(10, 10, 10, 0.26), 4px 7px 4px rgba(10, 10, 10, 0.12);
 }
 
 .gt2-nav-item[data-active="true"] .gt2-w-r {
