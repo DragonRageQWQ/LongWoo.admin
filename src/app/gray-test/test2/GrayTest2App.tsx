@@ -8,16 +8,6 @@ import EntryPanel from "./components/EntryPanel";
 import UserBubble from "./components/UserBubble";
 import "./test2.css";
 
-function WingMark() {
-  return (
-    <svg viewBox="0 0 46 32" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
-      <path d="M4 25c8-.5 13.5-4.5 16.5-11" />
-      <path d="M14 27c9-.5 15.5-5 19-12.5" />
-      <path d="M25 28.5c8-.5 13.5-4.5 17-11" />
-    </svg>
-  );
-}
-
 function NavLabel({ text }: { text: string }) {
   return (
     <>
@@ -97,10 +87,11 @@ export default function GrayTest2App() {
         </button>
 
         <div className="gt2-brand gt2-rise" style={{ "--i": 0 } as React.CSSProperties}>
-          <WingMark />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="gt2-brand-logo" src="/longwoo-logo.svg" alt="LongWoo 龙坞" />
           <div>
-            <span className="gt2-brand-name">LongWoo</span>
-            <span className="gt2-brand-sub">Studio</span>
+            <span className="gt2-brand-name">龙坞</span>
+            <span className="gt2-brand-sub">LongWoo Studio</span>
           </div>
         </div>
 

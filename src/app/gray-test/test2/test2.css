@@ -59,28 +59,28 @@
   margin-bottom: 56px;
 }
 
-.gt2-brand svg {
-  width: 44px;
-  height: 30px;
+.gt2-brand-logo {
+  width: 46px;
+  height: 26px;
   flex-shrink: 0;
+  object-fit: contain;
 }
 
 .gt2-brand-name {
   display: block;
-  font-size: 17px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
   line-height: 1.1;
 }
 
 .gt2-brand-sub {
   display: block;
-  margin-top: 3px;
+  margin-top: 4px;
   font-family: var(--gt2-mono);
-  font-size: 10px;
-  letter-spacing: 0.32em;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
   color: var(--gt2-mute);
-  text-transform: uppercase;
 }
 
 .gt2-nav {
