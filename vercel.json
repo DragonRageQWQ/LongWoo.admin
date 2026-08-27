@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "app/api/**/route.ts": {
+      "regions": ["hkg1"]
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/cleanup",

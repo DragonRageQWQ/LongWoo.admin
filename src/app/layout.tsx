@@ -6,6 +6,14 @@ import { LanguageProvider } from "@/components/i18n/LanguageProvider";
 import type { Lang } from "@/lib/i18n/dict";
 import ImageProtection from "@/components/ImageProtection";
 
+/**
+ * 函数区域优化（2026-08-27）：Vercel Functions 默认区域 iad1（美国弗吉尼亚）
+ * 对中国大陆用户延迟过高。切换至 hkg1（香港）：用户侧延迟从 ~200ms 降至 ~50ms，
+ * 且香港到悉尼数据库（ap-southeast-2）比弗吉尼亚更近，函数→DB 延迟同步改善。
+ * 覆盖所有 App Router 页面路由；API 路由由 vercel.json functions 配置兜底。
+ */
+export const preferredRegion = ["hkg1"];
+
 export const metadata: Metadata = {
   title: "LongWoo Studio - 专业兽装定制工作室",
   description: "LongWoo工作室提供专业兽装定制服务，致力于为客户打造高品质的定制兽装作品。",
