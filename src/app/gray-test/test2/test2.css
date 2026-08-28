@@ -600,6 +600,35 @@
   color: var(--gt2-mute);
 }
 
+/* 返回按钮：钉在切换栏左侧，滚动时始终可见 */
+.gt2-chat-back {
+  position: sticky;
+  left: clamp(28px, 6vw, 88px);
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border: 1px solid var(--gt2-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--gt2-mute);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.3s var(--gt2-ease), color 0.3s var(--gt2-ease), transform 0.3s var(--gt2-ease);
+}
+
+.gt2-chat-back:hover {
+  border-color: #b9b9b9;
+  color: var(--gt2-ink);
+}
+
+.gt2-chat-back:active {
+  transform: scale(0.96);
+}
+
 /* 聊天主体 */
 .gt2-chat-body {
   flex: 1;

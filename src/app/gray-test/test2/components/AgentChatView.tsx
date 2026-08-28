@@ -46,6 +46,13 @@ const SendIcon = () => (
   </svg>
 );
 
+const BackIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M19 12H5" />
+    <path d="M12 19l-7-7 7-7" />
+  </svg>
+);
+
 /**
  * 龙灵工坊 · 内嵌聊天视图
  * 在新首页内完成「角色列表 → 切换 → 对话」全流程：
@@ -56,10 +63,12 @@ const SendIcon = () => (
 export default function AgentChatView({
   lang,
   onNew,
+  onBack,
   targetId,
 }: {
   lang: Gt2Lang;
   onNew: () => void;
+  onBack: () => void;
   targetId?: string | null;
 }) {
   const c = COPY[lang].agent;
@@ -274,6 +283,10 @@ export default function AgentChatView({
     <div className="gt2-chat">
       {/* 角色切换栏 */}
       <div className="gt2-chat-switcher">
+        <button type="button" className="gt2-chat-back" onClick={onBack} aria-label={c.backBtn} title={c.backBtn}>
+          <BackIcon />
+          <span>{c.backBtn}</span>
+        </button>
         {characters.map((ch) => (
           <button
             key={ch.id}

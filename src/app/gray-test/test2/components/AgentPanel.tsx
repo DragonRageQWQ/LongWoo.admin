@@ -295,7 +295,7 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
 
       {/* 内嵌聊天视图：角色切换 + 对话全流程 */}
       <div className="gt2-agent-view gt2-agent-view--chat" data-current={view === "chat"} data-dir={view === "form" ? "chat" : undefined} inert={view !== "chat" ? true : undefined}>
-        <AgentChatView lang={lang} onNew={() => setView("form")} targetId={createdId} />
+        <AgentChatView lang={lang} onNew={() => setView("form")} onBack={() => setView("hero")} targetId={createdId} />
       </div>
     </div>
   );
