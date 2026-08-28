@@ -45,7 +45,7 @@ function extractDesignRefName(requirements: string | null): string | null {
 export default function OrderQueryPage() {
   const { t } = useLanguage();
   const [orderNo, setOrderNo] = useState("");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<QueryResult | null>(null);
@@ -57,7 +57,7 @@ export default function OrderQueryPage() {
     ? extractDesignRefName(result.requirements)
     : null;
 
-  const handleQuery = useCallback(async (no: string, phoneNo: string) => {
+  const handleQuery = useCallback(async (no: string, emailAddr: string) => {
     setError(null);
     setResult(null);
 
@@ -65,18 +65,18 @@ export default function OrderQueryPage() {
       setError(t("query.err.orderNoRequired"));
       return;
     }
-    if (!phoneNo.trim()) {
-      setError(t("query.err.phoneRequired"));
+    if (!emailAddr.trim()) {
+      setError(t("query.err.emailRequired"));
       return;
     }
-    if (!/^1[3-9]\d{9}$/.test(phoneNo)) {
-      setError(t("query.err.phoneInvalid"));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddr.trim())) {
+      setError(t("query.err.emailInvalid"));
       return;
     }
 
     setLoading(true);
     try {
-      const res = await queryOrderByNo(no.trim(), phoneNo.trim());
+      const res = await queryOrderByNo(no.trim(), emailAddr.trim());
       if (res.success && res.data) {
         setResult(res.data);
       } else {
@@ -89,25 +89,25 @@ export default function OrderQueryPage() {
     }
   }, [t]);
 
-  // 支持从个人中心"我的订单"/站内通知携带单号+手机号跳转并自动查询
+  // 支持从个人中心"我的订单"/站内通知携带单号+邮箱跳转并自动查询
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const no = params.get("no") || "";
-    const phoneNo = params.get("phone") || "";
+    const emailAddr = params.get("email") || "";
     if (no) {
-      // 预填单号（无手机号时等待用户输入；有手机号则自动查询）
+      // 预填单号（无邮箱时等待用户输入；有邮箱则自动查询）
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOrderNo(no);
     }
-    if (no && phoneNo) {
-      handleQuery(no, phoneNo);
+    if (no && emailAddr) {
+      handleQuery(no, emailAddr);
     }
   }, [handleQuery]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleQuery(orderNo, phone);
+    handleQuery(orderNo, email);
   };
 
   return (
@@ -147,16 +147,16 @@ export default function OrderQueryPage() {
 
             <div>
               <label className="block text-sm font-medium text-lw-black mb-1.5">
-                {t("query.phoneLabel")}
+                {t("query.emailLabel")}
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
-                  type="tel"
-                  maxLength={11}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                  placeholder={t("query.phonePh")}
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("query.emailPh")}
+                  autoComplete="email"
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition"
                 />
               </div>
@@ -225,7 +225,7 @@ export default function OrderQueryPage() {
                   <div>
                     <p className="text-xs text-gray-400">{t("query.phone")}</p>
                     <p className="text-sm text-lw-black">
-                      {result.customer_phone}
+                      {result.customer_phone || t("query.notSpecified")}
                     </p>
                   </div>
                 </div>

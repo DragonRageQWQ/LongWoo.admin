@@ -106,8 +106,6 @@ export interface Gt2Copy {
     socialPh: string;
     nameLabel: string;
     namePh: string;
-    phoneLabel: string;
-    phonePh: string;
     emailLabel: string;
     emailPh: string;
     dims: { key: "height" | "weight" | "chest" | "waist" | "hip" | "shoe"; label: string; unit: string }[];
@@ -127,7 +125,6 @@ export interface Gt2Copy {
     errImgType: string;
     errImgLarge: string;
     errName: string;
-    errPhone: string;
     errEmail: string;
     errSubmit: string;
     errNetwork: string;
@@ -250,8 +247,6 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       socialPh: "请输入您的社交平台账号",
       nameLabel: "姓名",
       namePh: "请输入您的姓名",
-      phoneLabel: "手机号",
-      phonePh: "请输入手机号",
       emailLabel: "Email",
       emailPh: "your@email.com",
       dims: [
@@ -278,7 +273,6 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errImgType: "仅支持图片文件",
       errImgLarge: "图片不能超过 20MB",
       errName: "请输入姓名",
-      errPhone: "请输入有效的手机号码",
       errEmail: "请输入有效的邮箱地址",
       errSubmit: "提交失败，请稍后重试",
       errNetwork: "网络错误，请稍后重试",
@@ -298,7 +292,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         kicker: "04 / ORDER TRACKING",
         title: "查询",
         titleEn: "Check",
-        desc: "输入订单号与手机号，随时查看委托进度、留言沟通与售后记录。",
+        desc: "输入订单号与邮箱，随时查看委托进度、留言沟通与售后记录。",
         features: ["订单进度实时查询", "留言与售后沟通", "附件与设定图回顾"],
         cta: "查询订单",
         href: "/order/query",
@@ -427,8 +421,6 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       socialPh: "Enter your social account",
       nameLabel: "Name",
       namePh: "Your name",
-      phoneLabel: "Phone",
-      phonePh: "Your phone number",
       emailLabel: "Email",
       emailPh: "your@email.com",
       dims: [
@@ -455,7 +447,6 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errImgType: "Image files only",
       errImgLarge: "Image must be under 20MB",
       errName: "Please enter your name",
-      errPhone: "Please enter a valid phone number",
       errEmail: "Please enter a valid email address",
       errSubmit: "Failed to submit, please retry",
       errNetwork: "Network error, please retry",
@@ -475,7 +466,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         kicker: "04 / ORDER TRACKING",
         title: "Check",
         titleEn: "查询",
-        desc: "Enter your order number and phone to track commission progress, messages and after-sales records anytime.",
+        desc: "Enter your order number and email to track commission progress, messages and after-sales records anytime.",
         features: ["Real-time order tracking", "Messages & after-sales", "Attachments & reference review"],
         cta: "Track Order",
         href: "/order/query",

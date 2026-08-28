@@ -108,7 +108,7 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
 
   const [dims, setDims] = useState<DimState>(EMPTY_DIMS);
   const [social, setSocial] = useState("");
-  const [contact, setContact] = useState({ name: "", phone: "", email: "" });
+  const [contact, setContact] = useState({ name: "", email: "" });
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -306,10 +306,6 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
         setError(c.errName);
         return;
       }
-      if (!/^1[3-9]\d{9}$/.test(contact.phone.trim())) {
-        setError(c.errPhone);
-        return;
-      }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) {
         setError(c.errEmail);
         return;
@@ -375,11 +371,6 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
       setStep(4);
       return;
     }
-    if (!/^1[3-9]\d{9}$/.test(contact.phone.trim())) {
-      setError(c.errPhone);
-      setStep(4);
-      return;
-    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) {
       setError(c.errEmail);
       setStep(4);
@@ -393,7 +384,6 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: contact.name.trim(),
-          customerPhone: contact.phone.trim(),
           customerEmail: contact.email.trim(),
           requirements: buildRequirements(),
         }),
@@ -715,20 +705,6 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
                         placeholder={c.namePh}
                         maxLength={50}
                         autoComplete="name"
-                      />
-                    </div>
-                    <div className="gt2-fs-field">
-                      <label>
-                        {c.phoneLabel} <em>*</em>
-                      </label>
-                      <input
-                        type="tel"
-                        value={contact.phone}
-                        onChange={(e) => setContact((p) => ({ ...p, phone: e.target.value }))}
-                        placeholder={c.phonePh}
-                        maxLength={11}
-                        inputMode="numeric"
-                        autoComplete="tel"
                       />
                     </div>
                     <div className="gt2-fs-field gt2-fs-field--full">

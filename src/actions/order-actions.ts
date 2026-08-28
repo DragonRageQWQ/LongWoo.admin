@@ -894,11 +894,11 @@ export async function replyEmail(
   }
 }
 
-// ==================== 按单号+手机号查询 ====================
+// ==================== 按单号+邮箱查询 ====================
 
 export async function queryOrderByNo(
   orderNo: string,
-  phone: string
+  email: string
 ): Promise<{
   success: boolean
   data?: Order & {
@@ -917,12 +917,12 @@ export async function queryOrderByNo(
   if (!orderNo || !orderNo.trim()) {
     return { success: false, error: '请输入委托单号' }
   }
-  if (!phone || !phone.trim()) {
-    return { success: false, error: '请输入手机号' }
+  if (!email || !email.trim()) {
+    return { success: false, error: '请输入邮箱' }
   }
-  // 手机号格式验证
-  if (!/^1[3-9]\d{9}$/.test(phone.trim())) {
-    return { success: false, error: '请输入有效的手机号' }
+  // 邮箱格式验证
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return { success: false, error: '请输入有效的邮箱地址' }
   }
   // 订单号长度和格式验证（防止注入）
   const trimmedOrderNo = orderNo.trim()
@@ -931,23 +931,24 @@ export async function queryOrderByNo(
   }
 
   // 速率限制（安全加固 N-04）：双键限流，防单号枚举。
-  // 单号格式为 LW+日期+4位序列（可预测），攻击者若掌握目标手机号，可枚举当日
+  // 单号格式为 LW+日期+4位序列（可预测），攻击者若掌握目标邮箱，可枚举当日
   // 单号批量查询以获取订单内容。仅按 IP 限流可被轮换 IP 绕过，因此增加
-  // 「手机号维度」强限制：同一手机号 1 分钟内最多 5 次查询，与 IP 无关。
+  // 「邮箱维度」强限制：同一邮箱 1 分钟内最多 5 次查询，与 IP 无关。
+  const trimmedEmail = email.trim().toLowerCase()
   const ip = await getClientIp()
-  const [phoneLimitResult, ipLimitResult] = await Promise.all([
-    checkRateLimit(`query:phone:${phone.trim()}`, 5, RATE_LIMIT_ORDER_WINDOW),
+  const [emailLimitResult, ipLimitResult] = await Promise.all([
+    checkRateLimit(`query:email:${trimmedEmail}`, 5, RATE_LIMIT_ORDER_WINDOW),
     checkRateLimit(`query:ip:${ip}`, 20, RATE_LIMIT_ORDER_WINDOW),
   ])
-  if (!phoneLimitResult.allowed || !ipLimitResult.allowed) {
+  if (!emailLimitResult.allowed || !ipLimitResult.allowed) {
     return { success: false, error: '查询过于频繁，请稍后再试' }
   }
 
   // 安全加固（N-04/H5）：主查询与附件/回复统一使用 admin client（service_role）。
-  // 认证凭据为「订单号 + 手机号」双因子同时匹配（服务端校验），与 claimOrder 一致；
+  // 认证凭据为「订单号 + 邮箱」双因子同时匹配（服务端校验），与 claimOrder 一致；
   // orders 表 RLS 未对匿名/游客开放 SELECT（orders_select_own 仅 admin 与归属者可见），
   // 若用 anon client 查询，游客提交订单后将永远查不到进度（功能失效）。
-  // 返回数据已脱敏（手机号/邮箱），且上方手机号维度限流限制枚举面。
+  // 返回数据已脱敏（手机号/邮箱），且上方邮箱维度限流限制枚举面。
   const admin = createAdminClient()
 
   try {
@@ -955,11 +956,11 @@ export async function queryOrderByNo(
       .from('orders')
       .select('*, service_types(*)')
       .eq('order_no', trimmedOrderNo)
-      .eq('customer_phone', phone.trim())
+      .eq('customer_email', trimmedEmail)
       .single()
 
     if (orderError || !order) {
-      return { success: false, error: '未找到匹配的委托单，请确认单号和手机号' }
+      return { success: false, error: '未找到匹配的委托单，请确认单号和邮箱' }
     }
 
     // 性能优化：附件与回复查询相互独立，改为并行执行（Promise.all），
@@ -1311,18 +1312,18 @@ export async function exportOrdersCsv(): Promise<{
  * 历史订单认领（方案 A 补充）
  *
  * 未登录/匿名下单的订单 user_id 为空，用户注册登录后可通过
- * 「订单号 + 手机号」验证并绑定到当前账号，此后在"我的订单"可见、
+ * 「订单号 + 邮箱」验证并绑定到当前账号，此后在"我的订单"可见、
  * 可接收站内通知，实现"未登录用户也可进行后续操作"。
  *
  * 安全约束：
- * - 订单号 + 手机号必须同时匹配（与公开查询页一致）
+ * - 订单号 + 邮箱必须同时匹配（与公开查询页一致）
  * - 订单已绑定他人账号时拒绝认领（防止抢占）
  * - 已绑定当前账号时幂等返回成功
- * - 速率限制：与公开查询一致（IP + 手机号 5 次/分钟）
+ * - 速率限制：与公开查询一致（IP + 邮箱 5 次/分钟）
  */
 export async function claimOrder(
   orderNo: string,
-  phone: string
+  email: string
 ): Promise<{ success: boolean; error?: string }> {
   // CSRF 保护
   const csrfError = await validateCsrf()
@@ -1338,24 +1339,24 @@ export async function claimOrder(
 
   // 输入验证（与 queryOrderByNo 一致）
   const trimmedOrderNo = orderNo.trim()
-  const trimmedPhone = phone.trim()
+  const trimmedEmail = email.trim().toLowerCase()
   if (!trimmedOrderNo) {
     return { success: false, error: '请输入委托单号' }
   }
-  if (!trimmedPhone) {
-    return { success: false, error: '请输入手机号' }
+  if (!trimmedEmail) {
+    return { success: false, error: '请输入邮箱' }
   }
-  if (!/^1[3-9]\d{9}$/.test(trimmedPhone)) {
-    return { success: false, error: '请输入有效的手机号' }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    return { success: false, error: '请输入有效的邮箱地址' }
   }
   if (trimmedOrderNo.length > 50) {
     return { success: false, error: '委托单号格式不正确' }
   }
 
-  // 速率限制：基于 IP + 手机号组合，1 分钟内最多 5 次
+  // 速率限制：基于 IP + 邮箱组合，1 分钟内最多 5 次
   const ip = await getClientIp()
   const rateLimitResult = await checkRateLimit(
-    `claim:${ip}:${trimmedPhone}`,
+    `claim:${ip}:${trimmedEmail}`,
     5,
     RATE_LIMIT_ORDER_WINDOW
   )
@@ -1365,19 +1366,19 @@ export async function claimOrder(
 
   // 使用服务端 admin client 查询/更新（绕过 RLS）：
   // 用户会话下 RLS 会过滤掉未绑定（user_id 为空）的历史订单，导致无法认领；
-  // 认证凭据为「订单号 + 手机号」同时匹配，服务端可信校验后绑定。
+  // 认证凭据为「订单号 + 邮箱」同时匹配，服务端可信校验后绑定。
   const supabase = createAdminClient()
 
   try {
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, order_no, customer_phone, user_id, status')
+      .select('id, order_no, customer_phone, customer_email, user_id, status')
       .eq('order_no', trimmedOrderNo)
-      .eq('customer_phone', trimmedPhone)
+      .eq('customer_email', trimmedEmail)
       .maybeSingle()
 
     if (orderError || !order) {
-      return { success: false, error: '未找到匹配的委托单，请确认单号和手机号' }
+      return { success: false, error: '未找到匹配的委托单，请确认单号和邮箱' }
     }
 
     // 已绑定当前账号：幂等成功

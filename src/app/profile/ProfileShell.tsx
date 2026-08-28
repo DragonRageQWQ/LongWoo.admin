@@ -87,7 +87,7 @@ export default function ProfileShell({
   // 认领历史订单
   const [claimOpen, setClaimOpen] = useState(false);
   const [claimNo, setClaimNo] = useState("");
-  const [claimPhone, setClaimPhone] = useState("");
+  const [claimEmail, setClaimEmail] = useState("");
   const [claimLoading, setClaimLoading] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
@@ -95,17 +95,21 @@ export default function ProfileShell({
   const handleClaim = async () => {
     setClaimError(null);
     setClaimSuccess(null);
-    if (!claimNo.trim() || !claimPhone.trim()) {
+    if (!claimNo.trim() || !claimEmail.trim()) {
       setClaimError(t("profile.err.claimRequired"));
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(claimEmail.trim())) {
+      setClaimError(t("query.err.emailInvalid"));
       return;
     }
     setClaimLoading(true);
     try {
-      const result = await claimOrder(claimNo.trim(), claimPhone.trim());
+      const result = await claimOrder(claimNo.trim(), claimEmail.trim());
       if (result.success) {
         setClaimSuccess(t("profile.err.claimSuccess"));
         setClaimNo("");
-        setClaimPhone("");
+        setClaimEmail("");
         // 认领成功后刷新订单列表（用户主动操作，仍需客户端刷新）
         setOrdersLoading(true);
         const refreshed = await listMyOrders(20);
@@ -691,7 +695,7 @@ export default function ProfileShell({
                       </p>
                     </div>
                     <Link
-                      href={`/order/query?no=${encodeURIComponent(order.order_no)}&phone=${encodeURIComponent(order.customer_phone || '')}`}
+                      href={`/order/query?no=${encodeURIComponent(order.order_no)}&email=${encodeURIComponent(order.customer_email || '')}`}
                       className="text-xs text-gray-400 hover:text-lw-accent flex-shrink-0 flex items-center gap-0.5"
                     >
                       {t("profile.viewDetails")}
@@ -974,16 +978,14 @@ export default function ProfileShell({
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">
-                  {t("profile.claimPhoneLabel")}
+                  {t("profile.claimEmailLabel")}
                 </label>
                 <input
-                  value={claimPhone}
-                  onChange={(e) =>
-                    setClaimPhone(e.target.value.replace(/\D/g, ""))
-                  }
-                  placeholder={t("profile.claimPhonePlaceholder")}
-                  inputMode="numeric"
-                  maxLength={11}
+                  type="email"
+                  value={claimEmail}
+                  onChange={(e) => setClaimEmail(e.target.value)}
+                  placeholder={t("profile.claimEmailPlaceholder")}
+                  autoComplete="email"
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-lw-accent/30 focus:border-lw-accent"
                 />
               </div>

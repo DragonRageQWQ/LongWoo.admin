@@ -34,10 +34,10 @@ export const I18N_DICTS: Record<Lang, Record<string, string>> = {
 
     // 订单查询页
     'query.title': '查询委托',
-    'query.subtitle': '输入委托单号和手机号查询您的委托进度',
+    'query.subtitle': '输入委托单号和邮箱查询您的委托进度',
     'query.orderNoLabel': '委托单号',
-    'query.phoneLabel': '手机号',
-    'query.phonePh': '请输入提交委托时填写的手机号',
+    'query.emailLabel': '邮箱',
+    'query.emailPh': '请输入提交委托时填写的邮箱',
     'query.btn': '查询委托',
     'query.loading': '查询中...',
     'query.customerName': '客户姓名',
@@ -96,10 +96,10 @@ export const I18N_DICTS: Record<Lang, Record<string, string>> = {
 
     // 订单查询页
     'query.title': 'Order Inquiry',
-    'query.subtitle': 'Enter your order number and phone to check progress',
+    'query.subtitle': 'Enter your order number and email to check progress',
     'query.orderNoLabel': 'Order Number',
-    'query.phoneLabel': 'Phone',
-    'query.phonePh': 'Enter the phone used when submitting the order',
+    'query.emailLabel': 'Email',
+    'query.emailPh': 'Enter the email used when submitting the order',
     'query.btn': 'Search',
     'query.loading': 'Searching...',
     'query.customerName': 'Customer Name',

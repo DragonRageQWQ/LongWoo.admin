@@ -21,8 +21,9 @@ export function validateOrderInput(data: {
   if (data.customerName.length > 50) {
     return '联系人姓名不能超过50个字符'
   }
-  if (!data.customerPhone || !/^1[3-9]\d{9}$/.test(data.customerPhone)) {
-    return '请输入有效的手机号码'
+  // 手机号为可选（无短信业务、海外客户无国内手机号）；填写时才校验格式
+  if (data.customerPhone && !/^1[3-9]\d{9}$/.test(data.customerPhone)) {
+    return '手机号码格式不正确'
   }
   if (!data.customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.customerEmail)) {
     return '请输入有效的邮箱地址'

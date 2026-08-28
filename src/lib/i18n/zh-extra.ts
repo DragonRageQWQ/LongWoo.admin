@@ -65,8 +65,8 @@ export const ZH_EXTRA: Record<string, string> = {
   'profile.close': '关闭',
   'profile.claimDesc': '将您之前未登录状态下提交的委托单绑定到当前账号，绑定后可在「我的订单」查看进度并接收站内通知。',
   'profile.claimNoPlaceholder': '例如 LW202608110032',
-  'profile.claimPhoneLabel': '下单手机号',
-  'profile.claimPhonePlaceholder': '请输入下单时填写的手机号',
+  'profile.claimEmailLabel': '下单邮箱',
+  'profile.claimEmailPlaceholder': '请输入下单时填写的邮箱',
   'profile.claiming': '认领中...',
   'profile.confirmClaim': '确认认领',
 
@@ -141,7 +141,7 @@ export const ZH_EXTRA: Record<string, string> = {
   'ai.layout.desc': '创建你的专属 AI 角色，和它自由对话。LongWoo 龙坞 AI 角色扮演。',
 
   // ===== 个人中心 · 运行时消息 =====
-  'profile.err.claimRequired': '请填写订单号和手机号',
+  'profile.err.claimRequired': '请填写订单号和邮箱',
   'profile.err.claimSuccess': '认领成功！该委托单已绑定到您的账号',
   'profile.err.claimFailed': '认领失败',
   'profile.err.claimUnknown': '认领时发生未知错误',
@@ -189,8 +189,8 @@ export const ZH_EXTRA: Record<string, string> = {
 
   // ===== 订单查询页 · 运行时消息 =====
   'query.err.orderNoRequired': '请输入委托单号',
-  'query.err.phoneRequired': '请输入手机号',
-  'query.err.phoneInvalid': '请输入有效的手机号',
+  'query.err.emailRequired': '请输入邮箱',
+  'query.err.emailInvalid': '请输入有效的邮箱地址',
   'query.err.queryFailed': '查询失败',
   'query.err.queryUnknown': '查询时发生未知错误',
 

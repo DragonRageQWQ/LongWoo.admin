@@ -24,7 +24,7 @@ export const dynamic = 'force-dynamic'
  *
  * 请求体（JSON）：
  *   customerName    string  必填  姓名
- *   customerPhone   string  必填  手机号（11 位，1[3-9]xxxxxxxxx）
+ *   customerPhone   string  可选  手机号（11 位，1[3-9]xxxxxxxxx；无短信业务，允许留空）
  *   customerEmail   string  必填  邮箱
  *   requirements    string  必填  需求描述（>= 10 字）
  *   serviceTypeId   string  可选  服务类型 id

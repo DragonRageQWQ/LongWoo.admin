@@ -65,8 +65,8 @@ export const EN_EXTRA: Record<string, string> = {
   'profile.close': 'Close',
   'profile.claimDesc': 'Bind commissions submitted without signing in to your current account. After binding, you can track progress in "My Orders" and receive in-app notifications.',
   'profile.claimNoPlaceholder': 'e.g. LW202608110032',
-  'profile.claimPhoneLabel': 'Order Phone Number',
-  'profile.claimPhonePlaceholder': 'Enter the phone number used when placing the order',
+  'profile.claimEmailLabel': 'Order Email',
+  'profile.claimEmailPlaceholder': 'Enter the email used when placing the order',
   'profile.claiming': 'Claiming...',
   'profile.confirmClaim': 'Confirm Claim',
 
@@ -141,7 +141,7 @@ export const EN_EXTRA: Record<string, string> = {
   'ai.layout.desc': 'Create your own AI character and chat freely. LongWoo AI roleplay.',
 
   // ===== 个人中心 · 运行时消息 =====
-  'profile.err.claimRequired': 'Please enter the order number and phone number',
+  'profile.err.claimRequired': 'Please enter the order number and email',
   'profile.err.claimSuccess': 'Claim successful! The commission has been bound to your account',
   'profile.err.claimFailed': 'Claim failed',
   'profile.err.claimUnknown': 'An unknown error occurred while claiming',
@@ -189,8 +189,8 @@ export const EN_EXTRA: Record<string, string> = {
 
   // ===== 订单查询页 · 运行时消息 =====
   'query.err.orderNoRequired': 'Please enter the order number',
-  'query.err.phoneRequired': 'Please enter your phone number',
-  'query.err.phoneInvalid': 'Please enter a valid phone number',
+  'query.err.emailRequired': 'Please enter your email address',
+  'query.err.emailInvalid': 'Please enter a valid email address',
   'query.err.queryFailed': 'Order query failed',
   'query.err.queryUnknown': 'An unknown error occurred while querying',
 
