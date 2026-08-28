@@ -1648,10 +1648,18 @@ textarea.gt2-input {
     top: 0;
     bottom: 0;
     left: 0;
-    width: min(316px, 86vw);
+    width: min(220px, 86vw);
     height: 100dvh;
     z-index: 50;
     padding-top: 76px;
+    /* 无酸纸 / 磨砂玻璃：保留灰白渐变但半透明，透过抽屉可见后方内容 */
+    background: linear-gradient(
+      to right,
+      rgba(181, 181, 181, 0.52) 0%,
+      rgba(255, 255, 255, 0.68) 100%
+    );
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
     transform: translate3d(-104%, 0, 0);
     transition: transform 0.55s var(--gt2-ease);
     box-shadow: none;
