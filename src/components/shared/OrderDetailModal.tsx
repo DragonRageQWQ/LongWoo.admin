@@ -18,6 +18,7 @@ import {
   FileText,
   Paperclip,
   CircleAlert,
+  Trash2,
 } from "lucide-react";
 import {
   getOrderById,
@@ -26,6 +27,7 @@ import {
   rejectOrder,
   updateOrderStatus,
   replySite,
+  deleteOrder,
 } from "@/actions/order-actions";
 import { statusLabels, formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -74,6 +76,8 @@ interface OrderDetailModalProps {
   onClose: (needRefresh: boolean) => void;
   /** "admin" 显示操作日志和图片放大；"studio" 精简模式 */
   variant?: "admin" | "studio";
+  /** 超级管理员（uid=10001）可删除委托单，仅 admin 模式下生效 */
+  isSuperAdmin?: boolean;
 }
 
 // 常用话术快捷插入（管理员回复效率）
@@ -129,8 +133,11 @@ export default function OrderDetailModal({
   orderId,
   onClose,
   variant = "admin",
+  isSuperAdmin = false,
 }: OrderDetailModalProps) {
   const showLogs = variant === "admin";
+  // 删除入口仅 admin 模式 + 超级管理员可见
+  const showDelete = variant === "admin" && isSuperAdmin;
   // 设定图缩略图点击放大：admin 与 studio 均支持（查看用户提交的原图）
   const showImageEnlarge = true;
 
@@ -391,6 +398,34 @@ export default function OrderDetailModal({
     }
   };
 
+  // ==================== 删除委托单（仅超级管理员，服务端二次鉴权） ====================
+  const [submittingDelete, setSubmittingDelete] = useState(false);
+
+  const handleDeleteOrder = async () => {
+    if (submittingDelete || !order) return;
+    if (
+      !window.confirm(
+        "删除委托单\n删除后不可恢复，将同时移除附件、回复、操作日志与站内通知。确认删除该委托单？"
+      )
+    ) {
+      return;
+    }
+    setSubmittingDelete(true);
+    try {
+      const result = await deleteOrder(order.id);
+      if (!result.success) {
+        showActionMessage("error", result.error || "删除失败，请稍后重试");
+        return;
+      }
+      onClose(true);
+    } catch (err) {
+      console.error("删除委托单异常:", err);
+      showActionMessage("error", "删除委托单时发生未知错误");
+    } finally {
+      setSubmittingDelete(false);
+    }
+  };
+
   return (
     <>
       {/* 遮罩层 */}
@@ -422,6 +457,20 @@ export default function OrderDetailModal({
                 </span>
               )}
             </div>
+            {showDelete && order && (
+              <button
+                onClick={handleDeleteOrder}
+                disabled={submittingDelete}
+                className="inline-flex items-center gap-1 px-3 py-1.5 mr-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submittingDelete ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                删除委托单
+              </button>
+            )}
             <button
               onClick={handleClose}
               className="p-1.5 text-gray-400 hover:text-lw-black hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentUser, canViewOrderDetail, requireAdmin } from '@/lib/auth'
+import { getCurrentUser, canViewOrderDetail, requireAdmin, requireZeroUser } from '@/lib/auth'
 import { escapeHtml, escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
 import { validateUrl, isValidUUID } from '@/lib/order-utils'
 import { maskPhone, maskEmail } from '@/lib/utils'
@@ -992,6 +992,83 @@ export async function queryOrderByNo(
   } catch (error) {
     console.error('按单号查询异常:', error)
     return { success: false, error: '查询委托单时发生未知错误' }
+  }
+}
+
+// ==================== 删除委托单（仅超级管理员 uid=10001） ====================
+//
+// 用于清除测试产生的多余订单。删除时同步清理关联数据：
+// 附件（order_attachments）、回复（order_replies）、
+// 操作日志（operation_logs）、站内通知（notifications.batch_id=订单id）。
+//
+// 权限：requireZeroUser() 校验（uid=10001 且 role=admin 且 is_active）
+// ====================
+export async function deleteOrder(orderId: string): Promise<{
+  success: boolean
+  error?: string
+}> {
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  const authResult = await requireZeroUser()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+
+  if (!isValidUUID(orderId)) {
+    return { success: false, error: '参数错误' }
+  }
+
+  const admin = createAdminClient()
+  try {
+    // 确认订单存在
+    const { data: target, error: fetchError } = await admin
+      .from('orders')
+      .select('id, order_no')
+      .eq('id', orderId)
+      .maybeSingle()
+    if (fetchError || !target) {
+      return { success: false, error: '未找到该委托单' }
+    }
+
+    // 删除关联数据（并行执行，单条失败不阻断主删除）
+    const [attRes, replyRes, logRes, notiRes] = await Promise.all([
+      admin.from('order_attachments').delete().eq('order_id', orderId),
+      admin.from('order_replies').delete().eq('order_id', orderId),
+      admin
+        .from('operation_logs')
+        .delete()
+        .eq('target_type', 'order')
+        .eq('target_id', orderId),
+      admin.from('notifications').delete().eq('batch_id', orderId),
+    ])
+    const relatedErrors = [
+      attRes.error,
+      replyRes.error,
+      logRes.error,
+      notiRes.error,
+    ].filter(Boolean)
+    if (relatedErrors.length > 0) {
+      console.error(
+        '删除委托单关联数据失败:',
+        relatedErrors.map((e) => (e as { message?: string }).message ?? '').join('; ')
+      )
+    }
+
+    // 删除订单本体
+    const { error: deleteError } = await admin.from('orders').delete().eq('id', orderId)
+    if (deleteError) {
+      console.error('删除委托单失败:', deleteError.message)
+      return { success: false, error: '删除失败，请稍后重试' }
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('删除委托单异常:', error)
+    return { success: false, error: '删除委托单时发生未知错误' }
   }
 }
 

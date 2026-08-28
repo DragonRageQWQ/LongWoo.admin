@@ -76,6 +76,7 @@ function DashboardContent({
         <OrderList
           title={t("admin.orders.title")}
           description={t("admin.orders.description")}
+          isSuperAdmin={isSuperAdmin}
         />
       );
     case "overview":

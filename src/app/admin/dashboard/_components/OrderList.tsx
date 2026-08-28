@@ -10,8 +10,9 @@ import {
   Loader,
   Inbox,
   Download,
+  Trash2,
 } from "lucide-react";
-import { getOrders, exportOrdersCsv } from "@/actions/order-actions";
+import { getOrders, exportOrdersCsv, deleteOrder } from "@/actions/order-actions";
 import { formatDate } from "@/lib/utils";
 import type { Order } from "@/types/database";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -36,9 +37,12 @@ const statusOptions: Array<{ value: string; label: string; i18nKey: string }> = 
 export default function OrderList({
   title,
   description,
+  isSuperAdmin = false,
 }: {
   title?: string;
   description?: string;
+  /** 超级管理员（uid=10001）可删除委托单 */
+  isSuperAdmin?: boolean;
 }) {
   const { t } = useLanguage();
   // 搜索与筛选状态
@@ -212,6 +216,33 @@ export default function OrderList({
   const handleViewDetail = (orderId: string) => {
     setSelectedOrderId(orderId);
     setModalOpen(true);
+  };
+
+  // 删除委托单（仅超级管理员可见入口，服务端二次鉴权）
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (deletingId) return;
+    if (
+      !window.confirm(
+        `${t("admin.order.deleteConfirmTitle")}\n${t("admin.order.deleteConfirmDesc")}`
+      )
+    ) {
+      return;
+    }
+    setDeletingId(orderId);
+    try {
+      const result = await deleteOrder(orderId);
+      if (!result.success) {
+        window.alert(result.error || t("admin.order.deleteFailed"));
+        return;
+      }
+      triggerRefresh();
+    } catch {
+      window.alert(t("admin.order.deleteFailed"));
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   // 详情弹窗关闭后刷新列表
@@ -420,13 +451,25 @@ export default function OrderList({
                         {formatDate(order.created_at)}
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <button
-                          onClick={() => handleViewDetail(order.id)}
-                          className="inline-flex items-center gap-1 px-3 py-1 text-sm text-lw-accent hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
-                        >
-                          <Eye className="w-4 h-4" />
-                          {t("admin.order.viewDetail")}
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleViewDetail(order.id)}
+                            className="inline-flex items-center gap-1 px-3 py-1 text-sm text-lw-accent hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-4 h-4" />
+                            {t("admin.order.viewDetail")}
+                          </button>
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => handleDeleteOrder(order.id)}
+                              disabled={deletingId === order.id}
+                              className="inline-flex items-center gap-1 px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              {deletingId === order.id ? "…" : t("admin.order.delete")}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -455,13 +498,25 @@ export default function OrderList({
                     <span className="text-xs text-gray-400">
                       {formatDate(order.created_at)}
                     </span>
-                    <button
-                      onClick={() => handleViewDetail(order.id)}
-                      className="inline-flex items-center gap-1 px-3 py-1 text-sm text-lw-accent hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
-                    >
-                      <Eye className="w-4 h-4" />
-                      {t("admin.order.viewDetail")}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleViewDetail(order.id)}
+                        className="inline-flex items-center gap-1 px-3 py-1 text-sm text-lw-accent hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
+                      >
+                        <Eye className="w-4 h-4" />
+                        {t("admin.order.viewDetail")}
+                      </button>
+                      {isSuperAdmin && (
+                        <button
+                          onClick={() => handleDeleteOrder(order.id)}
+                          disabled={deletingId === order.id}
+                          className="inline-flex items-center gap-1 px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          {deletingId === order.id ? "…" : t("admin.order.delete")}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -517,6 +572,7 @@ export default function OrderList({
         <OrderDetailModal
           orderId={selectedOrderId}
           onClose={handleModalClose}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
     </div>
