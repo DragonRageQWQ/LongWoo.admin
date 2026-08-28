@@ -54,6 +54,16 @@ export interface Gt2Copy {
     errNetwork: string;
     loginHint: string;
     tonePresets: string[];
+    chatMy: string;
+    chatEmpty: string;
+    chatCreateFirst: string;
+    chatHello: string;
+    chatInputPh: string;
+    chatClearTitle: string;
+    chatClearConfirm: string;
+    errChatLoad: string;
+    errChatSend: string;
+    errChatClear: string;
   };
   fursuit: {
     kicker: string;
@@ -131,6 +141,16 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errNetwork: "网络异常，请稍后重试",
       loginHint: "创建角色需要先登录",
       tonePresets: ["温柔", "活泼", "傲娇", "高冷", "幽默", "可爱", "沉稳", "热情", "毒舌", "元气", "慵懒", "神秘"],
+      chatMy: "我的角色",
+      chatEmpty: "还没有角色，创建你的第一个角色吧",
+      chatCreateFirst: "去创建",
+      chatHello: "和 TA 打个招呼吧",
+      chatInputPh: "对 TA 说点什么…",
+      chatClearTitle: "清空对话",
+      chatClearConfirm: "确定要清空和这个角色的全部对话记录吗？",
+      errChatLoad: "角色加载失败，请稍后重试",
+      errChatSend: "发送失败，请稍后重试",
+      errChatClear: "清空失败，请重试",
     },
     fursuit: {
       kicker: "COMMISSION · FULL CUSTOM",
@@ -242,6 +262,16 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errNetwork: "Network error, please retry",
       loginHint: "Sign in first to create a character",
       tonePresets: ["Gentle", "Lively", "Tsundere", "Aloof", "Humorous", "Cute", "Calm", "Warm", "Snarky", "Energetic", "Lazy", "Mysterious"],
+      chatMy: "My Characters",
+      chatEmpty: "No characters yet — create your first one",
+      chatCreateFirst: "Create",
+      chatHello: "Say hi to your character",
+      chatInputPh: "Say something…",
+      chatClearTitle: "Clear chat",
+      chatClearConfirm: "Clear all chat history with this character?",
+      errChatLoad: "Failed to load character, please retry",
+      errChatSend: "Failed to send, please retry",
+      errChatClear: "Failed to clear, please retry",
     },
     fursuit: {
       kicker: "COMMISSION · FULL CUSTOM",

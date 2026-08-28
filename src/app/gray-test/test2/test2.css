@@ -525,6 +525,347 @@
 
 .gt2-agent-hero-cta {
   margin-top: 46px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ============================================================
+   内嵌聊天视图（龙灵工坊全流程：角色切换 + 对话）
+   ============================================================ */
+.gt2-agent-view--chat {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.gt2-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* 角色切换栏：横向滚动 chips */
+.gt2-chat-switcher {
+  display: flex;
+  gap: 8px;
+  padding: 20px clamp(28px, 6vw, 88px) 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.gt2-chat-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+.gt2-chat-chip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 7px;
+  border: 1px solid var(--gt2-line);
+  border-radius: 999px;
+  background: #fff;
+  color: #525252;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.3s var(--gt2-ease), color 0.3s var(--gt2-ease), transform 0.3s var(--gt2-ease);
+}
+
+.gt2-chat-chip:hover {
+  border-color: #b9b9b9;
+}
+
+.gt2-chat-chip:active {
+  transform: scale(0.96);
+}
+
+.gt2-chat-chip[data-on="true"] {
+  border-color: var(--gt2-ink);
+  color: var(--gt2-ink);
+  background: #fafafa;
+}
+
+.gt2-chat-chip-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.gt2-chat-chip-add {
+  color: var(--gt2-mute);
+}
+
+/* 聊天主体 */
+.gt2-chat-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 18px clamp(28px, 6vw, 88px) 22px;
+}
+
+.gt2-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--gt2-line);
+  flex-shrink: 0;
+}
+
+.gt2-chat-header-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.gt2-chat-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gt2-chat-header-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gt2-chat-header-sub {
+  font-size: 12px;
+  color: var(--gt2-mute);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gt2-chat-clear {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--gt2-line);
+  background: #fff;
+  color: #a3a3a3;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s var(--gt2-ease), color 0.3s var(--gt2-ease);
+}
+
+.gt2-chat-clear:hover {
+  border-color: #c9c9c9;
+  color: var(--gt2-ink);
+}
+
+.gt2-chat-clear:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.gt2-chat-clear svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* 消息区 */
+.gt2-chat-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gt2-chat-messages::-webkit-scrollbar {
+  width: 5px;
+}
+
+.gt2-chat-messages::-webkit-scrollbar-thumb {
+  background: #e4e4e4;
+  border-radius: 99px;
+}
+
+.gt2-chat-loading {
+  display: flex;
+  gap: 5px;
+  padding: 10px 0;
+}
+
+.gt2-chat-msg {
+  display: flex;
+  gap: 10px;
+  max-width: 80%;
+  align-items: flex-end;
+}
+
+.gt2-chat-msg.assistant {
+  align-self: flex-start;
+}
+
+.gt2-chat-msg.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.gt2-chat-msg-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.gt2-chat-bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.gt2-chat-msg.assistant .gt2-chat-bubble {
+  background: #f2f2f1;
+  color: var(--gt2-ink);
+  border-top-left-radius: 5px;
+}
+
+.gt2-chat-msg.user .gt2-chat-bubble {
+  background: var(--gt2-ink);
+  color: #fff;
+  border-top-right-radius: 5px;
+}
+
+.gt2-chat-typing {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 16px;
+}
+
+.gt2-chat-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b9b9b9;
+  animation: gt2-typing-bounce 1.2s var(--gt2-ease) infinite;
+}
+
+.gt2-chat-typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.gt2-chat-typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes gt2-typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.gt2-chat-error {
+  font-size: 13px;
+  color: #d33a3a;
+  text-align: center;
+  padding: 8px 0;
+  flex-shrink: 0;
+}
+
+/* 输入栏 */
+.gt2-chat-input-row {
+  display: flex;
+  gap: 10px;
+  padding-top: 12px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.gt2-chat-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--gt2-line);
+  border-radius: 16px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  max-height: 120px;
+  font-family: inherit;
+  background: #fff;
+  color: var(--gt2-ink);
+  outline: none;
+  transition: border-color 0.3s var(--gt2-ease);
+}
+
+.gt2-chat-input:focus {
+  border-color: #b9b9b9;
+}
+
+.gt2-chat-send {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--gt2-ink);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s var(--gt2-spring), opacity 0.3s var(--gt2-ease);
+}
+
+.gt2-chat-send:hover:not(:disabled) {
+  transform: scale(1.06);
+}
+
+.gt2-chat-send:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.gt2-chat-send:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.gt2-chat-send svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 空列表 */
+.gt2-chat-empty {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px clamp(28px, 6vw, 88px);
+  color: var(--gt2-mute);
+  font-size: 14px;
+  text-align: center;
 }
 
 .gt2-agent-form {

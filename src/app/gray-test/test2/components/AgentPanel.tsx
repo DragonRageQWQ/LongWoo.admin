@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { COPY, type Gt2Lang } from "../copy";
+import AgentChatView from "./AgentChatView";
 
 const MAX_LENGTHS = {
   name: 30,
@@ -16,10 +16,10 @@ const MAX_LENGTHS = {
 const AVATAR_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
-  const router = useRouter();
   const c = COPY[lang].agent;
 
-  const [view, setView] = useState<"hero" | "form">("hero");
+  const [view, setView] = useState<"hero" | "form" | "chat">("hero");
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [persona, setPersona] = useState("");
   const [tone, setTone] = useState("");
@@ -101,12 +101,21 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
         }).catch(() => undefined);
       }
 
-      router.push(`/ai/characters/${newId}`);
+      // 内嵌流畅流程：创建成功后直接进入聊天并聚焦新角色，不再跳转生产页
+      setCreatedId(newId);
+      setView("chat");
+      setName("");
+      setPersona("");
+      setTone("");
+      setGreeting("");
+      setUserNickname("");
+      setAvatarUrl(null);
+      pendingAvatarRef.current = null;
     } catch {
       setError(c.errNetwork);
       setSaving(false);
     }
-  }, [name, persona, tone, greeting, userNickname, avatarUrl, router, c]);
+  }, [name, persona, tone, greeting, userNickname, avatarUrl, c]);
 
   return (
     <div className="gt2-agent-stage">
@@ -130,7 +139,13 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
             ))}
           </div>
           <div className="gt2-agent-hero-cta gt2-rise" style={{ "--i": 5 } as React.CSSProperties}>
-            <button type="button" className="gt2-btn-ghost" onClick={() => setView("form")}>
+            <button type="button" className="gt2-btn-ghost" onClick={() => setView("chat")}>
+              {c.chatMy}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+            <button type="button" className="gt2-btn-solid" onClick={() => setView("form")}>
               {c.uploadBtn}
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 19V5" />
@@ -276,6 +291,11 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* 内嵌聊天视图：角色切换 + 对话全流程 */}
+      <div className="gt2-agent-view gt2-agent-view--chat" data-current={view === "chat"} data-dir={view === "form" ? "chat" : undefined} inert={view !== "chat" ? true : undefined}>
+        <AgentChatView lang={lang} onNew={() => setView("form")} targetId={createdId} />
       </div>
     </div>
   );
