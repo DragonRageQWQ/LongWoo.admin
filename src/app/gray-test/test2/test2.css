@@ -546,14 +546,22 @@
   min-height: 0;
 }
 
-/* 角色切换栏：横向滚动 chips */
+/* 顶栏：返回按钮居左固定，角色胶囊独立横向滚动，互不重叠 */
+.gt2-chat-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px clamp(28px, 6vw, 88px) 0;
+  flex-shrink: 0;
+}
+
 .gt2-chat-switcher {
+  flex: 1;
+  min-width: 0;
   display: flex;
   gap: 8px;
-  padding: 20px clamp(28px, 6vw, 88px) 0;
   overflow-x: auto;
   scrollbar-width: none;
-  flex-shrink: 0;
 }
 
 .gt2-chat-switcher::-webkit-scrollbar {
@@ -564,8 +572,8 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 14px 6px 7px;
+  justify-content: center;
+  padding: 3px;
   border: 1px solid var(--gt2-line);
   border-radius: 999px;
   background: #fff;
@@ -573,7 +581,8 @@
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.3s var(--gt2-ease), color 0.3s var(--gt2-ease), transform 0.3s var(--gt2-ease);
+  transition: padding 0.5s var(--gt2-spring), border-color 0.35s var(--gt2-ease),
+    color 0.35s var(--gt2-ease), background 0.35s var(--gt2-ease), transform 0.3s var(--gt2-ease);
 }
 
 .gt2-chat-chip:hover {
@@ -581,13 +590,33 @@
 }
 
 .gt2-chat-chip:active {
-  transform: scale(0.96);
+  transform: scale(0.94);
 }
 
 .gt2-chat-chip[data-on="true"] {
+  padding: 6px 14px 6px 7px;
   border-color: var(--gt2-ink);
   color: var(--gt2-ink);
   background: #fafafa;
+}
+
+/* 未选中只露头像（圆形胶囊），选中后名字随胶囊展开（非线性 spring） */
+.gt2-chat-chip-name {
+  max-width: 0;
+  margin: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: max-width 0.5s var(--gt2-spring), margin-left 0.5s var(--gt2-spring),
+    opacity 0.32s var(--gt2-ease);
+}
+
+.gt2-chat-chip[data-on="true"] .gt2-chat-chip-name {
+  max-width: 132px;
+  margin-left: 8px;
+  opacity: 1;
 }
 
 .gt2-chat-chip-avatar {
@@ -597,14 +626,18 @@
 }
 
 .gt2-chat-chip-add {
+  padding: 6px;
   color: var(--gt2-mute);
 }
 
-/* 返回按钮：钉在切换栏左侧，滚动时始终可见 */
+.gt2-chat-chip-add svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+/* 返回按钮：顶栏最左侧固定，不随胶囊滚动 */
 .gt2-chat-back {
-  position: sticky;
-  left: clamp(28px, 6vw, 88px);
-  z-index: 1;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -674,6 +707,43 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 调整设定入口：位于角色名右侧 */
+.gt2-chat-edit {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--gt2-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--gt2-mute);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.3s var(--gt2-ease), color 0.3s var(--gt2-ease),
+    transform 0.3s var(--gt2-ease);
+}
+
+.gt2-chat-edit:hover {
+  border-color: var(--gt2-ink);
+  color: var(--gt2-ink);
+}
+
+.gt2-chat-edit:active {
+  transform: scale(0.96);
+}
+
+.gt2-chat-edit:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.gt2-chat-edit svg {
+  width: 14px;
+  height: 14px;
 }
 
 .gt2-chat-clear {
@@ -1068,6 +1138,87 @@ textarea.gt2-input {
 .gt2-form-actions .gt2-btn-solid {
   flex: 1;
   padding: 15px 20px;
+}
+
+.gt2-form-actions .gt2-btn-danger {
+  flex: 1;
+  padding: 15px 20px;
+}
+
+/* ---------- 编辑角色视图（内嵌） ---------- */
+.gt2-agent-edit {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+}
+
+.gt2-agent-edit::-webkit-scrollbar {
+  width: 5px;
+}
+
+.gt2-agent-edit::-webkit-scrollbar-thumb {
+  background: #e4e4e4;
+  border-radius: 99px;
+}
+
+.gt2-agent-edit-head {
+  display: flex;
+  flex-shrink: 0;
+  padding: 20px clamp(28px, 6vw, 88px) 0;
+}
+
+.gt2-agent-edit .gt2-agent-form {
+  padding-top: 42px;
+}
+
+.gt2-agent-edit .gt2-section-label {
+  margin-bottom: 8px;
+}
+
+.gt2-agent-edit-sub {
+  margin: 0 0 26px;
+  font-size: 13px;
+  color: var(--gt2-mute);
+}
+
+.gt2-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 15px 30px;
+  border: 1.5px solid #d8b4ae;
+  border-radius: 999px;
+  background: #fff;
+  color: #b42318;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.3s var(--gt2-ease), color 0.3s var(--gt2-ease),
+    transform 0.3s var(--gt2-ease), border-color 0.3s var(--gt2-ease);
+}
+
+.gt2-btn-danger:hover {
+  border-color: #c0564a;
+  background: #fdf5f3;
+}
+
+.gt2-btn-danger:active {
+  transform: scale(0.97);
+}
+
+.gt2-btn-danger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gt2-btn-danger svg {
+  width: 15px;
+  height: 15px;
 }
 
 /* ============================================================
@@ -2085,6 +2236,19 @@ textarea.gt2-input {
 
   .gt2-dock-pill--signup .gt2-dock-pill-text {
     display: none;
+  }
+
+  /* 窄屏聊天头部：调整设定只留图标，给名字/副标题留空间 */
+  .gt2-chat-edit span {
+    display: none;
+  }
+
+  .gt2-chat-edit {
+    padding: 7px 10px;
+  }
+
+  .gt2-agent-edit .gt2-agent-form {
+    padding-top: 34px;
   }
 }
 

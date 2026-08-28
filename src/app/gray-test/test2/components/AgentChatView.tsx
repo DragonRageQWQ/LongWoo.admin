@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AiCharacter, AiChatMessage } from "@/types/database";
 import { COPY, type Gt2Lang } from "../copy";
+import AgentEditView from "./AgentEditView";
 
 /** 角色头像：有图用图，无图显示名字首字 */
 function CharAvatar({ char, size, className }: { char: AiCharacter; size: number; className?: string }) {
@@ -53,6 +54,20 @@ const BackIcon = () => (
   </svg>
 );
 
+const SlidersIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 21v-7" />
+    <path d="M4 10V3" />
+    <path d="M12 21v-9" />
+    <path d="M12 8V3" />
+    <path d="M20 21v-5" />
+    <path d="M20 12V3" />
+    <path d="M2 14h4" />
+    <path d="M10 8h4" />
+    <path d="M18 16h4" />
+  </svg>
+);
+
 /**
  * 龙灵工坊 · 内嵌聊天视图
  * 在新首页内完成「角色列表 → 切换 → 对话」全流程：
@@ -83,9 +98,21 @@ export default function AgentChatView({
   const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loginRequired, setLoginRequired] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const activeChipRef = useRef<HTMLButtonElement>(null);
+
+  // 选中胶囊自动滚入视野（立即一次 + 展开动画结束后一次，覆盖名字展开宽度）
+  useEffect(() => {
+    const opts = { behavior: "smooth", inline: "nearest", block: "nearest" } as const;
+    activeChipRef.current?.scrollIntoView(opts);
+    const t = window.setTimeout(() => {
+      activeChipRef.current?.scrollIntoView(opts);
+    }, 520);
+    return () => window.clearTimeout(t);
+  }, [currentId, characters]);
 
   // 加载角色列表；targetId 优先选中（创建成功后直达）
   useEffect(() => {
@@ -259,6 +286,23 @@ export default function AgentChatView({
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   }, []);
 
+  // 保存角色：同步列表胶囊 + 当前头部
+  const handleSaved = useCallback((updated: AiCharacter) => {
+    setCharacters((prev) => prev.map((ch) => (ch.id === updated.id ? updated : ch)));
+    if (currentId === updated.id) setCharacter(updated);
+    setEditing(false);
+  }, [currentId]);
+
+  // 删除角色：移出列表，自动切换到剩余角色
+  const handleDeleted = useCallback((id: string) => {
+    const rest = characters.filter((ch) => ch.id !== id);
+    setCharacters(rest);
+    if (currentId === id) {
+      setCurrentId(rest[0]?.id ?? null);
+    }
+    setEditing(false);
+  }, [characters, currentId]);
+
   // Enter 发送（Shift+Enter 换行）
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -279,33 +323,55 @@ export default function AgentChatView({
     );
   }
 
+  // 编辑角色：独立子视图（保存 / 删除 / 返回聊天）
+  if (editing && character) {
+    return (
+      <AgentEditView
+        lang={lang}
+        character={character}
+        onSaved={handleSaved}
+        onDeleted={handleDeleted}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
+
   return (
     <div className="gt2-chat">
-      {/* 角色切换栏 */}
-      <div className="gt2-chat-switcher">
+      {/* 顶栏：返回居左固定，角色胶囊独立滚动，互不重叠 */}
+      <div className="gt2-chat-topbar">
         <button type="button" className="gt2-chat-back" onClick={onBack} aria-label={c.backBtn} title={c.backBtn}>
           <BackIcon />
           <span>{c.backBtn}</span>
         </button>
-        {characters.map((ch) => (
+        <div className="gt2-chat-switcher">
+          {characters.map((ch) => (
+            <button
+              key={ch.id}
+              ref={currentId === ch.id ? activeChipRef : undefined}
+              type="button"
+              className="gt2-chat-chip"
+              data-on={currentId === ch.id}
+              onClick={() => setCurrentId(ch.id)}
+              title={ch.name}
+            >
+              <CharAvatar char={ch} size={22} className="gt2-chat-chip-avatar" />
+              <span className="gt2-chat-chip-name">{ch.name}</span>
+            </button>
+          ))}
           <button
-            key={ch.id}
             type="button"
-            className="gt2-chat-chip"
-            data-on={currentId === ch.id}
-            onClick={() => setCurrentId(ch.id)}
+            className="gt2-chat-chip gt2-chat-chip-add"
+            onClick={onNew}
+            aria-label={c.uploadBtn}
+            title={c.uploadBtn}
           >
-            <CharAvatar char={ch} size={22} className="gt2-chat-chip-avatar" />
-            <span>{ch.name}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
           </button>
-        ))}
-        <button type="button" className="gt2-chat-chip gt2-chat-chip-add" onClick={onNew}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-            <path d="M12 5v14" />
-            <path d="M5 12h14" />
-          </svg>
-          <span>{c.uploadBtn}</span>
-        </button>
+        </div>
       </div>
 
       {/* 空列表 */}
@@ -331,6 +397,16 @@ export default function AgentChatView({
                   : c.chatHello}
               </p>
             </div>
+            <button
+              type="button"
+              className="gt2-chat-edit"
+              onClick={() => setEditing(true)}
+              disabled={!currentId}
+              title={c.editBtn}
+            >
+              <SlidersIcon />
+              <span>{c.editBtn}</span>
+            </button>
             <button
               type="button"
               className="gt2-chat-clear"

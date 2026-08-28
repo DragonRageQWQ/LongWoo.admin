@@ -64,6 +64,18 @@ export interface Gt2Copy {
     errChatLoad: string;
     errChatSend: string;
     errChatClear: string;
+    editBtn: string;
+    editTitle: string;
+    editTitleEn: string;
+    editSubtitle: string;
+    editDelete: string;
+    editDeleting: string;
+    editSave: string;
+    editSaving: string;
+    editDeleteConfirm: string;
+    errEditSave: string;
+    errEditDelete: string;
+    errAvatarUpload: string;
   };
   fursuit: {
     kicker: string;
@@ -151,6 +163,18 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errChatLoad: "角色加载失败，请稍后重试",
       errChatSend: "发送失败，请稍后重试",
       errChatClear: "清空失败，请重试",
+      editBtn: "调整设定",
+      editTitle: "编辑角色",
+      editTitleEn: "Edit Character",
+      editSubtitle: "调整 TA 的设定，随时焕然一新",
+      editDelete: "删除角色",
+      editDeleting: "删除中…",
+      editSave: "保存",
+      editSaving: "保存中…",
+      editDeleteConfirm: "确定要删除角色「{name}」吗？TA 的全部对话记录也会被删除，此操作不可恢复。",
+      errEditSave: "保存失败，请稍后重试",
+      errEditDelete: "删除失败，请稍后重试",
+      errAvatarUpload: "头像上传失败，请重试",
     },
     fursuit: {
       kicker: "COMMISSION · FULL CUSTOM",
@@ -272,6 +296,18 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errChatLoad: "Failed to load character, please retry",
       errChatSend: "Failed to send, please retry",
       errChatClear: "Failed to clear, please retry",
+      editBtn: "Settings",
+      editTitle: "Edit Character",
+      editTitleEn: "编辑角色",
+      editSubtitle: "Tune their settings anytime — keep them fresh",
+      editDelete: "Delete Character",
+      editDeleting: "Deleting…",
+      editSave: "Save",
+      editSaving: "Saving…",
+      editDeleteConfirm: "Delete \"{name}\"? All chat history with them will also be deleted. This cannot be undone.",
+      errEditSave: "Failed to save, please retry",
+      errEditDelete: "Failed to delete, please retry",
+      errAvatarUpload: "Failed to upload avatar, please retry",
     },
     fursuit: {
       kicker: "COMMISSION · FULL CUSTOM",
