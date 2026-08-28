@@ -158,6 +158,86 @@ export interface Gt2Copy {
     createdAt: string;
     status: Record<string, string>;
   };
+  shopPanel: {
+    dropsEntryKicker: string;
+    dropsEntryTitle: string;
+    dropsEntryDesc: string;
+    dropsEntryCta: string;
+    peripheryEntryKicker: string;
+    peripheryEntryTitle: string;
+    peripheryEntryDesc: string;
+    peripheryEntryCta: string;
+    backEntries: string;
+    dropsKicker: string;
+    dropsHeading: string;
+    dropsSub: string;
+    loading: string;
+    empty: string;
+    statusOnSale: string;
+    statusPreparing: string;
+    statusAdopted: string;
+    statusOptionOnSale: string;
+    statusOptionPreparing: string;
+    statusOptionAdopted: string;
+    btnSelect: string;
+    btnAdopted: string;
+    btnPreparing: string;
+    viewImage: string;
+    checkoutKicker: string;
+    checkoutTitle: string;
+    productLabel: string;
+    nameLabel: string;
+    namePh: string;
+    emailLabel: string;
+    emailPh: string;
+    bodyTitle: string;
+    bodyHint: string;
+    heightLabel: string;
+    weightLabel: string;
+    chestLabel: string;
+    waistLabel: string;
+    hipLabel: string;
+    shoeLabel: string;
+    socialLabel: string;
+    socialPh: string;
+    agreeText: string;
+    btnSubmit: string;
+    submitting: string;
+    errName: string;
+    errEmail: string;
+    errAgree: string;
+    doneTitle: string;
+    doneText: string;
+    orderCodePrefix: string;
+    queryLink: string;
+    editBanner: string;
+    editAdd: string;
+    editExit: string;
+    editTitle: string;
+    editPrice: string;
+    editStatus: string;
+    editIncludes: string;
+    editCopyright: string;
+    editDelivery: string;
+    editDescription: string;
+    editUpload: string;
+    editUploading: string;
+    editUploadHint: string;
+    editSave: string;
+    editDelete: string;
+    editCancel: string;
+    editLabel: string;
+    copyBtn: string;
+    copied: string;
+    editConfirmDelete: string;
+    editSaveSuccess: string;
+    editDeleteSuccess: string;
+    editImageRequired: string;
+    editTitleRequired: string;
+    editPriceInvalid: string;
+    focusTip: string;
+    noPermission: string;
+  };
   entries: Record<"shop" | "check" | "about", Gt2EntryCopy>;
   bubble: {
     signupEn: string;
@@ -341,6 +421,86 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         delivered: "已交付",
         completed: "已完成",
       },
+    },
+    shopPanel: {
+      dropsEntryKicker: "01",
+      dropsEntryTitle: "现货掉落",
+      dropsEntryDesc: "预设兽装定期掉落，现货与预售同步开放。无需漫长等待，遇见即是缘分。",
+      dropsEntryCta: "进入掉落",
+      peripheryEntryKicker: "02",
+      peripheryEntryTitle: "龙坞周边",
+      peripheryEntryDesc: "周边商品筹备中，敬请期待。",
+      peripheryEntryCta: "未开放",
+      backEntries: "返回商店",
+      dropsKicker: "01 / DROP ITEMS",
+      dropsHeading: "现货掉落",
+      dropsSub: "成品部分立即交付 剩余部分预计 4-6 周后交付*",
+      loading: "正在加载掉落信息…",
+      empty: "暂无掉落信息，敬请期待",
+      statusOnSale: "发售",
+      statusPreparing: "准备",
+      statusAdopted: "领养",
+      statusOptionOnSale: "发售（可购买）",
+      statusOptionPreparing: "准备（仅查看）",
+      statusOptionAdopted: "领养（交付中）",
+      btnSelect: "选择",
+      btnAdopted: "已被领养",
+      btnPreparing: "准备中 · 敬请期待",
+      viewImage: "查看完整大图",
+      checkoutKicker: "02 / CHECKOUT",
+      checkoutTitle: "确认购买",
+      productLabel: "已选掉落",
+      nameLabel: "姓名",
+      namePh: "请输入您的姓名",
+      emailLabel: "Email",
+      emailPh: "your@email.com",
+      bodyTitle: "身体数据",
+      bodyHint: "选填 · 便于预估尺寸",
+      heightLabel: "身高",
+      weightLabel: "体重",
+      chestLabel: "胸围",
+      waistLabel: "腰围",
+      hipLabel: "臀围",
+      shoeLabel: "鞋码",
+      socialLabel: "任意平台可以联系到您的账号（如：Bilibili QQ X...）",
+      socialPh: "请输入您的社交平台账号",
+      agreeText: "我已阅读并同意购买协议",
+      btnSubmit: "提 交",
+      submitting: "提交中…",
+      errName: "请输入姓名",
+      errEmail: "请输入有效的邮箱地址",
+      errAgree: "请先阅读并同意购买协议",
+      doneTitle: "购买成功",
+      doneText: "我们将在工作日9:00-17:00回复报价并与您进行接下来的沟通",
+      orderCodePrefix: "您的订单代码：",
+      queryLink: "去查询进度",
+      editBanner: "编辑模式：修改后保存将同步到用户可见的掉落界面",
+      editAdd: "+ 新增掉落",
+      editExit: "退出编辑",
+      editTitle: "掉落标题",
+      editPrice: "价格（RMB）",
+      editStatus: "掉落状态",
+      editIncludes: "包含内容",
+      editCopyright: "版权说明",
+      editDelivery: "交付说明",
+      editDescription: "介绍信息",
+      editUpload: "上传图片",
+      editUploading: "上传中…",
+      editUploadHint: "JPEG / PNG / GIF / WebP",
+      editSave: "保存修改",
+      editDelete: "删除",
+      editCancel: "取消",
+      editLabel: "编辑",
+      copyBtn: "复制订单代码",
+      copied: "已复制 ✓",
+      editConfirmDelete: "确定删除该掉落吗？删除后立即从前端掉落界面消失，此操作不可恢复。",
+      editSaveSuccess: "保存成功，掉落界面已同步更新",
+      editDeleteSuccess: "删除成功",
+      editImageRequired: "请上传介绍图片",
+      editTitleRequired: "请填写掉落标题",
+      editPriceInvalid: "请填写有效价格",
+      focusTip: "焦点：点击下方图片选择角色所在区域",
+      noPermission: "无编辑权限，仅管理员可编辑掉落信息",
     },
     entries: {
       shop: {
@@ -551,6 +711,86 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         delivered: "Delivered",
         completed: "Completed",
       },
+    },
+    shopPanel: {
+      dropsEntryKicker: "01",
+      dropsEntryTitle: "Drop Fursuits",
+      dropsEntryDesc: "Pre-made fursuits drop regularly — in stock and pre-order at the same time. No long waits.",
+      dropsEntryCta: "Browse Drops",
+      peripheryEntryKicker: "02",
+      peripheryEntryTitle: "LongWoo Merch",
+      peripheryEntryDesc: "Merchandise is in preparation. Stay tuned.",
+      peripheryEntryCta: "Coming Soon",
+      backEntries: "Back to Shop",
+      dropsKicker: "01 / DROP ITEMS",
+      dropsHeading: "Drop Fursuits",
+      dropsSub: "Finished parts ship immediately · remaining parts in 4-6 weeks*",
+      loading: "Loading drops…",
+      empty: "No drops yet. Stay tuned",
+      statusOnSale: "On Sale",
+      statusPreparing: "Preparing",
+      statusAdopted: "Adopted",
+      statusOptionOnSale: "On Sale (buyable)",
+      statusOptionPreparing: "Preparing (view only)",
+      statusOptionAdopted: "Adopted (in delivery)",
+      btnSelect: "Select",
+      btnAdopted: "Adopted",
+      btnPreparing: "Preparing · Stay Tuned",
+      viewImage: "View full image",
+      checkoutKicker: "02 / CHECKOUT",
+      checkoutTitle: "Confirm Purchase",
+      productLabel: "Selected Drop",
+      nameLabel: "Name",
+      namePh: "Your name",
+      emailLabel: "Email",
+      emailPh: "your@email.com",
+      bodyTitle: "Body Measurements",
+      bodyHint: "Optional · helps us estimate sizing",
+      heightLabel: "Height",
+      weightLabel: "Weight",
+      chestLabel: "Chest",
+      waistLabel: "Waist",
+      hipLabel: "Hip",
+      shoeLabel: "Shoe",
+      socialLabel: "Any account where we can reach you (e.g. Bilibili QQ X...)",
+      socialPh: "Enter your social account",
+      agreeText: "I have read and agree to the purchase agreement",
+      btnSubmit: "Submit",
+      submitting: "Submitting…",
+      errName: "Please enter your name",
+      errEmail: "Please enter a valid email address",
+      errAgree: "Please read and agree to the purchase agreement first",
+      doneTitle: "Purchase Successful",
+      doneText: "We reply with a quote and follow up during weekdays 9:00-17:00",
+      orderCodePrefix: "Your order code: ",
+      queryLink: "Track Progress",
+      editBanner: "Edit mode: saved changes sync to the public drop page",
+      editAdd: "+ Add Drop",
+      editExit: "Exit Edit",
+      editTitle: "Drop Title",
+      editPrice: "Price (RMB)",
+      editStatus: "Status",
+      editIncludes: "Includes",
+      editCopyright: "Copyright",
+      editDelivery: "Delivery",
+      editDescription: "Description",
+      editUpload: "Upload Image",
+      editUploading: "Uploading…",
+      editUploadHint: "JPEG / PNG / GIF / WebP",
+      editSave: "Save Changes",
+      editDelete: "Delete",
+      editCancel: "Cancel",
+      editLabel: "Edit",
+      copyBtn: "Copy Order Code",
+      copied: "Copied ✓",
+      editConfirmDelete: "Delete this drop? It disappears from the public page immediately. This cannot be undone.",
+      editSaveSuccess: "Saved. The public drop page has been updated",
+      editDeleteSuccess: "Deleted",
+      editImageRequired: "Please upload an image",
+      editTitleRequired: "Please enter a title",
+      editPriceInvalid: "Please enter a valid price",
+      focusTip: "Focus: click the image below to choose where the character is",
+      noPermission: "No edit permission. Only admins can edit drops",
     },
     entries: {
       shop: {

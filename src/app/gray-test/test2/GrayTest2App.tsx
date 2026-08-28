@@ -6,6 +6,7 @@ import AgentPanel from "./components/AgentPanel";
 import FursuitPanel from "./components/FursuitPanel";
 import EntryPanel from "./components/EntryPanel";
 import CheckPanel from "./components/CheckPanel";
+import ShopPanel from "./components/ShopPanel";
 import UserBubble from "./components/UserBubble";
 import "./test2.css";
 
@@ -284,7 +285,7 @@ export default function GrayTest2App() {
             <FursuitPanel lang={lang} />
           </section>
           <section className="gt2-panel" data-active={active === "shop"} inert={!isActive("shop")}>
-            <EntryPanel entry={copy.entries.shop} mark="03" />
+            <ShopPanel lang={lang} />
           </section>
           <section className="gt2-panel" data-active={active === "check"} inert={!isActive("check")}>
             <CheckPanel lang={lang} />

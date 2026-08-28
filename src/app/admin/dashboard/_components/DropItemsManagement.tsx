@@ -304,9 +304,9 @@ export default function DropItemsManagement() {
     }
   };
 
-  // 跳转到掉落界面（用户视角 / 管理员编辑模式）
+  // 跳转到新官网掉落界面（用户视角 / 管理员编辑模式；旧官网即将弃用）
   const goToDropPage = (editMode: boolean) => {
-    window.open(`/preorder-step1.html${editMode ? "?edit=1" : ""}`, "_blank");
+    window.open(`/gray-test/test2?tab=shop${editMode ? "&shopEdit=1" : ""}`, "_blank");
   };
 
   // 图片选择框（含焦点框选）

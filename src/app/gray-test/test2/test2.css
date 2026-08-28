@@ -2912,6 +2912,25 @@ textarea.gt2-input {
     padding-left: 20px;
     padding-right: 20px;
   }
+
+  /* 窄屏商店：入口单列、掉落两列 */
+  .gt2-shop-entries {
+    grid-template-columns: 1fr;
+  }
+
+  .gt2-shop-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gt2-shop-checkout-product {
+    flex-direction: column;
+  }
+
+  .gt2-shop-checkout-img-wrap {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
 }
 
 /* ============================================================
@@ -3206,6 +3225,578 @@ textarea.gt2-input {
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
+}
+
+/* ============================================================
+   商店模块（现货掉落 / 龙坞周边）
+   ============================================================ */
+.gt2-shop-entries {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 44px;
+  max-width: 720px;
+}
+
+.gt2-shop-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 26px 24px;
+  border: 1px solid var(--gt2-line);
+  border-radius: 20px;
+  background: var(--gt2-paper);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.3s var(--gt2-ease), transform 0.3s var(--gt2-ease), box-shadow 0.3s var(--gt2-ease);
+}
+
+.gt2-shop-entry:hover {
+  border-color: var(--gt2-ink);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(10, 10, 10, 0.06);
+}
+
+.gt2-shop-entry-num {
+  font-family: var(--gt2-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: #a3a3a3;
+}
+
+.gt2-shop-entry-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gt2-shop-entry-title {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--gt2-ink);
+}
+
+.gt2-shop-entry-desc {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #737373;
+}
+
+.gt2-shop-entry-cta {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gt2-ink);
+}
+
+.gt2-shop-entry--disabled {
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
+.gt2-shop-entry--disabled:hover {
+  border-color: var(--gt2-line);
+  transform: none;
+  box-shadow: none;
+}
+
+.gt2-shop-entry--disabled .gt2-shop-entry-title,
+.gt2-shop-entry--disabled .gt2-shop-entry-cta {
+  color: #b3b3b3;
+}
+
+.gt2-shop-entry--disabled .gt2-shop-entry-desc {
+  color: #c4c4c4;
+}
+
+/* 返回按钮 */
+.gt2-shop-back {
+  margin-top: 30px;
+  padding: 8px 14px 8px 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.25s var(--gt2-ease);
+}
+
+.gt2-shop-back:hover {
+  color: var(--gt2-ink);
+}
+
+/* 编辑模式横幅 */
+.gt2-shop-edit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+  padding: 14px 18px;
+  border: 1px solid #d6e4ff;
+  border-radius: 14px;
+  background: #f2f7ff;
+}
+
+.gt2-shop-edit-banner-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gt2-ink);
+}
+
+.gt2-shop-edit-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gt2-shop-edit-msg {
+  margin-top: 14px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.gt2-shop-edit-msg--ok {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+/* 掉落网格：一行三个 */
+.gt2-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 26px;
+}
+
+/* 掉落卡片 */
+.gt2-shop-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--gt2-line);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--gt2-paper);
+  transition: border-color 0.3s var(--gt2-ease), box-shadow 0.3s var(--gt2-ease);
+}
+
+.gt2-shop-card:hover {
+  border-color: #cfcfcf;
+  box-shadow: 0 10px 28px rgba(10, 10, 10, 0.05);
+}
+
+.gt2-shop-card-img-wrap {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #fafafa;
+  cursor: zoom-in;
+}
+
+.gt2-shop-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s var(--gt2-ease);
+}
+
+.gt2-shop-card:hover .gt2-shop-card-img {
+  transform: scale(1.03);
+}
+
+.gt2-shop-card-status {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--gt2-line);
+  color: var(--gt2-ink);
+}
+
+.gt2-shop-card-status--on_sale {
+  color: #15803d;
+  border-color: rgba(21, 128, 61, 0.35);
+}
+
+.gt2-shop-card-status--preparing {
+  color: #b45309;
+  border-color: rgba(180, 83, 9, 0.3);
+}
+
+.gt2-shop-card-status--adopted {
+  color: #1d4ed8;
+  border-color: rgba(29, 78, 216, 0.3);
+}
+
+.gt2-shop-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 16px 16px 12px;
+}
+
+.gt2-shop-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--gt2-ink);
+}
+
+.gt2-shop-card-price {
+  font-family: var(--gt2-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gt2-ink);
+}
+
+.gt2-shop-card-line {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #525252;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.gt2-shop-card-line--sub {
+  color: #737373;
+}
+
+.gt2-shop-card-line--delivery {
+  color: #9ca3af;
+  font-size: 11.5px;
+}
+
+.gt2-shop-card-foot {
+  margin-top: auto;
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gt2-shop-card-btn {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 14px;
+}
+
+.gt2-shop-card-btn--disabled {
+  background: #e4e4e4;
+  border-color: #e4e4e4;
+  color: #b3b3b3;
+  cursor: not-allowed;
+}
+
+.gt2-shop-card-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.gt2-shop-edit-btn {
+  padding: 8px 14px;
+  font-size: 12.5px;
+}
+
+.gt2-shop-edit-btn--danger {
+  color: #dc2626;
+}
+
+/* 编辑卡片（展开表单） */
+.gt2-shop-card--edit {
+  border-color: #b6c9f2;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.gt2-shop-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 16px;
+}
+
+.gt2-shop-edit-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #525252;
+  margin-top: 2px;
+}
+
+.gt2-shop-edit-input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--gt2-line);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--gt2-ink);
+  resize: vertical;
+  transition: border-color 0.25s var(--gt2-ease);
+}
+
+.gt2-shop-edit-input:focus {
+  outline: none;
+  border-color: var(--gt2-ink);
+}
+
+.gt2-shop-edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.gt2-shop-edit-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gt2-shop-edit-img-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.gt2-shop-edit-img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid var(--gt2-line);
+}
+
+.gt2-shop-edit-img-empty {
+  height: 120px;
+  border: 1.5px dashed #d4d4d4;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #b3b3b3;
+  background: #fafafa;
+}
+
+.gt2-shop-edit-focus {
+  position: relative;
+  border: 1px dashed var(--gt2-line);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: crosshair;
+  max-height: 150px;
+  background: #fafafa;
+}
+
+.gt2-shop-edit-focus img {
+  display: block;
+  width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+  background: #fafafa;
+}
+
+.gt2-shop-edit-marker {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  margin-top: -12px;
+  border: 2px solid #3b82f6;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85);
+}
+
+.gt2-shop-edit-marker::before,
+.gt2-shop-edit-marker::after {
+  content: "";
+  position: absolute;
+  background: #3b82f6;
+}
+
+.gt2-shop-edit-marker::before {
+  left: 50%;
+  top: -4px;
+  width: 2px;
+  height: calc(100% + 8px);
+  transform: translateX(-50%);
+}
+
+.gt2-shop-edit-marker::after {
+  top: 50%;
+  left: -4px;
+  height: 2px;
+  width: calc(100% + 8px);
+  transform: translateY(-50%);
+}
+
+.gt2-shop-edit-tip {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.5;
+}
+
+.gt2-shop-edit-upload {
+  align-self: flex-start;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.gt2-shop-edit-file {
+  display: none;
+}
+
+.gt2-shop-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.gt2-shop-edit-actions .gt2-shop-edit-btn {
+  flex: 1;
+}
+
+/* 加载/空状态 */
+.gt2-shop-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 70px 0;
+  color: #a3a3a3;
+  font-size: 13px;
+}
+
+.gt2-shop-spinner {
+  width: 26px;
+  height: 26px;
+  border: 2.5px solid var(--gt2-line);
+  border-top-color: var(--gt2-ink);
+  border-radius: 50%;
+  animation: gt2-shop-spin 0.8s linear infinite;
+}
+
+@keyframes gt2-shop-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 购买确认 */
+.gt2-shop-checkout-product {
+  display: flex;
+  gap: 18px;
+  padding: 14px;
+  border: 1px solid var(--gt2-line);
+  border-radius: 16px;
+  background: #fafafa;
+  margin-bottom: 22px;
+}
+
+.gt2-shop-checkout-img-wrap {
+  width: 132px;
+  height: 100px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.gt2-shop-checkout-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gt2-shop-checkout-product-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  min-width: 0;
+}
+
+.gt2-shop-checkout-product-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #a3a3a3;
+}
+
+.gt2-shop-checkout-product-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--gt2-ink);
+}
+
+.gt2-shop-checkout-product-price {
+  font-family: var(--gt2-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gt2-ink);
+}
+
+/* 协议勾选 */
+.gt2-shop-agree {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: #525252;
+  cursor: pointer;
+  text-align: left;
+}
+
+.gt2-shop-agree-box {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 1.5px solid #c4c4c4;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #fff;
+  transition: background 0.2s var(--gt2-ease), border-color 0.2s var(--gt2-ease);
+}
+
+.gt2-shop-agree--on .gt2-shop-agree-box {
+  background: var(--gt2-ink);
+  border-color: var(--gt2-ink);
+}
+
+/* 超窄屏：掉落单列 */
+@media (max-width: 640px) {
+  .gt2-shop-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ============================================================
