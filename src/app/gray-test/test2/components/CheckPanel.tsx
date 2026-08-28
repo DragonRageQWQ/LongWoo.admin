@@ -117,7 +117,7 @@ export default function CheckPanel({ lang }: { lang: Gt2Lang }) {
       >
         <div className="gt2-fs-grid">
           <div
-            className="gt2-fs-field gt2-fs-field--wide"
+            className="gt2-fs-field gt2-fs-field--full"
             data-error={!!fieldErrors.orderNo || undefined}
             data-valid={!fieldErrors.orderNo && orderNo.trim() ? true : undefined}
           >
