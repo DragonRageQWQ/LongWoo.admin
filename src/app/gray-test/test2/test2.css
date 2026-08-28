@@ -1535,6 +1535,522 @@ textarea.gt2-input {
 }
 
 /* ============================================================
+   内嵌委托兽装向导（5 步：上传→选配→折抵→联系→等待估价）
+   ============================================================ */
+.gt2-fs-meta {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: #a3a3a3;
+}
+
+/* ---------- 步骤指示条 ---------- */
+.gt2-fs-stepbar {
+  display: flex;
+  align-items: flex-start;
+  margin: 34px 0 30px;
+}
+
+.gt2-fs-step-seg {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  cursor: default;
+}
+
+.gt2-fs-step-item[data-reached="true"] {
+  cursor: pointer;
+}
+
+.gt2-fs-step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--gt2-line);
+  border-radius: 99px;
+  margin-top: 15px;
+  transition: background 0.45s var(--gt2-ease);
+}
+
+.gt2-fs-step-line[data-done="true"] {
+  background: var(--gt2-ink);
+}
+
+.gt2-fs-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 4px;
+}
+
+.gt2-fs-step-dot {
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gt2-line);
+  background: #fff;
+  color: #b3b3b3;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--gt2-mono);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.4s var(--gt2-ease), background 0.4s var(--gt2-ease),
+    color 0.4s var(--gt2-ease), transform 0.5s var(--gt2-spring);
+}
+
+.gt2-fs-step-dot svg {
+  width: 13px;
+  height: 13px;
+}
+
+.gt2-fs-step-item[data-state="active"] .gt2-fs-step-dot {
+  background: var(--gt2-ink);
+  border-color: var(--gt2-ink);
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.gt2-fs-step-item[data-state="done"] .gt2-fs-step-dot {
+  background: var(--gt2-ink);
+  border-color: var(--gt2-ink);
+  color: #fff;
+}
+
+.gt2-fs-step-label {
+  font-size: 10.5px;
+  color: var(--gt2-mute);
+  text-align: center;
+  white-space: nowrap;
+  transition: color 0.3s var(--gt2-ease);
+}
+
+.gt2-fs-step-item[data-state="active"] .gt2-fs-step-label {
+  color: var(--gt2-ink);
+  font-weight: 600;
+}
+
+/* ---------- 步骤内容切换动画 ---------- */
+.gt2-fs-step-view {
+  animation: gt2-fs-in 0.55s var(--gt2-spring) both;
+}
+
+@keyframes gt2-fs-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- 区块标题 ---------- */
+.gt2-fs-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.gt2-fs-section-head b {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.gt2-fs-multi-hint {
+  font-size: 11px;
+  color: var(--gt2-mute);
+  border: 1px solid var(--gt2-line);
+  border-radius: 6px;
+  padding: 2px 9px;
+}
+
+/* ---------- 选配 / 折抵选项 ---------- */
+.gt2-fs-opt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gt2-fs-opt {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 17px 20px;
+  border: 1.5px solid var(--gt2-line);
+  border-radius: 18px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.35s var(--gt2-ease), transform 0.3s var(--gt2-ease),
+    background 0.3s var(--gt2-ease);
+}
+
+.gt2-fs-opt:hover {
+  border-color: #c9c9c9;
+  transform: translateY(-1px);
+}
+
+.gt2-fs-opt:active {
+  transform: scale(0.99);
+}
+
+.gt2-fs-opt[data-on="true"] {
+  border-color: var(--gt2-ink);
+  background: #fbfbfb;
+}
+
+.gt2-fs-opt[data-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(50%);
+}
+
+.gt2-fs-opt[data-disabled="true"]:hover {
+  border-color: var(--gt2-line);
+  transform: none;
+}
+
+.gt2-fs-opt-box {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #d9d9d9;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.3s var(--gt2-ease), background 0.3s var(--gt2-ease),
+    transform 0.45s var(--gt2-spring);
+}
+
+.gt2-fs-opt[data-box="square"] .gt2-fs-opt-box {
+  border-radius: 7px;
+}
+
+.gt2-fs-opt[data-on="true"] .gt2-fs-opt-box {
+  border-color: var(--gt2-ink);
+  background: var(--gt2-ink);
+  transform: scale(1.05);
+}
+
+.gt2-fs-opt-box svg {
+  width: 12px;
+  height: 12px;
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 0.25s var(--gt2-ease), transform 0.45s var(--gt2-spring);
+}
+
+.gt2-fs-opt[data-on="true"] .gt2-fs-opt-box svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.gt2-fs-opt-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gt2-ink);
+  transform: scale(0);
+  transition: transform 0.45s var(--gt2-spring);
+}
+
+.gt2-fs-opt[data-on="true"] .gt2-fs-opt-dot {
+  transform: scale(1);
+}
+
+.gt2-fs-opt-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gt2-fs-opt-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--gt2-ink);
+}
+
+.gt2-fs-opt-sub {
+  font-family: var(--gt2-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a8a8a8;
+}
+
+.gt2-fs-opt-price {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gt2-mute);
+  white-space: nowrap;
+  transition: color 0.3s var(--gt2-ease);
+}
+
+.gt2-fs-opt[data-on="true"] .gt2-fs-opt-price {
+  color: var(--gt2-ink);
+}
+
+.gt2-fs-opt-price[data-benefit="true"] {
+  color: #c2410c;
+}
+
+.gt2-fs-opt-tag {
+  font-size: 10px;
+  color: var(--gt2-mute);
+  border: 1px solid var(--gt2-line);
+  border-radius: 6px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+.gt2-fs-note {
+  margin-top: 14px;
+  font-size: 11.5px;
+  color: var(--gt2-mute);
+  line-height: 1.6;
+}
+
+/* ---------- 价格摘要 ---------- */
+.gt2-fs-price {
+  margin-top: 32px;
+  border: 1px solid var(--gt2-line);
+  border-radius: 18px;
+  background: #fdfdfc;
+  padding: 18px 24px;
+}
+
+.gt2-fs-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 13px;
+  color: var(--gt2-mute);
+}
+
+.gt2-fs-price-row b {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--gt2-ink);
+}
+
+.gt2-fs-price-row b[data-discount="true"] {
+  color: #c2410c;
+}
+
+.gt2-fs-price-total {
+  border-top: 1px solid var(--gt2-line);
+  margin-top: 8px;
+  padding-top: 12px;
+}
+
+.gt2-fs-price-total span,
+.gt2-fs-price-total b {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gt2-ink);
+}
+
+/* ---------- 联系表单 ---------- */
+.gt2-fs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.gt2-fs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gt2-fs-field--full {
+  grid-column: 1 / -1;
+}
+
+.gt2-fs-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gt2-ink);
+}
+
+.gt2-fs-field label em {
+  font-style: normal;
+  color: #d33;
+}
+
+.gt2-fs-field input,
+.gt2-fs-field textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1.5px solid var(--gt2-line);
+  border-radius: 13px;
+  background: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--gt2-ink);
+  resize: vertical;
+  transition: border-color 0.3s var(--gt2-ease), box-shadow 0.3s var(--gt2-ease);
+}
+
+.gt2-fs-field input:focus,
+.gt2-fs-field textarea:focus {
+  outline: none;
+  border-color: var(--gt2-ink);
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.05);
+}
+
+.gt2-fs-sub-block {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--gt2-line);
+}
+
+.gt2-fs-sub-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.gt2-fs-sub-head b {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.gt2-fs-sub-head span {
+  font-size: 11px;
+  color: var(--gt2-mute);
+}
+
+.gt2-fs-social {
+  margin-top: 24px;
+}
+
+/* ---------- 步骤导航 ---------- */
+.gt2-fs-nav {
+  display: flex;
+  gap: 14px;
+  margin-top: 34px;
+}
+
+.gt2-fs-nav .gt2-btn-ghost {
+  flex: 0 0 auto;
+  padding: 14px 36px;
+}
+
+.gt2-fs-nav .gt2-btn-solid {
+  flex: 1;
+  padding: 15px 20px;
+}
+
+.gt2-fs-foot-hint {
+  margin-top: 16px;
+}
+
+/* ---------- 等待估价（成功页） ---------- */
+.gt2-fs-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 46px 8px 22px;
+}
+
+.gt2-fs-done-check {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: var(--gt2-ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  animation: gt2-pop 0.55s var(--gt2-spring) both;
+}
+
+.gt2-fs-done-check svg {
+  width: 30px;
+  height: 30px;
+}
+
+.gt2-fs-done-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.gt2-fs-done-text {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--gt2-mute);
+  max-width: 430px;
+  line-height: 1.6;
+}
+
+.gt2-fs-done-code {
+  margin-top: 22px;
+  font-family: var(--gt2-mono);
+  font-size: 14px;
+  color: var(--gt2-mute);
+  border: 1.5px dashed var(--gt2-line);
+  border-radius: 15px;
+  padding: 15px 28px;
+  background: #fdfdfc;
+  letter-spacing: 0.03em;
+}
+
+.gt2-fs-done-code b {
+  color: var(--gt2-ink);
+  font-weight: 700;
+}
+
+.gt2-fs-done-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 22px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.gt2-fs-done-actions .gt2-btn-ghost {
+  flex: 1;
+  padding: 13px 20px;
+}
+
+.gt2-fs-done-actions .gt2-btn-ghost[data-copied="true"] {
+  background: var(--gt2-ink);
+  color: #fff;
+}
+
+.gt2-fs-query {
+  flex: 1;
+  padding: 13px 20px;
+  text-decoration: none;
+}
+
+.gt2-fs-done-tip {
+  margin-top: 16px;
+  font-size: 11px;
+  color: #a8a8a8;
+}
+
+/* ============================================================
    门面入口面板（Shop / Check / About）
    ============================================================ */
 .gt2-entry {
@@ -2248,6 +2764,38 @@ textarea.gt2-input {
   }
 
   .gt2-agent-edit .gt2-agent-form {
+    padding-top: 34px;
+  }
+
+  /* 窄屏委托向导：联系表单单列、步骤标签收紧 */
+  .gt2-fs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gt2-fs-step-label {
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+
+  .gt2-fs-step-dot {
+    width: 27px;
+    height: 27px;
+    font-size: 11px;
+  }
+
+  .gt2-fs-step-line {
+    margin-top: 13px;
+  }
+
+  .gt2-fs-meta {
+    font-size: 10.5px;
+  }
+
+  .gt2-fs-nav .gt2-btn-ghost {
+    padding: 13px 24px;
+  }
+
+  .gt2-fs-done {
     padding-top: 34px;
   }
 }

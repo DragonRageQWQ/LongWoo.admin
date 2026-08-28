@@ -81,20 +81,57 @@ export interface Gt2Copy {
     kicker: string;
     title: string;
     titleEn: string;
+    steps: string[];
+    deliveryHint: string;
+    priceRangeHint: string;
     uploadTitle: string;
     uploadHint: string;
     reupload: string;
     remove: string;
     addonMicro: string;
     addonHint: string;
-    addons: { name: string; nameEn: string; price: string }[];
-    dims: { key: "height" | "chest" | "shoe" | "waist"; label: string; unit: string }[];
-    remarkPh: string;
+    addonNone: string;
+    addons: { name: string; nameEn: string; price: string; value: number; disabled?: boolean; tag?: string }[];
+    benefitTitle: string;
+    benefits: { label: string; labelEn: string; price: string; value: number }[];
+    benefitNote: string;
+    priceBase: string;
+    priceAddon: string;
+    priceDiscount: string;
+    priceTotal: string;
+    contactTitle: string;
+    bodyTitle: string;
+    bodyHint: string;
+    socialLabel: string;
+    socialPh: string;
+    nameLabel: string;
+    namePh: string;
+    phoneLabel: string;
+    phonePh: string;
+    emailLabel: string;
+    emailPh: string;
+    dims: { key: "height" | "weight" | "chest" | "waist" | "hip" | "shoe"; label: string; unit: string }[];
+    btnPrev: string;
+    btnNext: string;
     submitBtn: string;
+    submitting: string;
     submitHint: string;
+    doneTitle: string;
+    doneText: string;
+    orderCodePrefix: string;
+    copyBtn: string;
+    copied: string;
+    queryLink: string;
+    saveTip: string;
     errImgRequired: string;
     errImgType: string;
     errImgLarge: string;
+    errName: string;
+    errPhone: string;
+    errEmail: string;
+    errSubmit: string;
+    errNetwork: string;
+    errUploadAlert: string;
   };
   entries: Record<"shop" | "check" | "about", Gt2EntryCopy>;
   bubble: {
@@ -180,28 +217,72 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       kicker: "COMMISSION · FULL CUSTOM",
       title: "委托你的兽装",
       titleEn: "Commission Your Fursuit",
+      steps: ["上传设定图", "选配内容", "折抵权益", "联系方式", "等待估价"],
+      deliveryHint: "预计 4-6 周后交付*",
+      priceRangeHint: "首次购置价格依照15000RMB-25000RMB区间计算",
       uploadTitle: "上传设定图",
       uploadHint: "图片不大于 20M",
       reupload: "重新上传",
       remove: "移除",
       addonMicro: "选配 · ADD-ON",
-      addonHint: "点击进入选配流程，可多选",
+      addonHint: "可多选 · 选中的内容将计入估价",
+      addonNone: "无",
       addons: [
-        { name: "便携式头包", nameEn: "Head Bag", price: "RMB 300" },
-        { name: "室内脚", nameEn: "Indoor Feet", price: "RMB 750" },
+        { name: "便携式头包", nameEn: "Head Bag", price: "RMB 300", value: 300 },
+        { name: "室内脚", nameEn: "Indoor Feet", price: "RMB 750", value: 750 },
+        { name: "Longwoo Vision 视觉增强套件", nameEn: "Vision Kit", price: "RMB 8,888", value: 8888, disabled: true, tag: "暂未上线" },
       ],
+      benefitTitle: "第三步：是否行使折抵权益与复购权益",
+      benefits: [
+        { label: "不使用", labelEn: "None", price: "RMB 0", value: 0 },
+        { label: "4年期换购权益", labelEn: "4-Year Trade-in", price: "-RMB 3,000", value: 3000 },
+        { label: "复购权益*", labelEn: "Repurchase*", price: "-RMB 2,000", value: 2000 },
+      ],
+      benefitNote: "*原 象山工作室 的首任单主同享复购权益",
+      priceBase: "基础价格",
+      priceAddon: "附加选项",
+      priceDiscount: "折抵",
+      priceTotal: "合计",
+      contactTitle: "第四步：请填写您的数据与联系方式",
+      bodyTitle: "身体数据",
+      bodyHint: "选填 · 便于预估尺寸",
+      socialLabel: "任意平台可以联系到您的账号（如：Bilibili QQ X...）",
+      socialPh: "请输入您的社交平台账号",
+      nameLabel: "姓名",
+      namePh: "请输入您的姓名",
+      phoneLabel: "手机号",
+      phonePh: "请输入手机号",
+      emailLabel: "Email",
+      emailPh: "your@email.com",
       dims: [
         { key: "height", label: "身高", unit: "cm" },
+        { key: "weight", label: "体重", unit: "kg" },
         { key: "chest", label: "胸围", unit: "cm" },
-        { key: "shoe", label: "鞋码", unit: "cm" },
         { key: "waist", label: "腰围", unit: "cm" },
+        { key: "hip", label: "臀围", unit: "cm" },
+        { key: "shoe", label: "鞋码", unit: "" },
       ],
-      remarkPh: ">_< 有什么要嘱咐我们的？",
-      submitBtn: "确认估价",
-      submitHint: "已填信息将自动带入完整委托流程",
+      btnPrev: "上一步",
+      btnNext: "下一步",
+      submitBtn: "提 交",
+      submitting: "提交中…",
+      submitHint: "提交后我们将人工估价，并尽快与您联系",
+      doneTitle: "第五步：请等待我们的人工估价回复",
+      doneText: "我们将在工作日9:00-17:00回复报价并与您进行接下来的沟通",
+      orderCodePrefix: "您的订单代码：",
+      copyBtn: "复制订单代码",
+      copied: "已复制 ✓",
+      queryLink: "去查询进度",
+      saveTip: "请妥善保存订单代码，用于后续查询估价与进度",
       errImgRequired: "请先上传设定图",
       errImgType: "仅支持图片文件",
       errImgLarge: "图片不能超过 20MB",
+      errName: "请输入姓名",
+      errPhone: "请输入有效的手机号码",
+      errEmail: "请输入有效的邮箱地址",
+      errSubmit: "提交失败，请稍后重试",
+      errNetwork: "网络错误，请稍后重试",
+      errUploadAlert: "设定图上传失败：{msg}。文件名已随订单保存，您可稍后登录个人中心补充设定图，或联系客服协助上传。",
     },
     entries: {
       shop: {
@@ -313,28 +394,72 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       kicker: "COMMISSION · FULL CUSTOM",
       title: "Commission Your Fursuit",
       titleEn: "委托你的兽装",
+      steps: ["Reference Sheet", "Add-ons", "Trade-in", "Contact", "Estimate"],
+      deliveryHint: "Estimated delivery in 4-6 weeks*",
+      priceRangeHint: "First commission priced between RMB 15,000 - 25,000",
       uploadTitle: "Upload Reference Sheet",
       uploadHint: "Max 20MB per image",
       reupload: "Re-upload",
       remove: "Remove",
       addonMicro: "ADD-ON · 选配",
-      addonHint: "Enter the add-on flow, multi-select supported",
+      addonHint: "Multi-select — chosen items count toward the estimate",
+      addonNone: "None",
       addons: [
-        { name: "Portable Head Bag", nameEn: "便携式头包", price: "RMB 300" },
-        { name: "Indoor Feet", nameEn: "室内脚", price: "RMB 750" },
+        { name: "Portable Head Bag", nameEn: "便携式头包", price: "RMB 300", value: 300 },
+        { name: "Indoor Feet", nameEn: "室内脚", price: "RMB 750", value: 750 },
+        { name: "Longwoo Vision Kit", nameEn: "视觉增强套件", price: "RMB 8,888", value: 8888, disabled: true, tag: "Coming Soon" },
       ],
+      benefitTitle: "Step 3: Trade-in or repurchase benefits?",
+      benefits: [
+        { label: "None", labelEn: "不使用", price: "RMB 0", value: 0 },
+        { label: "4-Year Trade-in", labelEn: "4年期换购权益", price: "-RMB 3,000", value: 3000 },
+        { label: "Repurchase*", labelEn: "复购权益", price: "-RMB 2,000", value: 2000 },
+      ],
+      benefitNote: "*First-time clients of the original Xiangshan Studio enjoy the repurchase benefit too",
+      priceBase: "Base Price",
+      priceAddon: "Add-ons",
+      priceDiscount: "Trade-in",
+      priceTotal: "Total",
+      contactTitle: "Step 4: Your details & contact info",
+      bodyTitle: "Body Measurements",
+      bodyHint: "Optional · helps us estimate sizing",
+      socialLabel: "Any account where we can reach you (e.g. Bilibili QQ X...)",
+      socialPh: "Enter your social account",
+      nameLabel: "Name",
+      namePh: "Your name",
+      phoneLabel: "Phone",
+      phonePh: "Your phone number",
+      emailLabel: "Email",
+      emailPh: "your@email.com",
       dims: [
         { key: "height", label: "Height", unit: "cm" },
+        { key: "weight", label: "Weight", unit: "kg" },
         { key: "chest", label: "Chest", unit: "cm" },
-        { key: "shoe", label: "Shoe", unit: "cm" },
         { key: "waist", label: "Waist", unit: "cm" },
+        { key: "hip", label: "Hip", unit: "cm" },
+        { key: "shoe", label: "Shoe", unit: "" },
       ],
-      remarkPh: ">_< Anything you'd like to tell us?",
-      submitBtn: "Get a Quote",
-      submitHint: "Your entries will carry into the full commission flow",
+      btnPrev: "Back",
+      btnNext: "Next",
+      submitBtn: "Submit",
+      submitting: "Submitting…",
+      submitHint: "We'll manually estimate your commission and reach out soon",
+      doneTitle: "Step 5: Await our manual estimate",
+      doneText: "We reply with a quote and follow up during weekdays 9:00-17:00",
+      orderCodePrefix: "Your order code: ",
+      copyBtn: "Copy Order Code",
+      copied: "Copied ✓",
+      queryLink: "Track Progress",
+      saveTip: "Keep this code safe to check your estimate and progress later",
       errImgRequired: "Please upload a reference sheet first",
       errImgType: "Image files only",
       errImgLarge: "Image must be under 20MB",
+      errName: "Please enter your name",
+      errPhone: "Please enter a valid phone number",
+      errEmail: "Please enter a valid email address",
+      errSubmit: "Failed to submit, please retry",
+      errNetwork: "Network error, please retry",
+      errUploadAlert: "Reference sheet upload failed: {msg}. The file name was saved with the order — you can add it later from your profile, or contact support.",
     },
     entries: {
       shop: {
