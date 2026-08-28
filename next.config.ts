@@ -84,17 +84,19 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-      // css/js 更新时 URL 不变，用 7 天 + SWR 平衡缓存命中与更新时效
+      // css/js 为固定文件名（common.js / theme.css / i18n-*.js），
+      // 缓存与 HTML 同步为 1 小时：避免部署后新 HTML + 旧 JS/CSS 混用导致白屏。
+      // 根治方案：文件名内容哈希（构建时注入版本号）。
       {
         source: '/css/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' },
+          { key: 'Cache-Control', value: 'public, max-age=3600' },
         ],
       },
       {
         source: '/js/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' },
+          { key: 'Cache-Control', value: 'public, max-age=3600' },
         ],
       },
       // 静态 HTML 页面内容可能更新，缓存 1 小时
