@@ -1234,7 +1234,7 @@ textarea.gt2-input {
   border: 1.5px dashed #d6d6d6;
   border-radius: 22px;
   background: #fdfdfc;
-  min-height: 216px;
+  height: 500px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1249,12 +1249,17 @@ textarea.gt2-input {
   border-color: var(--gt2-ink);
 }
 
+/* 已上传：框高随图片比例自适应（内联 aspect-ratio 覆盖），240-720px 内完全展示 */
 .gt2-upload-zone[data-uploaded="true"] {
   border-style: solid;
   border-color: var(--gt2-line);
   background: #fff;
   cursor: default;
   justify-content: flex-end;
+  height: auto;
+  min-height: 240px;
+  max-height: 720px;
+  aspect-ratio: 6 / 5;
 }
 
 .gt2-upload-placeholder {
@@ -1553,9 +1558,11 @@ textarea.gt2-input {
   margin: 34px 0 30px;
 }
 
+/* 每段等宽、圆点在段内居中，保证 1-5 间距完全均匀 */
 .gt2-fs-step-seg {
+  position: relative;
   display: flex;
-  align-items: flex-start;
+  justify-content: center;
   flex: 1;
   min-width: 0;
   cursor: default;
@@ -1565,20 +1572,27 @@ textarea.gt2-input {
   cursor: pointer;
 }
 
-.gt2-fs-step-line {
-  flex: 1;
+/* 连接线：从前一段圆点右缘连到本段圆点左缘（负百分比跨段取位），垫在圆点下层 */
+.gt2-fs-step-seg + .gt2-fs-step-seg::before {
+  content: "";
+  position: absolute;
+  top: 14.5px;
+  left: calc(-50% + 15px);
+  right: calc(50% + 15px);
   height: 2px;
-  background: var(--gt2-line);
   border-radius: 99px;
-  margin-top: 15px;
+  background: var(--gt2-line);
   transition: background 0.45s var(--gt2-ease);
+  pointer-events: none;
 }
 
-.gt2-fs-step-line[data-done="true"] {
+.gt2-fs-step-seg[data-done="true"]::before {
   background: var(--gt2-ink);
 }
 
 .gt2-fs-step-item {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1804,8 +1818,8 @@ textarea.gt2-input {
   color: var(--gt2-ink);
 }
 
-.gt2-fs-opt-price[data-benefit="true"] {
-  color: #c2410c;
+.gt2-fs-opt .gt2-fs-opt-price[data-benefit="true"] {
+  color: #15803d;
 }
 
 .gt2-fs-opt-tag {
@@ -1849,7 +1863,7 @@ textarea.gt2-input {
 }
 
 .gt2-fs-price-row b[data-discount="true"] {
-  color: #c2410c;
+  color: #15803d;
 }
 
 .gt2-fs-price-total {
@@ -2783,8 +2797,19 @@ textarea.gt2-input {
     font-size: 11px;
   }
 
-  .gt2-fs-step-line {
-    margin-top: 13px;
+  .gt2-fs-step-seg + .gt2-fs-step-seg::before {
+    top: 12.5px;
+    left: calc(-50% + 14px);
+    right: calc(50% + 14px);
+  }
+
+  .gt2-upload-zone {
+    height: min(500px, 110vw);
+  }
+
+  .gt2-upload-zone[data-uploaded="true"] {
+    min-height: 200px;
+    max-height: 560px;
   }
 
   .gt2-fs-meta {

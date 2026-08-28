@@ -28,6 +28,17 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+// 读取图片真实宽高比，供上传框按比例自适应高度
+function measureImageRatio(dataUrl: string, onRatio: (ratio: number) => void) {
+  const img = new Image();
+  img.onload = () => {
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      onRatio(img.naturalWidth / img.naturalHeight);
+    }
+  };
+  img.src = dataUrl;
+}
+
 function compressImage(dataUrl: string): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -88,6 +99,7 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
   const [imageData, setImageData] = useState<string | null>(null);
   const [imageName, setImageName] = useState("");
   const [imageSize, setImageSize] = useState("");
+  const [imageRatio, setImageRatio] = useState<number | null>(null);
 
   // 选配（多选）：key = addon.name；"无" 用 "__none__" 表示
   const [addonSel, setAddonSel] = useState<Record<string, boolean>>({});
@@ -111,6 +123,7 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
         setImageData(img);
         setImageName(sessionStorage.getItem("longwoo_design_ref_name") || "");
         setImageSize(sessionStorage.getItem("longwoo_design_ref_size") || "");
+        measureImageRatio(img, setImageRatio);
       }
       const d: DimState = { ...EMPTY_DIMS };
       (Object.keys(DIM_KEYS) as DimKey[]).forEach((k) => {
@@ -205,6 +218,7 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
         setImageData(dataUrl);
         setImageName(file.name);
         setImageSize(sizeText);
+        measureImageRatio(dataUrl, setImageRatio);
         try {
           sessionStorage.setItem("longwoo_design_ref_image", dataUrl);
           sessionStorage.setItem("longwoo_design_ref_name", file.name);
@@ -222,6 +236,7 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
     setImageData(null);
     setImageName("");
     setImageSize("");
+    setImageRatio(null);
     try {
       sessionStorage.removeItem("longwoo_design_ref_image");
       sessionStorage.removeItem("longwoo_design_ref_name");
@@ -490,8 +505,12 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
               {c.steps.map((label, i) => {
                 const idx = i + 1;
                 return (
-                  <div key={label} className="gt2-fs-step-seg" onClick={() => goTo(idx)}>
-                    {i > 0 && <div className="gt2-fs-step-line" data-done={idx <= maxStep} />}
+                  <div
+                    key={label}
+                    className="gt2-fs-step-seg"
+                    data-done={i > 0 && idx <= maxStep}
+                    onClick={() => goTo(idx)}
+                  >
                     <div className="gt2-fs-step-item" data-state={stepState(idx)} data-reached={idx <= maxStep}>
                       <div className="gt2-fs-step-dot">
                         {idx < step ? <CheckIcon /> : idx}
@@ -508,7 +527,11 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
               {/* 第 1 步：上传设定图 */}
               {step === 1 && (
                 <>
-                  <div className="gt2-upload-zone" data-uploaded={!!imageData}>
+                  <div
+                    className="gt2-upload-zone"
+                    data-uploaded={!!imageData}
+                    style={imageRatio ? { aspectRatio: String(imageRatio) } : undefined}
+                  >
                     <input
                       ref={fileInputRef}
                       type="file"
