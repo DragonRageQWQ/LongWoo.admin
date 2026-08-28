@@ -1442,6 +1442,7 @@ textarea.gt2-input {
 .gt2-dim-field {
   display: flex;
   gap: 11px;
+  flex-wrap: wrap;
 }
 
 .gt2-dim-label {
@@ -1454,6 +1455,11 @@ textarea.gt2-input {
   letter-spacing: 0.2em;
   align-self: stretch;
   flex-shrink: 0;
+}
+
+.gt2-dim-label em {
+  font-style: normal;
+  color: #d33;
 }
 
 .gt2-dim-input {
@@ -1482,6 +1488,33 @@ textarea.gt2-input {
   outline: none;
   border-color: var(--gt2-ink);
   box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.05);
+}
+
+/* 必填校验：未填提交变红、填入后变绿 */
+.gt2-dim-field[data-error] .gt2-dim-input input {
+  border-color: #d33;
+}
+
+.gt2-dim-field[data-error] .gt2-dim-input input:focus {
+  border-color: #d33;
+  box-shadow: 0 0 0 3px rgba(221, 51, 51, 0.08);
+}
+
+.gt2-dim-field[data-valid] .gt2-dim-input input {
+  border-color: #15803d;
+}
+
+.gt2-dim-field[data-valid] .gt2-dim-input input:focus {
+  border-color: #15803d;
+}
+
+.gt2-dim-err {
+  flex-basis: 100%;
+  padding-left: 44px;
+  margin: 0;
+  color: #d33;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .gt2-dim-unit {
@@ -1896,6 +1929,11 @@ textarea.gt2-input {
   grid-column: 1 / -1;
 }
 
+.gt2-fs-field--wide {
+  grid-column: 1 / -1;
+  max-width: 600px;
+}
+
 .gt2-fs-field label {
   font-size: 12.5px;
   font-weight: 600;
@@ -1926,6 +1964,32 @@ textarea.gt2-input {
   outline: none;
   border-color: var(--gt2-ink);
   box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.05);
+}
+
+/* 必填校验：未填提交变红、填入后变绿 */
+.gt2-fs-field[data-error] input,
+.gt2-fs-field[data-error] textarea {
+  border-color: #d33;
+}
+
+.gt2-fs-field[data-error] input:focus,
+.gt2-fs-field[data-error] textarea:focus {
+  border-color: #d33;
+  box-shadow: 0 0 0 3px rgba(221, 51, 51, 0.08);
+}
+
+.gt2-fs-field[data-valid] input {
+  border-color: #15803d;
+}
+
+.gt2-fs-field[data-valid] input:focus {
+  border-color: #15803d;
+}
+
+.gt2-fs-field-err {
+  color: #d33;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .gt2-fs-sub-block {

@@ -111,6 +111,8 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
   const [contact, setContact] = useState({ name: "", email: "" });
 
   const [error, setError] = useState<string | null>(null);
+  // 第四步必填字段错误提示（key: name / email / height / weight）
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [orderNo, setOrderNo] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -295,26 +297,39 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
     [maxStep]
   );
 
+  const clearFieldError = useCallback((k: string) => {
+    setFieldErrors((p) => {
+      if (!p[k]) return p;
+      const n = { ...p };
+      delete n[k];
+      return n;
+    });
+  }, []);
+
+  // 第四步必填校验：姓名 / 邮箱 / 身高 / 体重
+  const validateStep4 = useCallback(() => {
+    const errs: Record<string, string> = {};
+    if (!contact.name.trim()) errs.name = c.errName;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) errs.email = c.errEmail;
+    if (!dims.height.trim()) errs.height = c.errDimRequired;
+    if (!dims.weight.trim()) errs.weight = c.errDimRequired;
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }, [contact, dims, c]);
+
   const goNext = useCallback(() => {
     setError(null);
     if (step === 1 && !imageData) {
       setError(c.errImgRequired);
       return;
     }
-    if (step === 4) {
-      if (!contact.name.trim()) {
-        setError(c.errName);
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) {
-        setError(c.errEmail);
-        return;
-      }
+    if (step === 4 && !validateStep4()) {
+      return;
     }
     const next = Math.min(step + 1, 5);
     setStep(next);
     setMaxStep((m) => Math.max(m, next));
-  }, [step, imageData, contact, c]);
+  }, [step, imageData, validateStep4, c]);
 
   // ===== 需求描述拼接（与官网静态页 buildRequirements 完全一致） =====
   const buildRequirements = useCallback(() => {
@@ -366,13 +381,7 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
     setError(null);
-    if (!contact.name.trim()) {
-      setError(c.errName);
-      setStep(4);
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) {
-      setError(c.errEmail);
+    if (!validateStep4()) {
       setStep(4);
       return;
     }
@@ -434,7 +443,7 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, contact, imageData, imageName, buildRequirements, c]);
+  }, [submitting, contact, imageData, imageName, buildRequirements, validateStep4, c]);
 
   const handleCopy = useCallback(async () => {
     if (!orderNo) return;
@@ -694,30 +703,51 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
                     <b>{c.contactTitle}</b>
                   </div>
                   <div className="gt2-fs-grid">
-                    <div className="gt2-fs-field">
+                    <div
+                      className="gt2-fs-field gt2-fs-field--wide"
+                      data-error={!!fieldErrors.name || undefined}
+                      data-valid={!fieldErrors.name && contact.name.trim() ? true : undefined}
+                    >
                       <label>
                         {c.nameLabel} <em>*</em>
                       </label>
                       <input
                         type="text"
                         value={contact.name}
-                        onChange={(e) => setContact((p) => ({ ...p, name: e.target.value }))}
+                        onChange={(e) => {
+                          setContact((p) => ({ ...p, name: e.target.value }));
+                          clearFieldError("name");
+                        }}
                         placeholder={c.namePh}
                         maxLength={50}
                         autoComplete="name"
                       />
+                      {fieldErrors.name && <p className="gt2-fs-field-err">{fieldErrors.name}</p>}
                     </div>
-                    <div className="gt2-fs-field gt2-fs-field--full">
+                    <div
+                      className="gt2-fs-field gt2-fs-field--full"
+                      data-error={!!fieldErrors.email || undefined}
+                      data-valid={
+                        !fieldErrors.email &&
+                        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())
+                          ? true
+                          : undefined
+                      }
+                    >
                       <label>
                         {c.emailLabel} <em>*</em>
                       </label>
                       <input
                         type="email"
                         value={contact.email}
-                        onChange={(e) => setContact((p) => ({ ...p, email: e.target.value }))}
+                        onChange={(e) => {
+                          setContact((p) => ({ ...p, email: e.target.value }));
+                          clearFieldError("email");
+                        }}
                         placeholder={c.emailPh}
                         autoComplete="email"
                       />
+                      {fieldErrors.email && <p className="gt2-fs-field-err">{fieldErrors.email}</p>}
                     </div>
                   </div>
 
@@ -727,21 +757,40 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
                       <span>{c.bodyHint}</span>
                     </div>
                     <div className="gt2-dim-grid">
-                      {c.dims.map((dim) => (
-                        <div key={dim.key} className="gt2-dim-field">
-                          <span className="gt2-dim-label">{dim.label}</span>
-                          <div className="gt2-dim-input">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={dims[dim.key]}
-                              onChange={(e) => handleDimChange(dim.key, e.target.value)}
-                              aria-label={dim.label}
-                            />
-                            {dim.unit && <span className="gt2-dim-unit">{dim.unit}</span>}
+                      {c.dims.map((dim) => {
+                        const required = dim.key === "height" || dim.key === "weight";
+                        return (
+                          <div
+                            key={dim.key}
+                            className="gt2-dim-field"
+                            data-error={!!fieldErrors[dim.key] || undefined}
+                            data-valid={
+                              !fieldErrors[dim.key] && dims[dim.key].trim() ? true : undefined
+                            }
+                          >
+                            <span className="gt2-dim-label">
+                              {dim.label}
+                              {required && <em>*</em>}
+                            </span>
+                            <div className="gt2-dim-input">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={dims[dim.key]}
+                                onChange={(e) => {
+                                  handleDimChange(dim.key, e.target.value);
+                                  clearFieldError(dim.key);
+                                }}
+                                aria-label={dim.label}
+                              />
+                              {dim.unit && <span className="gt2-dim-unit">{dim.unit}</span>}
+                            </div>
+                            {fieldErrors[dim.key] && (
+                              <p className="gt2-dim-err">{fieldErrors[dim.key]}</p>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 

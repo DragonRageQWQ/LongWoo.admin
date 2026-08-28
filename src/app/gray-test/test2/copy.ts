@@ -126,6 +126,7 @@ export interface Gt2Copy {
     errImgLarge: string;
     errName: string;
     errEmail: string;
+    errDimRequired: string;
     errSubmit: string;
     errNetwork: string;
     errUploadAlert: string;
@@ -242,7 +243,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       priceTotal: "合计",
       contactTitle: "第四步：请填写您的数据与联系方式",
       bodyTitle: "身体数据",
-      bodyHint: "选填 · 便于预估尺寸",
+      bodyHint: "身高 / 体重为必填 · 其余选填 · 便于预估尺寸",
       socialLabel: "任意平台可以联系到您的账号（如：Bilibili QQ X...）",
       socialPh: "请输入您的社交平台账号",
       nameLabel: "姓名",
@@ -274,6 +275,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errImgLarge: "图片不能超过 20MB",
       errName: "请输入姓名",
       errEmail: "请输入有效的邮箱地址",
+      errDimRequired: "此项未填写",
       errSubmit: "提交失败，请稍后重试",
       errNetwork: "网络错误，请稍后重试",
       errUploadAlert: "设定图上传失败：{msg}。文件名已随订单保存，您可稍后登录个人中心补充设定图，或联系客服协助上传。",
@@ -416,7 +418,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       priceTotal: "Total",
       contactTitle: "Step 4: Your details & contact info",
       bodyTitle: "Body Measurements",
-      bodyHint: "Optional · helps us estimate sizing",
+      bodyHint: "Height & weight required · rest optional · helps us estimate sizing",
       socialLabel: "Any account where we can reach you (e.g. Bilibili QQ X...)",
       socialPh: "Enter your social account",
       nameLabel: "Name",
@@ -448,6 +450,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errImgLarge: "Image must be under 20MB",
       errName: "Please enter your name",
       errEmail: "Please enter a valid email address",
+      errDimRequired: "Required",
       errSubmit: "Failed to submit, please retry",
       errNetwork: "Network error, please retry",
       errUploadAlert: "Reference sheet upload failed: {msg}. The file name was saved with the order — you can add it later from your profile, or contact support.",
