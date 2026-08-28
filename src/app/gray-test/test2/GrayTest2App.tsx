@@ -5,6 +5,7 @@ import { COPY, GT2_TABS, GT2_TAB_STORAGE_KEY, type Gt2Lang, type Gt2TabId } from
 import AgentPanel from "./components/AgentPanel";
 import FursuitPanel from "./components/FursuitPanel";
 import EntryPanel from "./components/EntryPanel";
+import CheckPanel from "./components/CheckPanel";
 import UserBubble from "./components/UserBubble";
 import "./test2.css";
 
@@ -156,6 +157,21 @@ export default function GrayTest2App() {
     }
   }, []);
 
+  // URL 参数支持：?tab=check&no=&email=（委托提交成功页“去查询进度”站内跳转）
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (tab && GT2_TABS.some((t) => t.id === tab)) {
+      setActive(tab as Gt2TabId);
+      try {
+        sessionStorage.setItem(GT2_TAB_STORAGE_KEY, tab);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!drawerOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -271,7 +287,7 @@ export default function GrayTest2App() {
             <EntryPanel entry={copy.entries.shop} mark="03" />
           </section>
           <section className="gt2-panel" data-active={active === "check"} inert={!isActive("check")}>
-            <EntryPanel entry={copy.entries.check} mark="04" />
+            <CheckPanel lang={lang} />
           </section>
           <section className="gt2-panel" data-active={active === "about"} inert={!isActive("about")}>
             <EntryPanel entry={copy.entries.about} mark="05" />

@@ -131,6 +131,33 @@ export interface Gt2Copy {
     errNetwork: string;
     errUploadAlert: string;
   };
+  checkPanel: {
+    orderNoLabel: string;
+    orderNoPh: string;
+    emailLabel: string;
+    emailPh: string;
+    btn: string;
+    loading: string;
+    errOrderNoRequired: string;
+    errEmailRequired: string;
+    errEmailInvalid: string;
+    errQueryFailed: string;
+    errQueryUnknown: string;
+    customerName: string;
+    phone: string;
+    email: string;
+    serviceType: string;
+    notSpecified: string;
+    desc: string;
+    designImage: string;
+    designImageMissing: string;
+    estimateAmount: string;
+    note: string;
+    deliveryLink: string;
+    replies: string;
+    createdAt: string;
+    status: Record<string, string>;
+  };
   entries: Record<"shop" | "check" | "about", Gt2EntryCopy>;
   bubble: {
     signupEn: string;
@@ -279,6 +306,41 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errSubmit: "提交失败，请稍后重试",
       errNetwork: "网络错误，请稍后重试",
       errUploadAlert: "设定图上传失败：{msg}。文件名已随订单保存，您可稍后登录个人中心补充设定图，或联系客服协助上传。",
+    },
+    checkPanel: {
+      orderNoLabel: "委托单号",
+      orderNoPh: "如 LW20250101001",
+      emailLabel: "邮箱",
+      emailPh: "请输入提交委托时填写的邮箱",
+      btn: "查询委托",
+      loading: "查询中…",
+      errOrderNoRequired: "请输入委托单号",
+      errEmailRequired: "请输入邮箱",
+      errEmailInvalid: "请输入有效的邮箱地址",
+      errQueryFailed: "查询失败，请检查单号与邮箱是否正确",
+      errQueryUnknown: "查询时发生未知错误，请稍后重试",
+      customerName: "客户姓名",
+      phone: "联系电话",
+      email: "邮箱",
+      serviceType: "服务类型",
+      notSpecified: "未指定",
+      desc: "需求描述",
+      designImage: "设定图",
+      designImageMissing: "设定图上传未成功，如有疑问请联系客服",
+      estimateAmount: "估价金额",
+      note: "备注：",
+      deliveryLink: "交付链接",
+      replies: "回复记录",
+      createdAt: "创建时间",
+      status: {
+        pending: "待估价",
+        estimated: "已估价",
+        accepted: "已接单",
+        rejected: "已拒单",
+        processing: "处理中",
+        delivered: "已交付",
+        completed: "已完成",
+      },
     },
     entries: {
       shop: {
@@ -454,6 +516,41 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errSubmit: "Failed to submit, please retry",
       errNetwork: "Network error, please retry",
       errUploadAlert: "Reference sheet upload failed: {msg}. The file name was saved with the order — you can add it later from your profile, or contact support.",
+    },
+    checkPanel: {
+      orderNoLabel: "Order No.",
+      orderNoPh: "e.g. LW20250101001",
+      emailLabel: "Email",
+      emailPh: "Enter the email used when submitting the order",
+      btn: "Track Order",
+      loading: "Searching…",
+      errOrderNoRequired: "Please enter the order number",
+      errEmailRequired: "Please enter your email address",
+      errEmailInvalid: "Please enter a valid email address",
+      errQueryFailed: "Query failed. Check the order number and email",
+      errQueryUnknown: "An unknown error occurred. Please try again",
+      customerName: "Customer",
+      phone: "Phone",
+      email: "Email",
+      serviceType: "Service",
+      notSpecified: "Not specified",
+      desc: "Requirements",
+      designImage: "Design Image",
+      designImageMissing: "Design image failed to upload. Please contact support if needed",
+      estimateAmount: "Estimated Amount",
+      note: "Note: ",
+      deliveryLink: "Delivery Link",
+      replies: "Replies",
+      createdAt: "Created",
+      status: {
+        pending: "Pending",
+        estimated: "Estimated",
+        accepted: "Accepted",
+        rejected: "Rejected",
+        processing: "In Progress",
+        delivered: "Delivered",
+        completed: "Completed",
+      },
     },
     entries: {
       shop: {

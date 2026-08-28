@@ -823,7 +823,10 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
                     <button type="button" className="gt2-btn-ghost" onClick={handleCopy} data-copied={copied}>
                       {copied ? c.copied : c.copyBtn}
                     </button>
-                    <a className="gt2-btn-solid gt2-fs-query" href="/order/query" target="_blank" rel="noreferrer">
+                    <a
+                      className="gt2-btn-solid gt2-fs-query"
+                      href={`/gray-test/test2?tab=check&no=${encodeURIComponent(orderNo ?? "")}&email=${encodeURIComponent(contact.email.trim())}`}
+                    >
                       {c.queryLink}
                     </a>
                   </div>
