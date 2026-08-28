@@ -27,7 +27,6 @@ export const EN_EXTRA: Record<string, string> = {
   'profile.queryOrder': 'Query Order',
   'profile.viewOrderProgress': 'Check order progress',
   'profile.myOrders': 'My Orders',
-  'profile.claimOrder': 'Claim Previous Order',
   'profile.viewMore': 'View More',
   'profile.goToQueryOrder': 'Go to Order Inquiry',
   'profile.noOrders': 'No Orders Yet',
@@ -63,12 +62,6 @@ export const EN_EXTRA: Record<string, string> = {
   'profile.savePassword': 'Save Password',
   'profile.passwordHint': 'Note: password must be 6-64 characters. After setting it, you can sign in with email + password.',
   'profile.close': 'Close',
-  'profile.claimDesc': 'Bind commissions submitted without signing in to your current account. After binding, you can track progress in "My Orders" and receive in-app notifications.',
-  'profile.claimNoPlaceholder': 'e.g. LW202608110032',
-  'profile.claimEmailLabel': 'Order Email',
-  'profile.claimEmailPlaceholder': 'Enter the email used when placing the order',
-  'profile.claiming': 'Claiming...',
-  'profile.confirmClaim': 'Confirm Claim',
 
   // ===== AI 工坊 =====
   'ai.characters.loading': 'Waking Linglong…',
@@ -141,10 +134,6 @@ export const EN_EXTRA: Record<string, string> = {
   'ai.layout.desc': 'Create your own AI character and chat freely. LongWoo AI roleplay.',
 
   // ===== 个人中心 · 运行时消息 =====
-  'profile.err.claimRequired': 'Please enter the order number and email',
-  'profile.err.claimSuccess': 'Claim successful! The commission has been bound to your account',
-  'profile.err.claimFailed': 'Claim failed',
-  'profile.err.claimUnknown': 'An unknown error occurred while claiming',
   'profile.err.profileInitFailed': 'Failed to initialize profile. Please sign out and sign in again',
   'profile.err.loadProfileFailed': 'Failed to load user information',
   'profile.err.ordersLoadFailed': 'Failed to load orders',

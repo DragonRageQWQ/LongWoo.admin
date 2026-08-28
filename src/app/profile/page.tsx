@@ -15,7 +15,7 @@ export const metadata = {
  * 读取用户资料与订单列表，初始数据随 HTML 直出；
  * 客户端 ProfileShell 不再发起点位请求（原先 2 个并行 useEffect 加载，
  * 进入页面需等待水合 + 请求往返 + loading 骨架闪烁）。
- * 交互（编辑昵称/头像/密码/认领/退出）仍由客户端组件处理。
+ * 交互（编辑昵称/头像/密码/退出）仍由客户端组件处理。
  */
 export default async function ProfilePage() {
   // 服务端鉴权 + 数据预取并行（PERF-04）：

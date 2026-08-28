@@ -27,7 +27,6 @@ export const ZH_EXTRA: Record<string, string> = {
   'profile.queryOrder': '查询订单',
   'profile.viewOrderProgress': '查看订单进度',
   'profile.myOrders': '我的订单',
-  'profile.claimOrder': '认领历史订单',
   'profile.viewMore': '查询更多',
   'profile.goToQueryOrder': '前往查询订单',
   'profile.noOrders': '暂无订单',
@@ -63,12 +62,6 @@ export const ZH_EXTRA: Record<string, string> = {
   'profile.savePassword': '保存密码',
   'profile.passwordHint': '提示：密码长度 6-64 位。设置后可使用邮箱 + 密码直接登录。',
   'profile.close': '关闭',
-  'profile.claimDesc': '将您之前未登录状态下提交的委托单绑定到当前账号，绑定后可在「我的订单」查看进度并接收站内通知。',
-  'profile.claimNoPlaceholder': '例如 LW202608110032',
-  'profile.claimEmailLabel': '下单邮箱',
-  'profile.claimEmailPlaceholder': '请输入下单时填写的邮箱',
-  'profile.claiming': '认领中...',
-  'profile.confirmClaim': '确认认领',
 
   // ===== AI 工坊 =====
   'ai.characters.loading': '正在唤醒灵龙…',
@@ -141,10 +134,6 @@ export const ZH_EXTRA: Record<string, string> = {
   'ai.layout.desc': '创建你的专属 AI 角色，和它自由对话。LongWoo 龙坞 AI 角色扮演。',
 
   // ===== 个人中心 · 运行时消息 =====
-  'profile.err.claimRequired': '请填写订单号和邮箱',
-  'profile.err.claimSuccess': '认领成功！该委托单已绑定到您的账号',
-  'profile.err.claimFailed': '认领失败',
-  'profile.err.claimUnknown': '认领时发生未知错误',
   'profile.err.profileInitFailed': '用户资料初始化失败，请退出后重新登录',
   'profile.err.loadProfileFailed': '加载用户信息失败',
   'profile.err.ordersLoadFailed': '加载订单失败',
