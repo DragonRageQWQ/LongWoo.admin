@@ -161,10 +161,12 @@ export interface Gt2Copy {
   shopPanel: {
     dropsEntryKicker: string;
     dropsEntryTitle: string;
+    dropsEntryTitleEn: string;
     dropsEntryDesc: string;
     dropsEntryCta: string;
     peripheryEntryKicker: string;
     peripheryEntryTitle: string;
+    peripheryEntryTitleEn: string;
     peripheryEntryDesc: string;
     peripheryEntryCta: string;
     backEntries: string;
@@ -425,10 +427,12 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
     shopPanel: {
       dropsEntryKicker: "01",
       dropsEntryTitle: "现货掉落",
+      dropsEntryTitleEn: "DROP FURSUITS",
       dropsEntryDesc: "预设兽装定期掉落，现货与预售同步开放。无需漫长等待，遇见即是缘分。",
       dropsEntryCta: "进入掉落",
       peripheryEntryKicker: "02",
       peripheryEntryTitle: "龙坞周边",
+      peripheryEntryTitleEn: "LONGWOO MERCH",
       peripheryEntryDesc: "周边商品筹备中，敬请期待。",
       peripheryEntryCta: "未开放",
       backEntries: "返回商店",
@@ -715,10 +719,12 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
     shopPanel: {
       dropsEntryKicker: "01",
       dropsEntryTitle: "Drop Fursuits",
+      dropsEntryTitleEn: "DROP FURSUITS",
       dropsEntryDesc: "Pre-made fursuits drop regularly — in stock and pre-order at the same time. No long waits.",
       dropsEntryCta: "Browse Drops",
       peripheryEntryKicker: "02",
       peripheryEntryTitle: "LongWoo Merch",
+      peripheryEntryTitleEn: "LONGWOO MERCH",
       peripheryEntryDesc: "Merchandise is in preparation. Stay tuned.",
       peripheryEntryCta: "Coming Soon",
       backEntries: "Back to Shop",

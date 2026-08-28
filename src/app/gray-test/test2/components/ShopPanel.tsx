@@ -366,21 +366,13 @@ export default function ShopPanel({ lang }: { lang: Gt2Lang }) {
 
       <div className="gt2-shop-entries gt2-stagger" style={{ "--i": 3 } as React.CSSProperties}>
         <button type="button" className="gt2-shop-entry" onClick={() => setView("drops")}>
-          <span className="gt2-shop-entry-num">{c.dropsEntryKicker}</span>
-          <div className="gt2-shop-entry-main">
-            <h2 className="gt2-shop-entry-title">{c.dropsEntryTitle}</h2>
-            <p className="gt2-shop-entry-desc">{c.dropsEntryDesc}</p>
-          </div>
-          <span className="gt2-shop-entry-cta">{c.dropsEntryCta} →</span>
+          <span className="gt2-shop-entry-en">{c.dropsEntryTitleEn}</span>
+          <span className="gt2-shop-entry-zh">{c.dropsEntryTitle}</span>
         </button>
 
         <div className="gt2-shop-entry gt2-shop-entry--disabled" aria-disabled="true">
-          <span className="gt2-shop-entry-num">{c.peripheryEntryKicker}</span>
-          <div className="gt2-shop-entry-main">
-            <h2 className="gt2-shop-entry-title">{c.peripheryEntryTitle}</h2>
-            <p className="gt2-shop-entry-desc">{c.peripheryEntryDesc}</p>
-          </div>
-          <span className="gt2-shop-entry-cta">{c.peripheryEntryCta}</span>
+          <span className="gt2-shop-entry-en">{c.peripheryEntryTitleEn}</span>
+          <span className="gt2-shop-entry-zh">{c.peripheryEntryTitle}</span>
         </div>
       </div>
     </div>

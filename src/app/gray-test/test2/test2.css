@@ -3241,13 +3241,14 @@ textarea.gt2-input {
 .gt2-shop-entry {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 26px 24px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 44px 24px;
   border: 1px solid var(--gt2-line);
   border-radius: 20px;
   background: var(--gt2-paper);
-  text-align: left;
+  text-align: center;
   font-family: inherit;
   cursor: pointer;
   transition: border-color 0.3s var(--gt2-ease), transform 0.3s var(--gt2-ease), box-shadow 0.3s var(--gt2-ease);
@@ -3259,36 +3260,22 @@ textarea.gt2-input {
   box-shadow: 0 12px 32px rgba(10, 10, 10, 0.06);
 }
 
-.gt2-shop-entry-num {
-  font-family: var(--gt2-mono);
-  font-size: 12px;
-  letter-spacing: 0.14em;
+.gt2-shop-entry-en {
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   color: #a3a3a3;
 }
 
-.gt2-shop-entry-main {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.gt2-shop-entry-title {
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+.gt2-shop-entry-zh {
+  font-size: 13px;
+  line-height: 1.3;
+  letter-spacing: 0.18em;
   color: var(--gt2-ink);
 }
 
-.gt2-shop-entry-desc {
-  font-size: 13px;
-  line-height: 1.8;
-  color: #737373;
-}
-
-.gt2-shop-entry-cta {
-  margin-top: 6px;
-  font-size: 13px;
-  font-weight: 600;
+.gt2-shop-entry:hover .gt2-shop-entry-en {
   color: var(--gt2-ink);
 }
 
@@ -3303,13 +3290,12 @@ textarea.gt2-input {
   box-shadow: none;
 }
 
-.gt2-shop-entry--disabled .gt2-shop-entry-title,
-.gt2-shop-entry--disabled .gt2-shop-entry-cta {
-  color: #b3b3b3;
+.gt2-shop-entry--disabled .gt2-shop-entry-en {
+  color: #c4c4c4;
 }
 
-.gt2-shop-entry--disabled .gt2-shop-entry-desc {
-  color: #c4c4c4;
+.gt2-shop-entry--disabled .gt2-shop-entry-zh {
+  color: #b3b3b3;
 }
 
 /* 返回按钮 */
