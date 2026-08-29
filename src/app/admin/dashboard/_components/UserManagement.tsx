@@ -33,7 +33,7 @@ import type { UserRole } from "@/types/database";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 // 分页大小
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 // 用户项类型（与 listAllUsers 返回的 data 结构一致）
 interface UserItem {
