@@ -1,0 +1,389 @@
+/* ============================================================
+   登录页（/login）· 新官网风格统一 v2.0.0
+   设计语言：纸墨极简（Ink on Paper），与官网首页/个人中心一致
+   ============================================================ */
+.lf-root {
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ink: #0a0a0a;
+  --soft: #737373;
+  --mute: #9ca3af;
+  --line: #e8e8e8;
+  --paper: #ffffff;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "Menlo", monospace;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "MiSans VF", "MiSans", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== 顶部栏 ===== */
+.lf-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.lf-top-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lf-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.lf-brand img {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.lf-brand b {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.lf-brand span {
+  font-size: 11px;
+  color: var(--mute);
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+}
+
+/* ===== 主体 ===== */
+.lf-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px 64px;
+}
+
+.lf-card {
+  width: 100%;
+  max-width: 440px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  padding: 40px 38px 34px;
+  transition: border-color 0.3s var(--ease);
+}
+
+.lf-card:hover {
+  border-color: #d9d9d9;
+}
+
+.lf-kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--mute);
+  margin: 0 0 14px;
+}
+
+.lf-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.lf-sub {
+  font-size: 14px;
+  color: var(--soft);
+  margin: 8px 0 0;
+  line-height: 1.6;
+}
+
+/* ===== Tab 切换 ===== */
+.lf-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  margin: 30px 0 24px;
+}
+
+.lf-tab {
+  flex: 1;
+  position: relative;
+  padding: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--mute);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s var(--ease);
+  font-family: inherit;
+}
+
+.lf-tab:hover {
+  color: var(--soft);
+}
+
+.lf-tab--active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.lf-tab--active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -1px;
+  width: 26px;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+
+/* ===== 提示 ===== */
+.lf-msg {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lf-msg--err {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.lf-msg--ok {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+/* ===== 表单 ===== */
+.lf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.lf-field label {
+  display: block;
+  font-size: 13px;
+  color: var(--soft);
+  margin-bottom: 8px;
+}
+
+.lf-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.lf-field-head label {
+  margin-bottom: 0;
+}
+
+.lf-input-wrap {
+  position: relative;
+}
+
+.lf-input {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 14px;
+  color: var(--ink);
+  background: #fafaf8;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.3s var(--ease), background 0.3s var(--ease);
+}
+
+.lf-input::placeholder {
+  color: var(--mute);
+}
+
+.lf-input:focus {
+  border-color: var(--ink);
+  background: #fff;
+}
+
+.lf-input--code {
+  letter-spacing: 0.3em;
+  font-family: var(--mono);
+}
+
+.lf-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.lf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+  font-family: inherit;
+}
+
+.lf-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.lf-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.lf-btn--outline {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+  white-space: nowrap;
+  min-width: 108px;
+  font-size: 13px;
+  padding: 11px 14px;
+}
+
+.lf-btn--outline:hover {
+  border-color: var(--ink);
+  background: #fafaf8;
+}
+
+.lf-btn--ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.lf-btn--qq {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.lf-btn--qq:hover {
+  border-color: #12b7f5;
+  color: #0e9fd8;
+  background: #f0fbff;
+}
+
+.lf-forgot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--mute);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  transition: color 0.3s var(--ease);
+  font-family: inherit;
+}
+
+.lf-forgot:hover {
+  color: var(--ink);
+}
+
+/* QQ 面板 */
+.lf-qq {
+  text-align: center;
+  padding: 10px 0 2px;
+}
+
+.lf-qq-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #fafaf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #12b7f5;
+}
+
+.lf-qq-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.lf-qq-desc {
+  font-size: 13px;
+  color: var(--mute);
+  margin: 0 0 22px;
+}
+
+.lf-qq-note {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--mute);
+}
+
+/* ===== 底部 ===== */
+.lf-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 26px;
+  font-size: 13px;
+  color: var(--soft);
+  text-decoration: none;
+  transition: color 0.3s var(--ease);
+}
+
+.lf-back:hover {
+  color: var(--ink);
+}
+
+.lf-foot {
+  border-top: 1px solid var(--line);
+  padding: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.lf-foot p {
+  margin: 0;
+}
+
+@media (max-width: 560px) {
+  .lf-card {
+    padding: 28px 22px 24px;
+  }
+  .lf-brand span {
+    display: none;
+  }
+}

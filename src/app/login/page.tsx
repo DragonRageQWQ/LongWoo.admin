@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Mail, ArrowLeft, Sparkles, Lock, KeyRound } from "lucide-react";
+import { Loader2, ArrowLeft, KeyRound } from "lucide-react";
 import {
   sendEmailOtp,
   signInWithQQ,
@@ -15,6 +15,7 @@ import {
 import PasswordResetModal from "@/components/auth/PasswordResetModal";
 import LangSwitcher from "@/components/i18n/LangSwitcher";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
+import "./login.css";
 
 type LoginTab = "email" | "password" | "qq";
 
@@ -314,67 +315,31 @@ function LoginForm() {
       ];
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-lw-gray py-8 px-4">
-      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-xl overflow-hidden grid md:grid-cols-2">
-        {/* ============ 左侧品牌区 ============ */}
-        <div className="relative hidden md:flex flex-col justify-between p-10 bg-gradient-to-br from-lw-black via-gray-900 to-lw-accent text-white overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-10 right-10 w-40 h-40 rounded-full bg-white blur-3xl" />
-            <div className="absolute bottom-20 left-10 w-32 h-32 rounded-full bg-lw-accent blur-2xl" />
-          </div>
-
-          <div className="relative z-10">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-2xl font-bold tracking-tight">
-                LongWoo Studio
-              </span>
-            </Link>
-          </div>
-
-          <div className="relative z-10 space-y-4">
-            <h2 className="text-3xl font-bold leading-tight">
-              {t("login.brand.title1")}
-              <br />
-              {t("login.brand.title2")}
-            </h2>
-            <p className="text-white/70 text-sm leading-relaxed">
-              {t("login.brand.desc")}
-            </p>
-          </div>
-
-          <div className="relative z-10 text-xs text-white/50">
-            © {new Date().getFullYear()} LongWoo Studio. All rights reserved.
-          </div>
+    <div className="lf-root">
+      {/* 顶部栏（墨色极简） */}
+      <header className="lf-top">
+        <div className="lf-top-inner">
+          <Link href="/" className="lf-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/longwoo-logo.svg" alt="LongWoo 龙坞" />
+            <b>龙坞</b>
+            <span>LongWoo Studio</span>
+          </Link>
+          <LangSwitcher />
         </div>
+      </header>
 
-        {/* ============ 右侧登录表单区 ============ */}
-        <div className="flex flex-col p-6 sm:p-10">
-          {/* 语言切换（登录页无 Header，置于表单区右上角） */}
-          <div className="flex justify-end mb-2">
-            <LangSwitcher />
-          </div>
-          <div className="md:hidden mb-6 text-center">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-lw-accent flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-lw-black">
-                LongWoo Studio
-              </span>
-            </Link>
+      {/* 主体 */}
+      <main className="lf-main">
+        <div className="lf-card">
+          <div>
+            <p className="lf-kicker">LONGWOO · ACCESS</p>
+            <h1 className="lf-title">{t("login.title")}</h1>
+            <p className="lf-sub">{t("login.subtitle")}</p>
           </div>
 
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-lw-black">{t("login.title")}</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {t("login.subtitle")}
-            </p>
-          </div>
-
-          <div className="flex border-b border-gray-200 mb-6" role="tablist">
+          {/* 登录方式 Tab（保留 id/role 结构） */}
+          <div className="lf-tabs" role="tablist">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -383,243 +348,198 @@ function LoginForm() {
                 aria-selected={activeTab === tab.key}
                 aria-controls={`tabpanel-${tab.key}`}
                 onClick={() => handleTabChange(tab.key)}
-                className={`flex-1 pb-3 text-sm font-medium transition-colors relative cursor-pointer ${
-                  activeTab === tab.key
-                    ? "text-lw-accent"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
+                className={`lf-tab ${activeTab === tab.key ? "lf-tab--active" : ""}`}
               >
                 {tab.label}
-                {activeTab === tab.key && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-lw-accent rounded-full" />
-                )}
               </button>
             ))}
           </div>
 
-          {error && (
-            <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-              {error}
-            </div>
-          )}
+          {error && <div className="lf-msg lf-msg--err">{error}</div>}
 
-          {info && !error && (
-            <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600">
-              {info}
-            </div>
-          )}
+          {info && !error && <div className="lf-msg lf-msg--ok">{info}</div>}
 
-          <div className="flex-1">
-            {activeTab === "email" && (
-              <form
-                onSubmit={handleVerifyEmailOtp}
-                role="tabpanel"
-                id="tabpanel-email"
-                aria-labelledby="tab-email"
-                className="space-y-5"
-              >
-                <div>
-                  <label
-                    htmlFor="email-input"
-                    className="block text-sm font-medium text-lw-black mb-1.5"
-                  >
-                    邮箱地址
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      id="email-input"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder={t("login.email.placeholder")}
-                      autoComplete="email"
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="email-code"
-                    className="block text-sm font-medium text-lw-black mb-1.5"
-                  >
-                    {t("login.code.label")}
-                  </label>
-                  <div className="flex gap-3">
-                    <input
-                      id="email-code"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      value={emailCode}
-                      onChange={(e) =>
-                        setEmailCode(e.target.value.replace(/\D/g, ""))
-                      }
-                      placeholder={t("login.code.placeholder")}
-                      className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition tracking-widest"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSendEmailOtp}
-                      disabled={
-                        emailSending ||
-                        emailCountdown > 0 ||
-                        !email
-                      }
-                      className="px-4 py-2.5 text-sm font-medium text-lw-accent border border-lw-accent rounded-lg hover:bg-blue-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-[110px]"
-                    >
-                      {emailSending ? (
-                        <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                      ) : emailCountdown > 0 ? (
-                        `${emailCountdown}s 后重发`
-                      ) : (
-                        t("login.btn.email")
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={emailVerifying}
-                  className="w-full py-3 bg-lw-accent text-white rounded-lg font-medium hover:bg-blue-700 active:bg-blue-800 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {emailVerifying && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {emailVerifying ? t("login.btn.login") + "..." : t("login.btn.login")}
-                </button>
-              </form>
-            )}
-
-            {activeTab === "password" && (
-              <form
-                onSubmit={handlePasswordLogin}
-                role="tabpanel"
-                id="tabpanel-password"
-                aria-labelledby="tab-password"
-                className="space-y-5"
-              >
-                <div>
-                  <label
-                    htmlFor="password-email-input"
-                    className="block text-sm font-medium text-lw-black mb-1.5"
-                  >
-                    {t("login.email.label")}
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      id="password-email-input"
-                      type="email"
-                      value={passwordEmail}
-                      onChange={(e) => setPasswordEmail(e.target.value)}
-                      onBlur={handlePasswordEmailBlur}
-                      placeholder={t("login.email.placeholder")}
-                      autoComplete="email"
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label
-                      htmlFor="password-input"
-                      className="block text-sm font-medium text-lw-black"
-                    >
-                      {t("login.password.label")}
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setResetOpen(true)}
-                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-lw-accent transition-colors cursor-pointer"
-                    >
-                      <KeyRound className="w-3 h-3" />
-                      {t("login.forgot")}
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      id="password-input"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={t("login.password.placeholder")}
-                      autoComplete="current-password"
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lw-accent focus:border-transparent transition"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={passwordLoading || passwordChecking}
-                  className="w-full py-3 bg-lw-accent text-white rounded-lg font-medium hover:bg-blue-700 active:bg-blue-800 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {(passwordLoading || passwordChecking) && (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  )}
-                  {passwordLoading
-                    ? t("login.btn.login") + "..."
-                    : passwordChecking
-                    ? t("login.btn.login") + "..."
-                    : t("login.btn.login")}
-                </button>
-              </form>
-            )}
-
-            {activeTab === "qq" && (
-              <div
-                role="tabpanel"
-                id="tabpanel-qq"
-                aria-labelledby="tab-qq"
-                className="space-y-6"
-              >
-                <div className="text-center py-6">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-[#12B7F5]/10 flex items-center justify-center mb-4">
-                    <QQIcon className="w-8 h-8 text-[#12B7F5]" />
-                  </div>
-                  <h3 className="text-lg font-medium text-lw-black mb-1">
-                    {t("login.tab.qq")} 登录
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    点击下方按钮使用 QQ 账号快捷登录
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleQQLogin}
-                  disabled={oauthLoading}
-                  className="w-full py-3 bg-[#12B7F5] text-white rounded-lg font-medium hover:bg-[#0ea5e0] active:bg-[#0c95d0] transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {oauthLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <QQIcon className="w-5 h-5" />
-                  )}
-                  {oauthLoading ? "正在跳转..." : t("login.btn.qq")}
-                </button>
-
-                <p className="text-center text-xs text-gray-400">
-                  首次使用 QQ 登录将自动注册账号
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-gray-100">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-lw-accent transition-colors"
+          {activeTab === "email" && (
+            <form
+              onSubmit={handleVerifyEmailOtp}
+              role="tabpanel"
+              id="tabpanel-email"
+              aria-labelledby="tab-email"
+              className="lf-form"
             >
-              <ArrowLeft className="w-4 h-4" />
-              返回首页
-            </Link>
-          </div>
+              <div className="lf-field">
+                <label htmlFor="email-input">邮箱地址</label>
+                <div className="lf-input-wrap">
+                  <input
+                    id="email-input"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t("login.email.placeholder")}
+                    autoComplete="email"
+                    className="lf-input"
+                  />
+                </div>
+              </div>
+
+              <div className="lf-field">
+                <label htmlFor="email-code">{t("login.code.label")}</label>
+                <div className="lf-input-row">
+                  <input
+                    id="email-code"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={emailCode}
+                    onChange={(e) =>
+                      setEmailCode(e.target.value.replace(/\D/g, ""))
+                    }
+                    placeholder={t("login.code.placeholder")}
+                    className="lf-input lf-input--code"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendEmailOtp}
+                    disabled={
+                      emailSending ||
+                      emailCountdown > 0 ||
+                      !email
+                    }
+                    className="lf-btn lf-btn--outline"
+                  >
+                    {emailSending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                    ) : emailCountdown > 0 ? (
+                      `${emailCountdown}s 后重发`
+                    ) : (
+                      t("login.btn.email")
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={emailVerifying}
+                className="lf-btn"
+              >
+                {emailVerifying && <Loader2 className="w-4 h-4 animate-spin" />}
+                {emailVerifying ? t("login.btn.login") + "..." : t("login.btn.login")}
+              </button>
+            </form>
+          )}
+
+          {activeTab === "password" && (
+            <form
+              onSubmit={handlePasswordLogin}
+              role="tabpanel"
+              id="tabpanel-password"
+              aria-labelledby="tab-password"
+              className="lf-form"
+            >
+              <div className="lf-field">
+                <label htmlFor="password-email-input">
+                  {t("login.email.label")}
+                </label>
+                <div className="lf-input-wrap">
+                  <input
+                    id="password-email-input"
+                    type="email"
+                    value={passwordEmail}
+                    onChange={(e) => setPasswordEmail(e.target.value)}
+                    onBlur={handlePasswordEmailBlur}
+                    placeholder={t("login.email.placeholder")}
+                    autoComplete="email"
+                    className="lf-input"
+                  />
+                </div>
+              </div>
+
+              <div className="lf-field">
+                <div className="lf-field-head">
+                  <label htmlFor="password-input">
+                    {t("login.password.label")}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setResetOpen(true)}
+                    className="lf-forgot"
+                  >
+                    <KeyRound className="w-3 h-3" />
+                    {t("login.forgot")}
+                  </button>
+                </div>
+                <div className="lf-input-wrap">
+                  <input
+                    id="password-input"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t("login.password.placeholder")}
+                    autoComplete="current-password"
+                    className="lf-input"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={passwordLoading || passwordChecking}
+                className="lf-btn"
+              >
+                {(passwordLoading || passwordChecking) && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                {passwordLoading
+                  ? t("login.btn.login") + "..."
+                  : passwordChecking
+                  ? t("login.btn.login") + "..."
+                  : t("login.btn.login")}
+              </button>
+            </form>
+          )}
+
+          {activeTab === "qq" && (
+            <div
+              role="tabpanel"
+              id="tabpanel-qq"
+              aria-labelledby="tab-qq"
+              className="lf-qq"
+            >
+              <div className="lf-qq-icon">
+                <QQIcon className="w-6 h-6" />
+              </div>
+              <h3 className="lf-qq-title">{t("login.tab.qq")} 登录</h3>
+              <p className="lf-qq-desc">点击下方按钮使用 QQ 账号快捷登录</p>
+
+              <button
+                type="button"
+                onClick={handleQQLogin}
+                disabled={oauthLoading}
+                className="lf-btn lf-btn--qq"
+              >
+                {oauthLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <QQIcon className="w-5 h-5" />
+                )}
+                {oauthLoading ? "正在跳转..." : t("login.btn.qq")}
+              </button>
+
+              <p className="lf-qq-note">首次使用 QQ 登录将自动注册账号</p>
+            </div>
+          )}
+
+          <Link href="/" className="lf-back">
+            <ArrowLeft className="w-4 h-4" />
+            返回首页
+          </Link>
         </div>
-      </div>
+      </main>
+
+      <footer className="lf-foot">
+        <p>© {new Date().getFullYear()} LongWoo Studio. All rights reserved.</p>
+      </footer>
 
       {/* 忘记密码弹窗（邮箱验证码重置，无需旧密码） */}
       <PasswordResetModal
@@ -635,8 +555,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-lw-gray">
-          <Loader2 className="w-6 h-6 animate-spin text-lw-accent" />
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
         </div>
       }
     >
