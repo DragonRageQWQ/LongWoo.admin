@@ -23,9 +23,12 @@ export const metadata: Metadata = {
   icons: {
     icon: "/longwoo-logo.svg",
   },
-  // 百度搜索资源平台站点验证（验证成功后请勿删除该标签）
+  // 站点验证标记（验证成功后请勿删除）
+  // - baidu-site-verification：百度搜索资源平台
+  // - msvalidate.01：Bing Webmaster Tools
   other: {
     "baidu-site-verification": "codeva-Kmb0PZ996R",
+    "msvalidate.01": "2A1B1E3C56923C2726C51FFD21114E69",
   },
   openGraph: {
     title: "LongWoo 龙坞 - 角色创意与定制工作室",
