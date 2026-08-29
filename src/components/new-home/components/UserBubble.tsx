@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Bell, Loader2, LogOut, Shield, UserRound } from "lucide-react";
 import { useSession, clearSessionCache } from "@/components/providers/SessionProvider";
 import { logoutUser } from "@/actions/auth-actions";
@@ -32,6 +33,7 @@ export default function UserBubble({
 }) {
   const c = COPY[lang].bubble;
   const { profile } = useSession();
+  const router = useRouter();
 
   const [panel, setPanel] = useState<PanelId>("none");
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -40,6 +42,16 @@ export default function UserBubble({
   const [loadError, setLoadError] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  // 性能优化（PERF-09）：账户菜单展开时立即预取个人中心/管理后台的 RSC，
+  // 用户点击"个人中心"时命中预载缓存，页面（含 loading 骨架）即时呈现，
+  // 消除点击后的服务端往返等待（原约 1.3s）。
+  const isAdmin = profile?.role === "admin";
+  useEffect(() => {
+    if (panel !== "account") return;
+    router.prefetch("/profile");
+    if (isAdmin) router.prefetch("/admin/dashboard");
+  }, [panel, isAdmin, router]);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -139,7 +151,6 @@ export default function UserBubble({
   }, []);
 
   const displayName = profile?.display_name || "";
-  const isAdmin = profile?.role === "admin";
 
   return (
     <div className="gt2-dock" ref={wrapRef}>
@@ -254,14 +265,12 @@ export default function UserBubble({
 
             {panel === "account" && (
               <div className="gt2-dock-panel gt2-dock-panel--account">
-                {/* 性能优化（PERF-07）：显式 prefetch，配合 /profile loading.tsx，
-                    点击后立即显示骨架而非白屏等待 RSC */}
-                <Link className="gt2-dock-menu-item" href="/profile" prefetch={true}>
+                <Link className="gt2-dock-menu-item" href="/profile">
                   <UserRound />
                   {c.profileBtn}
                 </Link>
                 {isAdmin && (
-                  <Link className="gt2-dock-menu-item" href="/admin/dashboard" prefetch={true}>
+                  <Link className="gt2-dock-menu-item" href="/admin/dashboard">
                     <Shield />
                     {c.adminPanel}
                   </Link>
