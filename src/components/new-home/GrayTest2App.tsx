@@ -289,16 +289,6 @@ export default function GrayTest2App() {
             <EntryPanel entry={copy.entries.about} mark="05" />
           </section>
         </div>
-
-        {/* 工作室简介（正常可见文本，强化站点主体描述） */}
-        <section className="gt2-seo-intro" aria-label="龙坞工作室简介">
-          <h2>龙坞工作室 LongWoo Studio</h2>
-          <p>
-            龙坞工作室 LongWoo Studio 是一间以原创角色设计为核心的定制工作室，专注于兽装定制、
-            预设掉落与 AI 智能体角色创作。从设定图绘制到实体交付，每一件作品都倾注热忱与专业。
-            欢迎通过首页导航体验角色创作、委托兽装、在线商店与订单查询，翻阅龙坞图鉴回顾每一件作品的诞生记录。
-          </p>
-        </section>
       </main>
     </div>
   );
