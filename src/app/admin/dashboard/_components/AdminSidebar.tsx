@@ -95,12 +95,16 @@ export default function AdminSidebar({ activeTab, isSuperAdmin = false }: AdminS
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
-      {/* 顶部标题 */}
-      <div className="px-6 py-6 border-b border-gray-100">
-        <h1 className="text-base font-bold text-lw-black tracking-tight">
-          {t("admin.sidebar.brand")}
-        </h1>
-        <p className="text-xs text-gray-400 mt-1">{t("admin.sidebar.subtitle")}</p>
+      {/* 顶部标题（墨色品牌区，对齐新首页侧边栏） */}
+      <div className="px-6 py-6 border-b border-gray-100 flex items-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/longwoo-logo.svg" alt="LongWoo 龙坞" className="w-9 h-9 object-contain" />
+        <div>
+          <h1 className="text-base font-bold text-lw-black tracking-tight">
+            {t("admin.sidebar.brand")}
+          </h1>
+          <p className="text-xs text-gray-400 mt-0.5">{t("admin.sidebar.subtitle")}</p>
+        </div>
       </div>
 
       {/* 导航项 */}

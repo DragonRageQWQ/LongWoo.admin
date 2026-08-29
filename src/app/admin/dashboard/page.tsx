@@ -133,6 +133,13 @@ export default async function AdminDashboardPage({
       {/* 右侧内容区 */}
       <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-x-hidden lg:pl-10">
         <div className="lg:pt-0 pt-12">
+          {/* 墨色页眉（对齐新首页 gt2-kicker + 大标题风格） */}
+          <div className="mb-6">
+            <p className="ink-kicker">LONGWOO · ADMIN CONSOLE</p>
+            <h1 className="text-2xl font-bold tracking-tight mt-1 text-[#17171a]">
+              {t("admin.sidebar.brand")}
+            </h1>
+          </div>
           <Suspense
             fallback={
               <div className="flex items-center justify-center py-20">
