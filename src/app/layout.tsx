@@ -17,8 +17,9 @@ export const preferredRegion = ["hkg1"];
 export const metadata: Metadata = {
   // SEO：绝对 URL 基准，供 canonical / OpenGraph / Twitter 卡片解析相对路径
   metadataBase: new URL("https://www.longwoo.studio"),
-  title: "LongWoo Studio - 专业兽装定制工作室",
-  description: "LongWoo工作室提供专业兽装定制服务，致力于为客户打造高品质的定制兽装作品。",
+  title: "LongWoo 龙坞 - 角色创意与定制工作室",
+  description:
+    "从兽装定制到 AI 智能体，LongWoo 龙坞以原创设计为核心，打造属于你的角色世界：定制兽装、预设掉落、智能体角色，未来不止于此。",
   icons: {
     icon: "/longwoo-logo.svg",
   },
@@ -27,8 +28,9 @@ export const metadata: Metadata = {
     "baidu-site-verification": "codeva-Kmb0PZ996R",
   },
   openGraph: {
-    title: "LongWoo Studio - 专业兽装定制工作室",
-    description: "专业兽装定制与销售，从设计到交付，每一处细节都倾注我们的热忱与专业。",
+    title: "LongWoo 龙坞 - 角色创意与定制工作室",
+    description:
+      "从兽装定制到 AI 智能体，LongWoo 龙坞以原创设计为核心，打造属于你的角色世界：定制兽装、预设掉落、智能体角色，未来不止于此。",
     type: "website",
     locale: "zh_CN",
     siteName: "LongWoo Studio",
