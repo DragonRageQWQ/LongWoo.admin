@@ -284,7 +284,7 @@ export default function GrayTest2App() {
             <CheckPanel lang={lang} />
           </section>
           <section className="gt2-panel" data-active={active === "about"} inert={!isActive("about")}>
-            <EntryPanel entry={copy.entries.about} mark="05" />
+            <EntryPanel entry={copy.entries.about} mark="05" gallery />
           </section>
         </div>
       </main>

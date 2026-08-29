@@ -254,15 +254,14 @@ export default function UserBubble({
 
             {panel === "account" && (
               <div className="gt2-dock-panel gt2-dock-panel--account">
-                {isAdmin ? (
+                <Link className="gt2-dock-menu-item" href="/profile">
+                  <UserRound />
+                  {c.profileBtn}
+                </Link>
+                {isAdmin && (
                   <Link className="gt2-dock-menu-item" href="/admin/dashboard">
                     <Shield />
                     {c.adminPanel}
-                  </Link>
-                ) : (
-                  <Link className="gt2-dock-menu-item" href="/profile">
-                    <UserRound />
-                    {c.profileBtn}
                   </Link>
                 )}
                 <button

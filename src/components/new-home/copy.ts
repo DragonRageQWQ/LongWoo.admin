@@ -6,7 +6,7 @@ export const GT2_TABS: { id: Gt2TabId; en: string; zh: string }[] = [
   { id: "fursuit", en: "Fursuit", zh: "委托兽装" },
   { id: "shop", en: "Web Shop", zh: "在线商店" },
   { id: "check", en: "Check", zh: "查询" },
-  { id: "about", en: "About", zh: "关于" },
+  { id: "about", en: "Gallery", zh: "图鉴" },
 ];
 
 export const GT2_TAB_STORAGE_KEY = "lw_gt2_tab";
@@ -526,13 +526,13 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         href: "/order/query",
       },
       about: {
-        kicker: "05 / ACCOUNT",
-        title: "关于",
-        titleEn: "About",
-        desc: "管理你的个人资料、历史委托与通知设置。",
-        features: ["个人资料管理", "历史订单汇总", "通知与安全设置"],
-        cta: "前往个人中心",
-        href: "/profile",
+        kicker: "05 / GALLERY",
+        title: "龙坞图鉴",
+        titleEn: "Gallery",
+        desc: "LongWoo 龙坞工作室专注于高品质兽装定制与销售，从设计到交付，每一处细节都倾注热忱与专业。龙坞图鉴收录每一件作品的诞生记录——翻阅属于我们的兽装世界。",
+        features: ["原创角色与定制案例", "完成作品展示", "设计到交付全记录"],
+        cta: "龙坞图鉴",
+        href: "#gallery",
       },
     },
     bubble: {
@@ -818,13 +818,13 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         href: "/order/query",
       },
       about: {
-        kicker: "05 / ACCOUNT",
-        title: "About",
-        titleEn: "关于",
-        desc: "Manage your profile, past commissions and notification settings.",
-        features: ["Profile management", "Order history", "Notifications & security"],
-        cta: "Go to Profile",
-        href: "/profile",
+        kicker: "05 / GALLERY",
+        title: "Gallery",
+        titleEn: "龙坞图鉴",
+        desc: "LongWoo Studio crafts and sells high-quality fursuits — every detail, from design to delivery, is infused with passion and professionalism. The Gallery archives every work we've brought to life.",
+        features: ["Original characters & commissions", "Finished works showcase", "Design-to-delivery records"],
+        cta: "View Gallery",
+        href: "#gallery",
       },
     },
     bubble: {
