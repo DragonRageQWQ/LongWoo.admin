@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import {
   Mail,
@@ -27,11 +27,13 @@ import {
   updateDisplayName,
   updateAvatar,
   updatePassword,
+  getProfileBundle,
 } from "@/actions/profile-actions";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { formatDate, statusLabels } from "@/lib/utils";
 import type { Profile, Order } from "@/types/database";
 import PasswordResetModal from "@/components/auth/PasswordResetModal";
+import ProfileSkeleton from "./ProfileSkeleton";
 import "./profile.css";
 
 // 性能优化：建议与反馈按需加载（独立 chunk，非首屏 JS）
@@ -58,6 +60,44 @@ export default function ProfileShell({
   const [loggingOut, setLoggingOut] = useState(false);
   const error = initialError ?? null;
 
+  // 我的订单状态（初始数据来自服务端预取）
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(
+    initialError ?? null
+  );
+
+  // 性能优化（PERF-08）：服务端仅做轻鉴权时（initialProfile 为 null），
+  // 由客户端在 mount 后并行获取用户资料与订单；期间展示共享骨架。
+  const [dataLoading, setDataLoading] = useState(!initialProfile);
+  const [isAdminState, setIsAdminState] = useState(isAdmin);
+
+  useEffect(() => {
+    if (initialProfile) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getProfileBundle();
+        if (cancelled) return;
+        if (res.success) {
+          setProfile(res.profile);
+          setOrders(res.orders);
+          setIsAdminState(res.isAdmin);
+        } else {
+          setOrdersError(res.error ?? "加载失败，请稍后重试");
+        }
+      } catch {
+        if (!cancelled) setOrdersError("加载失败，请稍后重试");
+      } finally {
+        if (!cancelled) setDataLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialProfile]);
+
   // 昵称编辑状态
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
@@ -79,13 +119,6 @@ export default function ProfileShell({
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   // 忘记密码弹窗状态
   const [resetOpen, setResetOpen] = useState(false);
-
-  // 我的订单状态（初始数据来自服务端预取）
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  const [ordersError, setOrdersError] = useState<string | null>(
-    initialError ?? null
-  );
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -265,6 +298,11 @@ export default function ProfileShell({
     );
   }
 
+  // 性能优化（PERF-08）：客户端取数期间展示共享骨架（与导航 loading 一致）
+  if (dataLoading) {
+    return <ProfileSkeleton />;
+  }
+
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -409,10 +447,10 @@ export default function ProfileShell({
                 </button>
                 <span
                   className={`pf-role-badge ${
-                    isAdmin ? "pf-role-badge--admin" : "pf-role-badge--user"
+                    isAdminState ? "pf-role-badge--admin" : "pf-role-badge--user"
                   }`}
                 >
-                  {isAdmin ? t("profile.admin") : t("profile.user")}
+                  {isAdminState ? t("profile.admin") : t("profile.user")}
                 </span>
               </div>
             )}
@@ -440,7 +478,7 @@ export default function ProfileShell({
         {/* 02 快捷入口 */}
         <p className="pf-kicker">02 / SHORTCUTS</p>
         <div className="pf-grid">
-          {isAdmin && (
+          {isAdminState && (
             <Link href="/studio/dashboard" className="pf-link-card">
               <span className="pf-link-card-icon">
                 <Package className="w-4 h-4" />
@@ -449,7 +487,7 @@ export default function ProfileShell({
               <p>{t("profile.manageOrdersDesc")}</p>
             </Link>
           )}
-          {isAdmin && (
+          {isAdminState && (
             <Link href="/admin/dashboard" className="pf-link-card">
               <span className="pf-link-card-icon">
                 <Settings className="w-4 h-4" />
@@ -596,7 +634,7 @@ export default function ProfileShell({
             <div className="pf-row">
               <span className="pf-row-label">{t("profile.accountRole")}</span>
               <span className="pf-row-value" style={{ fontFamily: "inherit" }}>
-                {isAdmin ? t("profile.admin") : t("profile.user")}
+                {isAdminState ? t("profile.admin") : t("profile.user")}
               </span>
             </div>
           </div>

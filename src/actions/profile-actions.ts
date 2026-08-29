@@ -1,7 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { getCurrentUser } from '@/lib/auth'
 import { getSessionUser } from '@/lib/supabase/server'
+import { listMyOrdersFor } from '@/actions/order-actions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
@@ -9,7 +11,50 @@ import { validateFileMagicNumber } from '@/lib/file-validation'
 import { getOrCreateProfile } from '@/lib/profile'
 import { confirmPasswordSet } from '@/lib/password-confirm'
 import { getClientIp } from '@/lib/server-utils'
+import type { Order, Profile } from '@/types/database'
 import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_MIME_TYPES, RATE_LIMIT_AVATAR_WINDOW, RATE_LIMIT_AVATAR_MAX, RATE_LIMIT_PASSWORD_WINDOW, RATE_LIMIT_PASSWORD_MAX, RATE_LIMIT_CHECK_EMAIL_WINDOW, RATE_LIMIT_CHECK_EMAIL_MAX } from '@/lib/constants'
+
+// ==================== 个人中心数据（客户端取数） ====================
+
+/**
+ * 获取个人中心所需数据（用户资料 + 我的订单）
+ *
+ * 性能优化（PERF-08）：个人中心页面改为"服务端轻鉴权 + 客户端并行取数"——
+ * 服务端仅做零网络的本地 JWT 验签，页面框架立即直出；本 action 由客户端
+ * ProfileShell 在 mount 后调用，getCurrentUser（profiles 查询）与
+ * listMyOrdersFor（订单查询）在服务端并行，单次往返即返回全部数据。
+ * 返回数据经 Server Action 序列化，无重复鉴权开销。
+ */
+export async function getProfileBundle(): Promise<
+  | { success: true; profile: Profile; orders: Order[]; isAdmin: boolean }
+  | { success: false; error: string }
+> {
+  try {
+    // 零网络本地 JWT 验签，提前拿到受信 userId/email 供订单查询使用
+    const session = await getSessionUser()
+    if (!session) {
+      return { success: false, error: '请先登录' }
+    }
+
+    // getCurrentUser（profiles 查询）与订单查询真正并行（两个独立 Supabase RTT 同时发出）
+    const [user, ordersRes] = await Promise.all([
+      getCurrentUser(),
+      listMyOrdersFor(session.id, session.email ?? null, 20),
+    ])
+    if (!user || !user.profile) {
+      return { success: false, error: '请先登录' }
+    }
+
+    return {
+      success: true,
+      profile: user.profile,
+      orders: ordersRes.success && ordersRes.data ? ordersRes.data : [],
+      isAdmin: user.role === 'admin',
+    }
+  } catch {
+    return { success: false, error: '加载失败，请稍后重试' }
+  }
+}
 
 // ==================== 修改昵称 ====================
 
