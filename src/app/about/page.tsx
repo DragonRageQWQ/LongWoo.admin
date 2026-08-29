@@ -5,6 +5,7 @@ import Footer from "@/components/layout/Footer";
 export const metadata: Metadata = {
   title: "关于我们 - LongWoo Studio",
   description: "LongWoo 龙坞是一家专注于高品质兽装定制与销售的专业工作室，致力于为每一位客户提供独一无二的作品。",
+  alternates: { canonical: "/about" },
 };
 
 export default function AboutPage() {

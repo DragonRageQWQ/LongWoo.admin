@@ -101,7 +101,7 @@ export default function CheckPanel({ lang }: { lang: Gt2Lang }) {
         <p className="gt2-kicker">{entry.kicker}</p>
       </div>
       <div className="gt2-stagger" style={{ "--i": 1 } as React.CSSProperties}>
-        <h1 className="gt2-display">{entry.title}</h1>
+        <h2 className="gt2-display">{entry.title}</h2>
         <p className="gt2-display-sub">{entry.titleEn}</p>
       </div>
       <p className="gt2-lead gt2-stagger" style={{ "--i": 2 } as React.CSSProperties}>

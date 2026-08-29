@@ -490,7 +490,7 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
               <p className="gt2-kicker">{c.kicker}</p>
             </div>
             <div className="gt2-stagger" style={{ "--i": 1 } as React.CSSProperties}>
-              <h1 className="gt2-display">{c.title}</h1>
+              <h2 className="gt2-display">{c.title}</h2>
               <p className="gt2-display-sub">
                 {c.titleEn}
                 <span className="gt2-fs-meta">

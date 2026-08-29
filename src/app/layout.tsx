@@ -15,6 +15,8 @@ import ImageProtection from "@/components/ImageProtection";
 export const preferredRegion = ["hkg1"];
 
 export const metadata: Metadata = {
+  // SEO：绝对 URL 基准，供 canonical / OpenGraph / Twitter 卡片解析相对路径
+  metadataBase: new URL("https://www.longwoo.studio"),
   title: "LongWoo Studio - 专业兽装定制工作室",
   description: "LongWoo工作室提供专业兽装定制服务，致力于为客户打造高品质的定制兽装作品。",
   icons: {

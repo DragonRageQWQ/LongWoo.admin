@@ -266,6 +266,8 @@ export default function GrayTest2App() {
       </aside>
 
       <main className="gt2-main">
+        {/* SEO：页面级唯一 H1（视觉隐藏，避免多面板标题抢占 H1 语义） */}
+        <h1 className="sr-only">LongWoo 龙坞 · 专业兽装定制工作室</h1>
         <div className="gt2-top-actions">
           <UserBubble lang={lang} onLangChange={setLang} />
         </div>

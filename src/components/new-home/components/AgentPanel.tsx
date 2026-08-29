@@ -130,9 +130,9 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
           <div className="gt2-rise" style={{ "--i": 1 } as React.CSSProperties}>
             <p className="gt2-kicker">{c.kicker}</p>
           </div>
-          <h1 className="gt2-display gt2-rise" style={{ "--i": 2 } as React.CSSProperties}>
+          <h2 className="gt2-display gt2-rise" style={{ "--i": 2 } as React.CSSProperties}>
             {c.heroTitle}
-          </h1>
+          </h2>
           <p className="gt2-display-sub gt2-rise" style={{ "--i": 3 } as React.CSSProperties}>
             {c.heroTitleEn}
           </p>

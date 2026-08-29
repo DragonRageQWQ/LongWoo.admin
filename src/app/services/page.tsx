@@ -7,6 +7,7 @@ import type { ServiceType } from "@/types/database";
 export const metadata: Metadata = {
   title: "服务项目 - LongWoo Studio",
   description: "浏览 LongWoo 工作室提供的兽装定制服务项目，包括全装定制、半装定制等多种选项。",
+  alternates: { canonical: "/services" },
 };
 
 // 服务类型变更频率低，使用 ISR 每小时重新生成
@@ -21,8 +22,33 @@ export default async function ServicesPage() {
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
+  // SEO：服务列表结构化数据（ItemList + Service），供富媒体摘要引用
+  const servicesJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "LongWoo 兽装定制服务",
+    url: "https://www.longwoo.studio/services",
+    itemListElement: (services ?? []).map((s: ServiceType, i: number) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      item: {
+        "@type": "Service",
+        name: s.name,
+        description: s.description ?? undefined,
+        serviceType: s.name,
+        provider: { "@type": "Organization", name: "LongWoo Studio" },
+        areaServed: "CN",
+      },
+    })),
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(servicesJsonLd) }}
+      />
+      <div className="min-h-screen flex flex-col bg-white">
       <Header />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -79,6 +105,7 @@ export default async function ServicesPage() {
       </main>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }

@@ -22,6 +22,19 @@ body {
   background: var(--color-lw-white);
 }
 
+/* ===== SEO：视觉隐藏的页面级标题（保持单页单 H1 语义） ===== */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ===== 图片版权保护（Next 页面）：禁止保存/拖拽/长按 ===== */
 img {
   -webkit-user-drag: none;

@@ -357,7 +357,7 @@ export default function ShopPanel({ lang }: { lang: Gt2Lang }) {
         <p className="gt2-kicker">{entry.kicker}</p>
       </div>
       <div className="gt2-stagger" style={{ "--i": 1 } as React.CSSProperties}>
-        <h1 className="gt2-display">{entry.title}</h1>
+        <h2 className="gt2-display">{entry.title}</h2>
         <p className="gt2-display-sub">{entry.titleEn}</p>
       </div>
       <p className="gt2-lead gt2-stagger" style={{ "--i": 2 } as React.CSSProperties}>
@@ -386,7 +386,7 @@ export default function ShopPanel({ lang }: { lang: Gt2Lang }) {
         <p className="gt2-kicker">{c.dropsKicker}</p>
       </div>
       <div className="gt2-stagger" style={{ "--i": 1 } as React.CSSProperties}>
-        <h1 className="gt2-display">{c.dropsHeading}</h1>
+        <h2 className="gt2-display">{c.dropsHeading}</h2>
         <p className="gt2-display-sub">{c.dropsSub}</p>
       </div>
 
@@ -631,7 +631,7 @@ export default function ShopPanel({ lang }: { lang: Gt2Lang }) {
           <p className="gt2-kicker">{c.checkoutKicker}</p>
         </div>
         <div className="gt2-stagger" style={{ "--i": 1 } as React.CSSProperties}>
-          <h1 className="gt2-display">{c.checkoutTitle}</h1>
+          <h2 className="gt2-display">{c.checkoutTitle}</h2>
         </div>
         <button type="button" className="gt2-shop-back gt2-stagger" style={{ "--i": 2 } as React.CSSProperties} onClick={() => setView("drops")}>
           ← {c.backEntries}
