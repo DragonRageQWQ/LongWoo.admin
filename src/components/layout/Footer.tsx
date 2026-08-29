@@ -4,7 +4,9 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           {/* 工作室名称 */}
-          <div className="text-lg font-bold text-lw-black">LongWoo 工作室</div>
+          <a href="/" className="text-lg font-bold text-lw-black hover:opacity-70 transition-opacity">
+            LongWoo 工作室
+          </a>
 
           {/* 联系方式 */}
           <div className="flex flex-col items-center md:items-end gap-1 text-sm text-gray-500">

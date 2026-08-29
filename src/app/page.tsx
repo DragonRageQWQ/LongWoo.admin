@@ -11,15 +11,15 @@ import GrayTest2App from "@/components/new-home/GrayTest2App";
  * 全站用户开放，管理功能（商店编辑）由组件内 session-check 纵深防御。
  */
 export const metadata: Metadata = {
-  title: "LongWoo 龙坞 - 角色创意与定制工作室",
+  title: "龙坞工作室 LongWoo - 角色创意与定制",
   description:
-    "从兽装定制到 AI 智能体，LongWoo 龙坞以原创设计为核心，打造属于你的角色世界：定制兽装、预设掉落、智能体角色，未来不止于此。",
+    "龙坞工作室 LongWoo 以原创角色设计为核心：兽装定制、预设掉落与 AI 智能体角色创作，从设定图到实体交付全程亲手打磨，未来不止于此。",
   robots: { index: true, follow: true },
   alternates: { canonical: "/" },
   openGraph: {
-    title: "LongWoo 龙坞 - 角色创意与定制工作室",
+    title: "龙坞工作室 LongWoo - 角色创意与定制",
     description:
-      "从兽装定制到 AI 智能体，LongWoo 龙坞以原创设计为核心，打造属于你的角色世界：定制兽装、预设掉落、智能体角色，未来不止于此。",
+      "龙坞工作室 LongWoo 以原创角色设计为核心：兽装定制、预设掉落与 AI 智能体角色创作，从设定图到实体交付全程亲手打磨，未来不止于此。",
     type: "website",
     locale: "zh_CN",
     siteName: "LongWoo Studio",

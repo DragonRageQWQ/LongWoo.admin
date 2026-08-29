@@ -3761,6 +3761,33 @@ textarea.gt2-input {
 }
 
 /* ============================================================
+   工作室简介区块（正常可见文本，强化站点主体描述）
+   ============================================================ */
+.gt2-seo-intro {
+  margin: 4rem auto 2rem;
+  max-width: 720px;
+  padding: 2rem 2.5rem;
+  border: 1px solid var(--gt2-line, rgba(0, 0, 0, 0.08));
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.gt2-seo-intro h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--gt2-ink, #17171a);
+}
+
+.gt2-seo-intro p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.9;
+  color: var(--gt2-fade, #6f6f6a);
+}
+
+/* ============================================================
    减弱动态效果（无障碍）
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {

@@ -44,7 +44,7 @@ export default function GalleryView() {
   return (
     <div className="gl-root">
       <header className="gl-top">
-        <a className="gl-back" href="/">← LongWoo Studio</a>
+        <a className="gl-back" href="/">← 龙坞工作室 LongWoo Studio</a>
       </header>
 
       <main className="gl-main">
