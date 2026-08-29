@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   icons: {
     icon: "/longwoo-logo.svg",
   },
+  // 百度搜索资源平台站点验证（验证成功后请勿删除该标签）
+  other: {
+    "baidu-site-verification": "codeva-Kmb0PZ996R",
+  },
   openGraph: {
     title: "LongWoo Studio - 专业兽装定制工作室",
     description: "专业兽装定制与销售，从设计到交付，每一处细节都倾注我们的热忱与专业。",
