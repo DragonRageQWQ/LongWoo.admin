@@ -265,12 +265,14 @@ export default function UserBubble({
 
             {panel === "account" && (
               <div className="gt2-dock-panel gt2-dock-panel--account">
-                <Link className="gt2-dock-menu-item" href="/profile">
+                {/* prefetch={false}：阻止 Link 视口自动 prefetch 与 useEffect 的
+                    router.prefetch 重复请求（PERF-09），避免并发 RSC 请求拖慢导航 */}
+                <Link className="gt2-dock-menu-item" href="/profile" prefetch={false}>
                   <UserRound />
                   {c.profileBtn}
                 </Link>
                 {isAdmin && (
-                  <Link className="gt2-dock-menu-item" href="/admin/dashboard">
+                  <Link className="gt2-dock-menu-item" href="/admin/dashboard" prefetch={false}>
                     <Shield />
                     {c.adminPanel}
                   </Link>
