@@ -17,7 +17,6 @@ import {
   Lock,
   X,
   Upload,
-  Bot,
   Sparkles,
   KeyRound,
 } from "lucide-react";
@@ -496,28 +495,23 @@ export default function ProfileShell({
               <p>{t("profile.adminOverviewDesc")}</p>
             </Link>
           )}
-          <Link href="/order-step1.html" className="pf-link-card">
+          <Link href="/?tab=fursuit" className="pf-link-card">
             <span className="pf-link-card-icon">
               <Package className="w-4 h-4" />
             </span>
             <b>{t("profile.buyFursuit")}</b>
             <p>{t("profile.startCustomizeDesc")}</p>
           </Link>
-          <Link href="/ai/characters" className="pf-link-card">
+          {/* 重定向：龙灵工坊 → Agent智能体（新首页 Agent 功能） */}
+          <Link href="/?tab=agent" className="pf-link-card">
             <span className="pf-link-card-icon">
               <Sparkles className="w-4 h-4" />
             </span>
-            <b>{t("nav.lingWork")}</b>
+            <b>{t("profile.agentName")}</b>
             <p>{t("profile.lingWorkDesc")}</p>
           </Link>
-          <Link href="/ai-chat.html" className="pf-link-card">
-            <span className="pf-link-card-icon">
-              <Bot className="w-4 h-4" />
-            </span>
-            <b>{t("profile.aiAssistant")}</b>
-            <p>{t("profile.aiAssistantDesc")}</p>
-          </Link>
-          <Link href="/order/query" className="pf-link-card">
+          {/* AI 助手：功能暂未开启，入口已隐藏，仅保留在灰度测试界面（/gray-test） */}
+          <Link href="/?tab=check" className="pf-link-card">
             <span className="pf-link-card-icon">
               <Clock className="w-4 h-4" />
             </span>

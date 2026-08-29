@@ -43,4 +43,11 @@ export const grayTestEntries: GrayTestEntry[] = [
     description: "毛布材质在线取样入口（待开发，暂未开放）",
     href: "",
   },
+  {
+    id: "ai-chat",
+    label: "ai",
+    title: "AI 助手（暂未开放）",
+    description: "兽装定制相关问题咨询；功能暂未开启，入口仅保留在灰度环境",
+    href: "/ai-chat.html",
+  },
 ]

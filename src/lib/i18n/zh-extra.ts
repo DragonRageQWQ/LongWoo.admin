@@ -21,6 +21,7 @@ export const ZH_EXTRA: Record<string, string> = {
   'profile.adminOverviewDesc': '系统数据概览',
   'profile.buyFursuit': '购买自设兽装',
   'profile.startCustomizeDesc': '开始定制您的专属兽装',
+  'profile.agentName': 'Agent智能体',
   'profile.lingWorkDesc': '创建 AI 角色自由对话',
   'profile.aiAssistant': 'AI 助手',
   'profile.aiAssistantDesc': '兽装定制相关问题咨询',

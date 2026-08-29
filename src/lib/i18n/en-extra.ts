@@ -21,6 +21,7 @@ export const EN_EXTRA: Record<string, string> = {
   'profile.adminOverviewDesc': 'System data overview',
   'profile.buyFursuit': 'Commission a Fursuit',
   'profile.startCustomizeDesc': 'Start customizing your fursuit',
+  'profile.agentName': 'Agent AI',
   'profile.lingWorkDesc': 'Chat freely with AI characters',
   'profile.aiAssistant': 'AI Assistant',
   'profile.aiAssistantDesc': 'Ask about fursuit customization',
