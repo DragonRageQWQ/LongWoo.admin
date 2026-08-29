@@ -1,0 +1,209 @@
+/* ============================================================
+   龙坞图鉴独立页（/gallery）
+   设计语言：纸墨极简（Ink on Paper），与官网首页一致
+   ============================================================ */
+.gl-root {
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ink: #0a0a0a;
+  --soft: #737373;
+  --mute: #9ca3af;
+  --line: #e8e8e8;
+  --paper: #ffffff;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "Menlo", monospace;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "MiSans VF", "MiSans", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.gl-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  padding: 18px 32px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.gl-back {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--soft);
+  text-decoration: none;
+  transition: color 0.3s var(--ease);
+}
+
+.gl-back:hover {
+  color: var(--ink);
+}
+
+.gl-main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 72px 32px 96px;
+}
+
+.gl-hero {
+  max-width: 720px;
+}
+
+.gl-kicker {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: var(--mute);
+  margin: 0 0 22px;
+}
+
+.gl-title {
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -1.2px;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.gl-sub {
+  font-size: 18px;
+  color: var(--soft);
+  margin: 10px 0 0;
+  font-weight: 400;
+}
+
+.gl-desc {
+  margin: 26px 0 0;
+  font-size: 15px;
+  line-height: 1.9;
+  color: #404040;
+}
+
+.gl-section {
+  margin-top: 72px;
+  padding-top: 36px;
+  border-top: 1px solid var(--line);
+}
+
+.gl-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.gl-section-kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: #b8b8b8;
+}
+
+.gl-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.gl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.gl-card {
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  text-decoration: none;
+  transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease),
+    border-color 0.3s var(--ease);
+}
+
+.gl-card:hover {
+  transform: translateY(-3px);
+  border-color: #d6d6d6;
+  box-shadow: 0 12px 28px rgba(10, 10, 10, 0.06);
+}
+
+.gl-img-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #f3f3f1;
+}
+
+.gl-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gl-img--empty {
+  background: linear-gradient(135deg, #f3f3f1 25%, #ececea 25%, #ececea 50%, #f3f3f1 50%, #f3f3f1 75%, #ececea 75%);
+  background-size: 20px 20px;
+}
+
+.gl-card-body {
+  padding: 14px 16px 16px;
+}
+
+.gl-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.gl-card-tag {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: var(--soft);
+}
+
+.gl-empty {
+  padding: 48px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--mute);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+}
+
+.gl-foot {
+  border-top: 1px solid var(--line);
+  padding: 28px 32px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.gl-foot p {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .gl-main {
+    padding: 48px 20px 72px;
+  }
+  .gl-title {
+    font-size: 32px;
+  }
+  .gl-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  .gl-grid {
+    grid-template-columns: 1fr;
+  }
+}
