@@ -77,16 +77,16 @@ export default function GalleryView() {
                   <div className="gl-img-wrap">
                     {w.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        className="gl-img"
-                        src={w.image_url}
-                        alt={w.title}
-                        loading={i < 6 ? "eager" : "lazy"}
-                        fetchPriority={i < 3 ? "high" : undefined}
-                        decoding="async"
-                        width={600}
-                        height={600}
-                      />
+                    <img
+                      className="gl-img"
+                      src={w.image_url}
+                      alt={w.title}
+                      loading={i < 3 ? "eager" : "lazy"}
+                      fetchPriority={i < 3 ? "high" : undefined}
+                      decoding="async"
+                      width={600}
+                      height={600}
+                    />
                     ) : (
                       <div className="gl-img gl-img--empty" aria-hidden="true" />
                     )}
