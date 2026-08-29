@@ -104,6 +104,9 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
       // 内嵌流畅流程：创建成功后直接进入聊天并聚焦新角色，不再跳转生产页
       setCreatedId(newId);
       setView("chat");
+      // 修复：创建成功路径必须重置 saving，否则再次进入创建表单时
+      // 按钮残留 loading 状态且 disabled（组件不卸载，state 持久保留）
+      setSaving(false);
       setName("");
       setPersona("");
       setTone("");
