@@ -208,16 +208,32 @@ export async function getOrders(filters: {
     const limit = Math.min(filters.limit ?? 20, MAX_PAGE_LIMIT)
 
     // 使用公共查询构建函数（admin 可见全部订单，无需可见性过滤）
-    const query = buildOrderQuery(supabase, {
-      offset,
-      limit,
-      status: filters.status,
-      search: filters.search,
-      startDate: filters.startDate,
-      endDate: filters.endDate,
-      isAdmin: true,
-      userId: currentUser.userId,
-    })
+    // 性能优化：admin 订单列表页不展示服务类型列，走精简查询（仅取列表所需 8 列），
+    // 关闭 service_types 嵌入关联，显著减小 payload；详情弹窗通过 getOrderById 单独查询。
+    let query = supabase
+      .from('orders')
+      .select('id, order_no, status, customer_name, customer_phone, customer_email, requirements, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    // 状态筛选
+    if (filters.status) {
+      query = query.eq('status', filters.status)
+    }
+
+    // 关键词搜索：订单号、客户名、需求描述
+    if (filters.search && filters.search.trim()) {
+      const keyword = escapeIlikeKeyword(escapePostgrestKeyword(filters.search.trim()))
+      query = query.or(`order_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%,requirements.ilike.%${keyword}%`)
+    }
+
+    // 日期范围筛选
+    if (filters.startDate) {
+      query = query.gte('created_at', `${filters.startDate}T00:00:00.000Z`)
+    }
+    if (filters.endDate) {
+      query = query.lte('created_at', `${filters.endDate}T23:59:59.999Z`)
+    }
 
     const { data, error, count } = await query
 
