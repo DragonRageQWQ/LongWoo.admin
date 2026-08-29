@@ -2768,6 +2768,12 @@ textarea.gt2-input {
     padding-top: 96px;
   }
 
+  /* 窄屏聊天顶栏：整体下移到右上角 Dock（语言/铃铛/头像气泡，占 y≈21-61px）
+     之下，避免角色胶囊（含 agent 头像）与 Dock 重叠。与 hero/form 顶部避让一致 */
+  .gt2-chat-topbar {
+    padding-top: 84px;
+  }
+
   .gt2-watermark {
     font-size: clamp(72px, 22vw, 120px);
     top: 64px;
