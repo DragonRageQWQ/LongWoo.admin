@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionUser } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { validateCharacterFields, AI_CHARACTER_MAX_COUNT } from '@/lib/ai-character'
+import { isSessionUserSoftBanned } from '@/lib/user-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,6 +52,14 @@ export async function POST(request: NextRequest) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ success: false, error: '未登录' }, { status: 401 })
+  }
+
+  // 软封禁（blacklist）：拉黑用户禁止创建角色（浏览列表放行）
+  if (await isSessionUserSoftBanned()) {
+    return NextResponse.json(
+      { success: false, error: '账户已被限制使用，请联系管理员' },
+      { status: 403 }
+    )
   }
 
   let body: Record<string, unknown>

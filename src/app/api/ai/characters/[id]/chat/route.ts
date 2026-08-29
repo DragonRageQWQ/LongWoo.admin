@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionUser } from '@/lib/supabase/server'
+import { isSessionUserSoftBanned } from '@/lib/user-guard'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
 import {
@@ -101,6 +102,14 @@ export async function POST(request: NextRequest) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ success: false, error: '未登录' }, { status: 401 })
+  }
+
+  // 软封禁（blacklist）：拉黑用户禁止与 AI 角色对话
+  if (await isSessionUserSoftBanned()) {
+    return NextResponse.json(
+      { success: false, error: '账户已被限制使用，请联系管理员' },
+      { status: 403 }
+    )
   }
 
   const characterId = extractCharacterId(request)

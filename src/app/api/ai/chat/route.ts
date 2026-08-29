@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getSessionUser } from '@/lib/supabase/server'
+import { isSessionUserSoftBanned } from '@/lib/user-guard'
 import { extractClientIpFromRequest } from '@/lib/server-utils'
 
 export const dynamic = 'force-dynamic'
@@ -92,6 +93,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { success: false, error: '操作过于频繁，请1分钟后再试' },
       { status: 429 }
+    )
+  }
+
+  // 软封禁（blacklist）：已登录的拉黑用户禁止使用 AI 助手（匿名游客不受影响）
+  if (user && (await isSessionUserSoftBanned())) {
+    return NextResponse.json(
+      { success: false, error: '账户已被限制使用，请联系管理员' },
+      { status: 403 }
     )
   }
 

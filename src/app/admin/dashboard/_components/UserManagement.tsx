@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import {
   Users,
   Search,
@@ -13,12 +13,21 @@ import {
   ChevronRight,
   CheckCircle,
   AlertCircle,
+  Tag,
 } from "lucide-react";
 import {
   listAllUsers,
   grantAdminRole,
   revokeAdminRole,
+  addUserTag,
+  removeUserTag,
 } from "@/actions/admin-actions";
+import {
+  USER_TAG_KEYS,
+  USER_TAG_LABELS,
+  USER_TAG_STYLES,
+  type UserTagKey,
+} from "@/lib/user-tags";
 import { formatDate } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
@@ -36,6 +45,7 @@ interface UserItem {
   avatar_url: string | null;
   is_active: boolean;
   created_at: string;
+  tags?: string[] | null;
 }
 
 // 角色筛选类型
@@ -87,6 +97,10 @@ export default function UserManagement() {
     action: null,
   });
   const [actionLoading, setActionLoading] = useState(false);
+
+  // 标签展开面板状态（当前展开的用户 id）与标签操作加载态
+  const [expandedTagUserId, setExpandedTagUserId] = useState<string | null>(null);
+  const [tagLoadingId, setTagLoadingId] = useState<string | null>(null);
 
   // Toast 提示
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -295,6 +309,98 @@ export default function UserManagement() {
     );
   };
 
+  // 渲染用户已有标签徽章（对所有管理员可见）
+  const renderTagBadges = (user: UserItem) => {
+    const tags = (user.tags ?? []).filter((tg): tg is UserTagKey =>
+      USER_TAG_KEYS.includes(tg as UserTagKey)
+    );
+    if (tags.length === 0) return null;
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1">
+        {tags.map((tg) => (
+          <span
+            key={tg}
+            className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${USER_TAG_STYLES[tg]}`}
+          >
+            {USER_TAG_LABELS[tg]}
+          </span>
+        ))}
+      </span>
+    );
+  };
+
+  // 切换标签（添加/移除）
+  const handleToggleTag = async (user: UserItem, tag: UserTagKey) => {
+    if (!user.uid || tagLoadingId) return;
+    const has = (user.tags ?? []).includes(tag);
+    setTagLoadingId(user.id);
+    try {
+      const result = has
+        ? await removeUserTag(user.uid, tag)
+        : await addUserTag(user.uid, tag);
+      if (result.success) {
+        setToast({
+          type: "success",
+          message: has
+            ? `已移除「${USER_TAG_LABELS[tag]}」标签`
+            : `已添加「${USER_TAG_LABELS[tag]}」标签`,
+        });
+        fetchUsers();
+      } else {
+        setToast({ type: "error", message: result.error || "操作失败" });
+      }
+    } catch (err) {
+      console.error("标签操作异常:", err);
+      setToast({ type: "error", message: "操作时发生未知错误" });
+    } finally {
+      setTagLoadingId(null);
+    }
+  };
+
+  // 标签展开面板（仅超管可见）：全部可用标签一键切换
+  const renderTagPanel = (user: UserItem) => {
+    const currentTags = (user.tags ?? []) as UserTagKey[];
+    return (
+      <div className="px-4 py-3 bg-gray-50/60 border-t border-gray-100">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-medium text-gray-500">用户标签</p>
+          <button
+            onClick={() => setExpandedTagUserId(null)}
+            className="text-gray-400 hover:text-gray-600"
+            aria-label="关闭"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {USER_TAG_KEYS.map((tag) => {
+            const active = currentTags.includes(tag);
+            return (
+              <button
+                key={tag}
+                onClick={() => handleToggleTag(user, tag)}
+                disabled={tagLoadingId === user.id}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                  active
+                    ? USER_TAG_STYLES[tag]
+                    : "bg-white text-gray-500 border-gray-200 hover:bg-gray-100"
+                }`}
+              >
+                {tagLoadingId === user.id && active ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : null}
+                {USER_TAG_LABELS[tag]}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-gray-400 mt-2">
+          拉黑=可浏览不可用内容 · 硬封禁=登录伪装失败 · 测试A-D=灰度分组 · VIP/SVIP=特殊标记
+        </p>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-5">
       {/* 标题 */}
@@ -443,8 +549,8 @@ export default function UserManagement() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {users.map((user) => (
+                    <Fragment key={user.id}>
                     <tr
-                      key={user.id}
                       className="hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
@@ -475,15 +581,46 @@ export default function UserManagement() {
                         {user.email}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {renderRoleBadge(user)}
+                        <div className="flex flex-col items-start gap-1">
+                          {renderRoleBadge(user)}
+                          {renderTagBadges(user)}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                         {formatDate(user.created_at)}
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        {renderActions(user)}
+                        <div className="inline-flex items-center gap-2">
+                          {isZeroUser && user.uid !== zeroUserUid && user.uid !== null && (
+                            <button
+                              onClick={() =>
+                                setExpandedTagUserId(
+                                  expandedTagUserId === user.id ? null : user.id
+                                )
+                              }
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium border rounded-md transition-colors cursor-pointer ${
+                                expandedTagUserId === user.id
+                                  ? "bg-lw-accent text-white border-lw-accent"
+                                  : "text-gray-600 border-gray-200 hover:bg-gray-100"
+                              }`}
+                              aria-label="管理标签"
+                            >
+                              <Tag className="w-3.5 h-3.5" />
+                              标签
+                            </button>
+                          )}
+                          {renderActions(user)}
+                        </div>
                       </td>
                     </tr>
+                    {expandedTagUserId === user.id && (
+                      <tr key={`tag-${user.id}`}>
+                        <td colSpan={6} className="p-0">
+                          {renderTagPanel(user)}
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -517,7 +654,10 @@ export default function UserManagement() {
                         </p>
                       </div>
                     </div>
-                    {renderRoleBadge(user)}
+                    <div className="flex flex-col items-end gap-1">
+                      {renderRoleBadge(user)}
+                      {renderTagBadges(user)}
+                    </div>
                   </div>
                   <div className="text-sm text-gray-600 truncate">
                     {user.email}
@@ -526,8 +666,29 @@ export default function UserManagement() {
                     <span className="text-xs text-gray-400">
                       {formatDate(user.created_at)}
                     </span>
-                    {renderActions(user)}
+                    <div className="flex items-center gap-2">
+                      {isZeroUser && user.uid !== zeroUserUid && user.uid !== null && (
+                        <button
+                          onClick={() =>
+                            setExpandedTagUserId(
+                              expandedTagUserId === user.id ? null : user.id
+                            )
+                          }
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium border rounded-md transition-colors cursor-pointer ${
+                            expandedTagUserId === user.id
+                              ? "bg-lw-accent text-white border-lw-accent"
+                              : "text-gray-600 border-gray-200 hover:bg-gray-100"
+                          }`}
+                          aria-label="管理标签"
+                        >
+                          <Tag className="w-3.5 h-3.5" />
+                          标签
+                        </button>
+                      )}
+                      {renderActions(user)}
+                    </div>
                   </div>
+                  {expandedTagUserId === user.id && renderTagPanel(user)}
                 </div>
               ))}
             </div>

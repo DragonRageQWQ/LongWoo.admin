@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionUser } from '@/lib/supabase/server'
+import { isSessionUserSoftBanned } from '@/lib/user-guard'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { isValidUUID } from '@/lib/order-utils'
@@ -197,6 +198,14 @@ export async function POST(request: NextRequest) {
       uploadedBy = user?.id ?? null
     } catch {
       uploadedBy = null
+    }
+
+    // 软封禁（blacklist）：已登录的拉黑用户禁止上传附件（匿名游客不受影响）
+    if (uploadedBy && (await isSessionUserSoftBanned())) {
+      return NextResponse.json(
+        { success: false, error: '账户已被限制使用，请联系管理员' },
+        { status: 403 }
+      )
     }
 
     // 12) 写入 order_attachments（service_role 绕过 RLS）

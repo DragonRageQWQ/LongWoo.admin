@@ -13,6 +13,7 @@ import { cache } from 'react'
 import { createClient, getSessionUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ZERO_USER_UID as CONST_ZERO_USER_UID } from '@/lib/constants'
+import { hasUserTag } from '@/lib/user-tags'
 import type { UserRole, Profile } from '@/types/database'
 
 /** 零号用户 UID — 超级管理员，唯一可授予/撤销管理员权限的用户 */
@@ -48,6 +49,10 @@ export const getCurrentUser = cache(async (): Promise<{
 
     if (profileError || !profile || profile.is_active !== true) return null
 
+    // 硬封禁（ban）：视为未登录——已有会话立即失效，
+    // 页面级 redirect 到 /login，登录接口再伪装失败（见 login route）
+    if (hasUserTag(profile.tags, 'ban')) return null
+
     return {
       userId: verifiedUser.id,
       role: (profile.role as UserRole) ?? DEFAULT_ROLE,
@@ -70,6 +75,25 @@ export async function requireUser(): Promise<
   const user = await getCurrentUser()
   if (!user) {
     return { success: false, error: '请先登录' }
+  }
+  return { success: true, user }
+}
+
+/**
+ * 要求用户已登录且未被拉黑（blacklist 软封禁），否则返回错误对象
+ * 供"使用型"业务（下单/AI 对话/上传等）Server Actions 使用：
+ * 拉黑用户可正常浏览网页，但禁止使用业务内容
+ */
+export async function requireUsableUser(): Promise<
+  | { success: true; user: { userId: string; role: UserRole; uid: number | null; profile: Profile | null } }
+  | { success: false; error: string }
+> {
+  const user = await getCurrentUser()
+  if (!user) {
+    return { success: false, error: '请先登录' }
+  }
+  if (hasUserTag(user.profile?.tags, 'blacklist')) {
+    return { success: false, error: '账户已被限制使用，请联系管理员' }
   }
   return { success: true, user }
 }

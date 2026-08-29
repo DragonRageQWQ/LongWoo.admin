@@ -12,6 +12,7 @@ import { checkRateLimit, peekRateLimit } from '@/lib/rate-limit'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { fetchWithRetry } from '@/lib/network-utils'
 import { extractClientIpFromRequest } from '@/lib/server-utils'
+import { hasUserTag } from '@/lib/user-tags'
 import {
   RATE_LIMIT_OTP_WINDOW,
   RATE_LIMIT_LOGIN_MAX_FAILS,
@@ -147,6 +148,13 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { success: false, error: '账户已停用，请联系管理员' },
           { status: 403 }
+        )
+      }
+      // 硬封禁（ban）：伪装成网络超时，不暴露封禁信息，账号无法正常登录
+      if (hasUserTag(passwordProfile.tags, 'ban')) {
+        return NextResponse.json(
+          { success: false, error: '请求超时，请稍后重试' },
+          { status: 504 }
         )
       }
 
@@ -350,6 +358,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: '账户已停用，请联系管理员' },
         { status: 403 }
+      )
+    }
+    // 硬封禁（ban）：伪装成网络超时，不暴露封禁信息，账号无法正常登录
+    if (hasUserTag(profileResult.tags, 'ban')) {
+      return NextResponse.json(
+        { success: false, error: '请求超时，请稍后重试' },
+        { status: 504 }
       )
     }
     const role = profileResult.role

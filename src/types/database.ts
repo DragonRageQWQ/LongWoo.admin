@@ -10,6 +10,8 @@ export type Profile = {
   avatar_url: string | null
   is_active: boolean
   has_password: boolean
+  /** 用户标签（tag 体系）：blacklist/ban/testA-D/vip/svip，仅超管可修改 */
+  tags?: string[] | null
   created_at: string
   updated_at: string
 }

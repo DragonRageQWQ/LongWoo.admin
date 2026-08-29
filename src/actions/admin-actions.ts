@@ -9,6 +9,7 @@ import { getClientIp } from '@/lib/server-utils'
 import { MAX_PAGE_LIMIT } from '@/lib/constants'
 import { escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
 import { buildUserListMeta, type UserListMeta } from '@/lib/admin-meta'
+import { isUserTag, sanitizeTags, type UserTagKey, USER_TAG_LABELS } from '@/lib/user-tags'
 import type { Profile, UserRole } from '@/types/database'
 
 // ==================== 零号用户专属操作 ====================
@@ -226,7 +227,7 @@ export async function listAllUsers(options?: {
   limit?: number
 }): Promise<{
   success: boolean
-  data?: Array<Pick<Profile, 'id' | 'uid' | 'email' | 'role' | 'display_name' | 'avatar_url' | 'is_active' | 'created_at'>>
+  data?: Array<Pick<Profile, 'id' | 'uid' | 'email' | 'role' | 'display_name' | 'avatar_url' | 'is_active' | 'created_at' | 'tags'>>
   total?: number
   meta?: UserListMeta
   error?: string
@@ -249,7 +250,7 @@ export async function listAllUsers(options?: {
     // 性能优化：移除前端未使用的 has_password 字段，减少传输
     let query = admin
       .from('profiles')
-      .select('id, uid, email, role, display_name, avatar_url, is_active, created_at', { count: 'exact' })
+      .select('id, uid, email, role, display_name, avatar_url, is_active, created_at, tags', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -273,7 +274,7 @@ export async function listAllUsers(options?: {
 
     return {
       success: true,
-      data: data as Array<Pick<Profile, 'id' | 'uid' | 'email' | 'role' | 'display_name' | 'avatar_url' | 'is_active' | 'created_at'>>,
+      data: data as Array<Pick<Profile, 'id' | 'uid' | 'email' | 'role' | 'display_name' | 'avatar_url' | 'is_active' | 'created_at' | 'tags'>>,
       total: count ?? 0,
       meta,
     }
@@ -335,5 +336,184 @@ export async function getAdminAuditLog(options?: {
   } catch (error) {
     console.error('查询审计日志异常:', error)
     return { success: false, error: '查询时发生未知错误' }
+  }
+}
+
+// ==================== 用户标签（tag）操作 ====================
+//
+// 标签体系（全部仅零号用户 uid=10001 可执行）：
+//   blacklist 拉黑（软封禁） / ban 硬封禁 / testA~D 测试 / vip / svip
+//
+// 安全措施：
+// 1. requireZeroUser() 服务端验证调用者身份
+// 2. 标签白名单校验（sanitizeTags），拒绝任意字符串注入
+// 3. 操作者不能修改自己的标签（self-protect，防自解封）
+// 4. 操作记录到 admin_audit_log 审计表
+// ====================
+
+/**
+ * 为指定用户添加标签（幂等：已存在则忽略）
+ * 仅零号用户可调用
+ */
+export async function addUserTag(targetUid: number, tag: string): Promise<AdminActionResult> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 鉴权：仅零号用户可操作
+  const authResult = await requireZeroUser()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+
+  // 标签白名单校验
+  if (!isUserTag(tag)) {
+    return { success: false, error: '非法的标签类型' }
+  }
+  const tagKey = tag as UserTagKey
+
+  // 安全：操作者不能修改自己的标签（防自解封）
+  if (targetUid === ZERO_USER_UID) {
+    return { success: false, error: '不能修改自己的标签' }
+  }
+
+  const operator = authResult.user
+  const admin = createAdminClient()
+
+  try {
+    // 查询目标用户当前标签
+    const { data: targetUser, error: fetchError } = await admin
+      .from('profiles')
+      .select('id, uid, email, display_name, tags')
+      .eq('uid', targetUid)
+      .single()
+
+    if (fetchError || !targetUser) {
+      return { success: false, error: '未找到该用户' }
+    }
+
+    const currentTags = sanitizeTags(targetUser.tags)
+    if (currentTags.includes(tagKey)) {
+      return { success: true } // 已存在，幂等返回
+    }
+
+    const newTags = [...currentTags, tagKey]
+    const { error: updateError } = await admin
+      .from('profiles')
+      .update({
+        tags: newTags,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('uid', targetUid)
+
+    if (updateError) {
+      console.error('添加用户标签失败:', updateError.message)
+      return { success: false, error: '操作失败，请稍后重试' }
+    }
+
+    // 审计日志
+    await admin.from('admin_audit_log').insert({
+      operator_uid: operator.uid,
+      operator_email: operator.profile?.email ?? null,
+      action: 'add_user_tag',
+      target_uid: targetUid,
+      target_email: targetUser.email,
+      details: {
+        tag: tagKey,
+        tag_label: USER_TAG_LABELS[tagKey],
+        target_display_name: targetUser.display_name,
+      },
+    })
+
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('添加用户标签异常:', error)
+    return { success: false, error: '操作时发生未知错误' }
+  }
+}
+
+/**
+ * 移除指定用户的标签
+ * 仅零号用户可调用
+ */
+export async function removeUserTag(targetUid: number, tag: string): Promise<AdminActionResult> {
+  // CSRF 保护
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 鉴权：仅零号用户可操作
+  const authResult = await requireZeroUser()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+
+  // 标签白名单校验
+  if (!isUserTag(tag)) {
+    return { success: false, error: '非法的标签类型' }
+  }
+  const tagKey = tag as UserTagKey
+
+  // 安全：操作者不能修改自己的标签
+  if (targetUid === ZERO_USER_UID) {
+    return { success: false, error: '不能修改自己的标签' }
+  }
+
+  const operator = authResult.user
+  const admin = createAdminClient()
+
+  try {
+    const { data: targetUser, error: fetchError } = await admin
+      .from('profiles')
+      .select('id, uid, email, display_name, tags')
+      .eq('uid', targetUid)
+      .single()
+
+    if (fetchError || !targetUser) {
+      return { success: false, error: '未找到该用户' }
+    }
+
+    const currentTags = sanitizeTags(targetUser.tags)
+    if (!currentTags.includes(tagKey)) {
+      return { success: true } // 不存在，幂等返回
+    }
+
+    const newTags = currentTags.filter((t) => t !== tagKey)
+    const { error: updateError } = await admin
+      .from('profiles')
+      .update({
+        tags: newTags,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('uid', targetUid)
+
+    if (updateError) {
+      console.error('移除用户标签失败:', updateError.message)
+      return { success: false, error: '操作失败，请稍后重试' }
+    }
+
+    // 审计日志
+    await admin.from('admin_audit_log').insert({
+      operator_uid: operator.uid,
+      operator_email: operator.profile?.email ?? null,
+      action: 'remove_user_tag',
+      target_uid: targetUid,
+      target_email: targetUser.email,
+      details: {
+        tag: tagKey,
+        tag_label: USER_TAG_LABELS[tagKey],
+        target_display_name: targetUser.display_name,
+      },
+    })
+
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('移除用户标签异常:', error)
+    return { success: false, error: '操作时发生未知错误' }
   }
 }

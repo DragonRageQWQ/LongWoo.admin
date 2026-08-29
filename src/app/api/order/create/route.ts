@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createBrowserClient } from '@supabase/supabase-js'
 import { getSessionUser } from '@/lib/supabase/server'
+import { isSessionUserSoftBanned } from '@/lib/user-guard'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { isValidUUID, validateOrderInput } from '@/lib/order-utils'
@@ -109,6 +110,14 @@ export async function POST(request: NextRequest) {
   } catch {
     // 读取登录态失败时按匿名处理，不阻断下单
     userId = null
+  }
+
+  // 软封禁（blacklist）：已登录的拉黑用户禁止下单（匿名游客不受影响）
+  if (userId && (await isSessionUserSoftBanned())) {
+    return NextResponse.json(
+      { success: false, error: '账户已被限制使用，请联系管理员' },
+      { status: 403 }
+    )
   }
 
   // 订单写入使用 service_role 客户端（服务端可信，不受 RLS 限制）。
