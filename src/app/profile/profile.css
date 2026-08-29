@@ -1,0 +1,731 @@
+/* ============================================================
+   个人中心（/profile）· 新官网风格重构 v2.0.0
+   设计语言：纸墨极简（Ink on Paper），与官网首页一致
+   ============================================================ */
+.pf-root {
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ink: #0a0a0a;
+  --soft: #737373;
+  --mute: #9ca3af;
+  --line: #e8e8e8;
+  --paper: #ffffff;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "Menlo", monospace;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "MiSans VF", "MiSans", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== 顶部栏 ===== */
+.pf-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.pf-top-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pf-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.pf-brand img {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.pf-brand b {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.pf-brand span {
+  font-size: 11px;
+  color: var(--mute);
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+}
+
+.pf-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.pf-top-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--soft);
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 6px 2px;
+  cursor: pointer;
+  transition: color 0.3s var(--ease);
+  font-family: inherit;
+}
+
+.pf-top-link:hover {
+  color: var(--ink);
+}
+
+.pf-top-link--danger:hover {
+  color: #dc2626;
+}
+
+/* ===== 主体 ===== */
+.pf-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 64px 24px 96px;
+}
+
+.pf-watermark {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-family: var(--mono);
+  font-size: 120px;
+  line-height: 1;
+  color: #f4f4f2;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.pf-kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--mute);
+  margin: 46px 0 0;
+}
+
+.pf-kicker--first {
+  margin-top: 0;
+}
+
+.pf-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  margin: 12px 0 0;
+  line-height: 1.15;
+}
+
+.pf-sub {
+  font-size: 14px;
+  color: var(--soft);
+  margin: 8px 0 0;
+}
+
+/* ===== 卡片 ===== */
+.pf-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px 26px;
+  margin-top: 18px;
+  transition: border-color 0.3s var(--ease);
+}
+
+.pf-card:hover {
+  border-color: #d9d9d9;
+}
+
+/* 用户资料 */
+.pf-user {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+}
+
+.pf-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pf-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 700;
+  overflow: hidden;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.35s var(--ease);
+}
+
+.pf-avatar:hover {
+  transform: translateY(-2px);
+}
+
+.pf-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pf-avatar-hint {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease);
+}
+
+.pf-avatar-wrap:hover .pf-avatar-hint {
+  opacity: 1;
+}
+
+.pf-user-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pf-user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pf-user-name {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.pf-edit-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--mute);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.3s var(--ease), background 0.3s var(--ease);
+}
+
+.pf-edit-btn:hover {
+  color: var(--ink);
+  background: #f3f3f1;
+}
+
+.pf-role-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+.pf-role-badge--admin {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.pf-role-badge--user {
+  background: #f3f3f1;
+  color: var(--soft);
+  border: 1px solid var(--line);
+}
+
+.pf-user-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--soft);
+  overflow: hidden;
+}
+
+.pf-user-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-err {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 昵称编辑 */
+.pf-name-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pf-input {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--ink);
+  background: #fafaf8;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.3s var(--ease);
+}
+
+.pf-input:focus {
+  border-color: var(--ink);
+}
+
+.pf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+  font-family: inherit;
+}
+
+.pf-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.pf-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pf-btn--ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.pf-btn--ghost:hover {
+  background: #f3f3f1;
+  opacity: 1;
+}
+
+.pf-btn--danger {
+  background: transparent;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.pf-btn--danger:hover {
+  background: #fef2f2;
+}
+
+/* 快捷入口 */
+.pf-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.pf-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 20px 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 0.35s var(--ease), border-color 0.3s var(--ease),
+    box-shadow 0.35s var(--ease);
+}
+
+.pf-link-card:hover {
+  transform: translateY(-3px);
+  border-color: #d6d6d6;
+  box-shadow: 0 12px 28px rgba(10, 10, 10, 0.06);
+}
+
+.pf-link-card-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  background: #fafaf8;
+}
+
+.pf-link-card b {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pf-link-card p {
+  font-size: 12px;
+  color: var(--mute);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 区块标题行 */
+.pf-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.pf-section-head a {
+  font-size: 12px;
+  color: var(--soft);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.3s var(--ease);
+}
+
+.pf-section-head a:hover {
+  color: var(--ink);
+}
+
+/* 订单列表 */
+.pf-order-list {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pf-order {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  transition: border-color 0.3s var(--ease), transform 0.3s var(--ease);
+}
+
+.pf-order:hover {
+  border-color: #d6d6d6;
+  transform: translateY(-1px);
+}
+
+.pf-order-main {
+  min-width: 0;
+}
+
+.pf-order-no-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pf-order-no {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+
+.pf-order-meta {
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-order-link {
+  font-size: 12px;
+  color: var(--soft);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  transition: color 0.3s var(--ease);
+}
+
+.pf-order-link:hover {
+  color: var(--ink);
+}
+
+.pf-empty {
+  margin-top: 18px;
+  padding: 44px 20px;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  color: var(--mute);
+}
+
+.pf-empty b {
+  display: block;
+  font-size: 14px;
+  color: var(--soft);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.pf-empty a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 2px;
+  transition: border-color 0.3s var(--ease);
+}
+
+.pf-empty a:hover {
+  border-color: var(--ink);
+}
+
+/* 信息行 */
+.pf-rows {
+  margin-top: 6px;
+}
+
+.pf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.pf-row:last-child {
+  border-bottom: none;
+}
+
+.pf-row-label {
+  color: var(--mute);
+}
+
+.pf-row-value {
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pf-row-value--ok {
+  color: #16a34a;
+}
+
+/* 密码管理 */
+.pf-sec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.pf-sec-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.pf-sec-left svg {
+  color: var(--mute);
+}
+
+.pf-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.pf-tag--ok {
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+.pf-tag--warn {
+  color: #d97706;
+  background: #fffbeb;
+}
+
+.pf-sec-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pf-text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--soft);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 2px;
+  transition: color 0.3s var(--ease);
+  font-family: inherit;
+}
+
+.pf-text-btn:hover {
+  color: var(--ink);
+}
+
+.pf-text-btn--accent:hover {
+  color: var(--ink);
+}
+
+.pf-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-field label {
+  display: block;
+  font-size: 12px;
+  color: var(--soft);
+  margin-bottom: 6px;
+}
+
+.pf-field input {
+  width: 100%;
+}
+
+.pf-form-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.pf-hint {
+  font-size: 12px;
+  color: var(--mute);
+  line-height: 1.6;
+}
+
+.pf-ok {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 底部 */
+.pf-foot {
+  border-top: 1px solid var(--line);
+  padding: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.pf-foot p {
+  margin: 0;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 900px) {
+  .pf-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pf-main {
+    padding: 44px 18px 72px;
+  }
+  .pf-title {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  .pf-grid {
+    grid-template-columns: 1fr;
+  }
+  .pf-user {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pf-brand span {
+    display: none;
+  }
+}
