@@ -269,7 +269,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       heroLines: [
         "上传设定图，描述角色的个性，免费生成你的专属角色 AI。",
         "长期的学习与陪伴，可以让 AI 心智无限逼近于真实状态。",
-        "已被充分训练的 AI 角色，可以被载入实体兽装。",
+        "已被充分训练的 AI 角色，未来可以被载入实体兽装。",
       ],
       uploadBtn: "上传",
       formTitle: "角色设定",
@@ -561,7 +561,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       heroLines: [
         "Upload a reference sheet, describe the personality, and generate your character AI for free.",
         "With long-term learning and companionship, the AI mind gets infinitely close to a real one.",
-        "A fully trained AI character can be loaded into a physical fursuit.",
+        "A fully trained AI character can be loaded into a physical fursuit in the future.",
       ],
       uploadBtn: "Upload",
       formTitle: "Character Profile",
