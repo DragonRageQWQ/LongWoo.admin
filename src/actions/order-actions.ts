@@ -1252,7 +1252,26 @@ export async function listMyOrders(limit = 20): Promise<{
   if (!currentUser) {
     return { success: false, error: '请先登录' }
   }
+  return listMyOrdersFor(currentUser.userId, currentUser.profile?.email ?? null, limit)
+}
 
+/**
+ * 按指定用户查询订单（不依赖 getCurrentUser 的 profiles 查询）
+ *
+ * 性能优化（PERF-06）：个人中心页面先做零网络的本地 JWT 验签拿到 userId/email，
+ * 直接调用本函数发起订单查询，使 profiles 查询与 orders 查询真正并行，
+ * 避免 orders 等待 profiles 完成后才发起（原实现 2 次 Supabase RTT 串行）。
+ * userId/email 均来自已验签的 JWT payload（受信字段）。
+ */
+export async function listMyOrdersFor(
+  userId: string,
+  email: string | null,
+  limit = 20
+): Promise<{
+  success: boolean
+  data?: Order[]
+  error?: string
+}> {
   const supabase = await createClient()
 
   try {
@@ -1260,22 +1279,24 @@ export async function listMyOrders(limit = 20): Promise<{
 
     // 客户订单：优先按下单账号（user_id）匹配，兜底按下单邮箱匹配（旧订单/匿名订单）
     // 方案 A：已登录用户下单时 orders.user_id 已写入，邮箱变更/输错不影响订单归属
-    const email = currentUser.profile?.email
+    // 性能优化（PERF-05）：仅查询个人中心订单卡片所需字段，并去掉 count:'exact'
+    // （页面不使用 total 计数；PostgREST 的 exact count 会额外扫描全部匹配行，
+    // 订单量大时明显拖慢 TTFB）。service_types 只需 name 用于卡片展示。
     let query = supabase
       .from('orders')
-      .select('*, service_types(*)', { count: 'exact' })
+      .select('id, order_no, status, customer_email, created_at, service_types(name)')
       .order('created_at', { ascending: false })
       .limit(safeLimit)
 
-    if (email && currentUser.userId) {
+    if (email && userId) {
       // 注意：email 中的 "." 不能转义（PostgREST or 过滤器里 \. 会导致匹配失败），
       // 仅需防御转义 or 过滤器分隔符逗号（合法邮箱不含逗号，此为纵深防御）。
       const safeEmail = email.replace(/,/g, '\\,')
       query = query.or(
-        `user_id.eq.${currentUser.userId},customer_email.eq.${safeEmail},studio_user_id.eq.${currentUser.userId}`
+        `user_id.eq.${userId},customer_email.eq.${safeEmail},studio_user_id.eq.${userId}`
       )
-    } else if (currentUser.userId) {
-      query = query.or(`user_id.eq.${currentUser.userId},studio_user_id.eq.${currentUser.userId}`)
+    } else if (userId) {
+      query = query.or(`user_id.eq.${userId},studio_user_id.eq.${userId}`)
     } else if (email) {
       query = query.eq('customer_email', email)
     } else {
@@ -1289,7 +1310,7 @@ export async function listMyOrders(limit = 20): Promise<{
       return { success: false, error: '查询失败，请稍后重试' }
     }
 
-    return { success: true, data: (data || []) as Order[] }
+    return { success: true, data: (data || []) as unknown as Order[] }
   } catch (error) {
     console.error('查询我的订单异常:', error)
     return { success: false, error: '查询我的订单时发生未知错误' }

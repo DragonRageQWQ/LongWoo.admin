@@ -254,12 +254,14 @@ export default function UserBubble({
 
             {panel === "account" && (
               <div className="gt2-dock-panel gt2-dock-panel--account">
-                <Link className="gt2-dock-menu-item" href="/profile">
+                {/* 性能优化（PERF-07）：显式 prefetch，配合 /profile loading.tsx，
+                    点击后立即显示骨架而非白屏等待 RSC */}
+                <Link className="gt2-dock-menu-item" href="/profile" prefetch={true}>
                   <UserRound />
                   {c.profileBtn}
                 </Link>
                 {isAdmin && (
-                  <Link className="gt2-dock-menu-item" href="/admin/dashboard">
+                  <Link className="gt2-dock-menu-item" href="/admin/dashboard" prefetch={true}>
                     <Shield />
                     {c.adminPanel}
                   </Link>

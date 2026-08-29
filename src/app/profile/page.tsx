@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { listMyOrders } from "@/actions/order-actions";
+import { getSessionUser } from "@/lib/supabase/server";
+import { listMyOrdersFor } from "@/actions/order-actions";
 import ProfileShell from "./ProfileShell";
 import type { Order } from "@/types/database";
 
@@ -16,15 +17,25 @@ export const metadata = {
  * 客户端 ProfileShell 不再发起点位请求（原先 2 个并行 useEffect 加载，
  * 进入页面需等待水合 + 请求往返 + loading 骨架闪烁）。
  * 交互（编辑昵称/头像/密码/退出）仍由客户端组件处理。
+ *
+ * 性能优化（PERF-06）：先做零网络的本地 JWT 验签（verifyAccessTokenWithUser
+ * 本地验签，无网络往返）拿到受信的 userId/email，随后 profiles 查询与
+ * orders 查询通过 Promise.all 真正并行（原先 listMyOrders 需等 profiles
+ * 查询完成后才发起，2 次 Supabase RTT 串行），SSR 耗时降为单次 RTT 时长。
  */
 export default async function ProfilePage() {
-  // 服务端鉴权 + 数据预取并行（PERF-04）：
-  // getCurrentUser（鉴权 + profiles）与 listMyOrders（订单）无相互依赖（listMyOrders
-  // 内部 getCurrentUser 由 React.cache 同请求去重，profiles 查询仅执行一次），
-  // Promise.all 使两次 Supabase 查询并行，SSR 时间从串行 2 RTT 降为 1 RTT 时长。
+  // 本地 JWT 验签（零网络），提前拿到 userId/email 供订单查询使用
+  const session = await getSessionUser();
+  if (!session) {
+    redirect("/login");
+  }
+
   const [currentUser, ordersResult] = await Promise.all([
     getCurrentUser(),
-    listMyOrders(20).catch(() => ({ success: false as const, error: "加载订单失败" })),
+    listMyOrdersFor(session.id, session.email ?? null, 20).catch(() => ({
+      success: false as const,
+      error: "加载订单失败",
+    })),
   ]);
 
   // getCurrentUser 内部校验 is_active，非激活用户返回 null
