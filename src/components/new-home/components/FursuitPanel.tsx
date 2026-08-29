@@ -825,7 +825,7 @@ export default function FursuitPanel({ lang }: { lang: Gt2Lang }) {
                     </button>
                     <a
                       className="gt2-btn-solid gt2-fs-query"
-                      href={`/gray-test/test2?tab=check&no=${encodeURIComponent(orderNo ?? "")}&email=${encodeURIComponent(contact.email.trim())}`}
+                      href={`/?tab=check&no=${encodeURIComponent(orderNo ?? "")}&email=${encodeURIComponent(contact.email.trim())}`}
                     >
                       {c.queryLink}
                     </a>

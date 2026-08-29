@@ -314,7 +314,7 @@ export default function AgentChatView({
     [handleSend]
   );
 
-  // 未登录：给出登录提示（test2 页面本身有管理员鉴权，正常不会出现）
+  // 未登录：给出登录提示（正常不会出现，游客可浏览但创建角色需登录）
   if (loginRequired) {
     return (
       <div className="gt2-chat-empty">

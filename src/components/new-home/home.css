@@ -1,5 +1,5 @@
 /* ============================================================
-   灰度测试 test2 · 新首页交互原型
+   官网首页 v2.0.0（原「新首页」灰度原型正式上线）
    设计语言：纸墨极简（Ink on Paper）
    动画系统：非线性缓动 cubic-bezier(.22,1,.36,1) 全局统一
    ============================================================ */
@@ -2642,33 +2642,6 @@ textarea.gt2-input {
 }
 
 /* ============================================================
-   返回灰度测试入口（右上角操作条内）
-   ============================================================ */
-.gt2-back-hub {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 16px;
-  border: 1px solid var(--gt2-line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(8px);
-  font-family: var(--gt2-mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  color: var(--gt2-soft);
-  text-decoration: none;
-  transition: border-color 0.3s var(--gt2-ease), color 0.3s var(--gt2-ease),
-    transform 0.3s var(--gt2-ease);
-}
-
-.gt2-back-hub:hover {
-  border-color: var(--gt2-ink);
-  color: var(--gt2-ink);
-  transform: translateY(-1px);
-}
-
-/* ============================================================
    移动端：汉堡 + 抽屉
    ============================================================ */
 .gt2-hamburger {
@@ -2813,10 +2786,6 @@ textarea.gt2-input {
     top: 21px;
     right: 16px;
     gap: 9px;
-  }
-
-  .gt2-back-hub {
-    padding: 8px 13px;
   }
 
   .gt2-dock-panel {

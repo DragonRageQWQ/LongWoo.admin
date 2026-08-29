@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LongWoo Studio - 旧版首页（已归档）</title>
+    <meta name="description" data-i18n-meta="home.docDesc" content="LongWoo龙坞专业兽装定制工作室，提供高品质全装定制与预设兽装销售服务。（旧版首页，已归档）">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="/longwoo-logo.svg">
+    <!-- 预连接 Supabase API -->
+    <link rel="preconnect" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
+    <link rel="dns-prefetch" href="https://vwxdjdmvgbfbpivpvxdg.supabase.co">
+    <!-- 预加载首屏 hero 图（webp），缩短 LCP -->
+    <link rel="preload" as="image" href="assets/image_0_yi19x4.webp" type="image/webp" fetchpriority="high">
+    <link rel="stylesheet" href="/css/theme.css">
+    <!-- LW-I18N 语言切换（未上线：切换器隐藏，?lang=en 可预览） -->
+    <script src="/js/i18n/i18n-init.js" defer></script>
+</head>
+<body data-i18n-doc-title="home.docTitle">
+  <div class="page-wrapper">
+
+    <!-- 0. 归档标识条：旧版首页已下线归档，仅供灰度预览 -->
+    <div style="position:fixed;top:0;left:0;right:0;z-index:200;background:#1f1f1f;color:#fff;text-align:center;font-size:12px;line-height:32px;letter-spacing:1px;">
+      【旧版首页 · 已归档】本页面仅为灰度测试预览，请访问 <a href="/" style="color:#7dd3fc;text-decoration:underline;">新版首页</a>
+    </div>
+
+    <!-- 1. Top Bar -->
+    <header class="top-bar" style="top:32px">
+      <span class="logo-text">LongWoo</span>
+      <span data-lang-slot></span>
+      <a href="/login" class="login-btn" data-i18n="nav.signIn">立即登录</a>
+    </header>
+
+    <main>
+
+      <!-- 2. Hero Banner -->
+      <section class="hero-banner">
+        <picture>
+          <source srcset="/assets/image_0_yi19x4.webp" type="image/webp">
+          <img src="/assets/image_0_yi19x4.jpg" alt="LongWoo Studio Banner" fetchpriority="high" decoding="async" width="480" height="270" />
+        </picture>
+        <div class="hero-overlay">
+          <h1 class="hero-title">LongWoo Studio</h1>
+          <p class="hero-subtitle" data-i18n="home.heroSubtitle">专业兽装定制工作室</p>
+        </div>
+      </section>
+
+      <!-- 3. CTA Buttons -->
+      <section class="cta-section">
+        <a href="/order-step1.html" class="cta-primary" data-i18n="home.ctaCustom">购买 自设兽装</a>
+        <a href="/preorder-step1.html" class="cta-secondary" data-i18n="home.ctaDrop">购买 预设兽装 (掉落)</a>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- 4. Studio Introduction -->
+      <section class="studio-intro">
+        <h2 class="section-title" data-i18n="home.aboutTitle">工作室简介</h2>
+        <div class="intro-image">
+          <picture>
+            <source srcset="/assets/image_1_5nmrru.webp" type="image/webp">
+            <img src="/assets/image_1_5nmrru.jpg" alt="LongWoo 工作室" loading="lazy" decoding="async" width="480" height="320" />
+          </picture>
+        </div>
+        <p class="intro-text" data-i18n="home.aboutText">
+          LongWoo 工作室是一家专注于高品质兽装定制与销售的专业工作室。我们致力于为每一位客户提供独一无二的兽装作品。
+        </p>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- 5. Service Advantages -->
+      <section class="advantages">
+        <h2 class="section-title" data-i18n="home.advTitle">服务优势</h2>
+        <div class="advantage-grid">
+
+          <!-- 专业定制 -->
+          <div class="advantage-card">
+            <div class="advantage-icon">
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="40" height="40" rx="10" fill="rgba(16,16,16,0.06)"/>
+                <path d="M12 28V18L20 12L28 18V28H22V22H18V28H12Z" stroke="#101010" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 12V18" stroke="#101010" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="advantage-title" data-i18n="home.advCustomTitle">专业定制</h3>
+            <p class="advantage-desc" data-i18n="home.advCustomDesc">每一件作品均为量身定制</p>
+          </div>
+
+          <!-- 品质保证 -->
+          <div class="advantage-card">
+            <div class="advantage-icon">
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="40" height="40" rx="10" fill="rgba(16,16,16,0.06)"/>
+                <path d="M20 28L10 22L20 16L30 22L20 28Z" stroke="#101010" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 23V28L20 32L28 28V23" stroke="#101010" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="20" cy="20" r="2" fill="#101010"/>
+              </svg>
+            </div>
+            <h3 class="advantage-title" data-i18n="home.advQualityTitle">品质保证</h3>
+            <p class="advantage-desc" data-i18n="home.advQualityDesc">精选材料，精细工艺</p>
+          </div>
+
+          <!-- 售后无忧 -->
+          <div class="advantage-card">
+            <div class="advantage-icon">
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="40" height="40" rx="10" fill="rgba(16,16,16,0.06)"/>
+                <circle cx="20" cy="22" r="8" stroke="#101010" stroke-width="1.8"/>
+                <path d="M20 18V22L23 24" stroke="#101010" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 10H24" stroke="#101010" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M20 10V12" stroke="#101010" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="advantage-title" data-i18n="home.advServiceTitle">售后无忧</h3>
+            <p class="advantage-desc" data-i18n="home.advServiceDesc">提供完善的售后服务</p>
+          </div>
+
+          <!-- 原创设计 -->
+          <div class="advantage-card">
+            <div class="advantage-icon">
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="40" height="40" rx="10" fill="rgba(16,16,16,0.06)"/>
+                <path d="M14 26C14 26 16 22 20 22C24 22 26 26 26 26" stroke="#101010" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="16" cy="17" r="2" fill="#101010"/>
+                <circle cx="24" cy="17" r="2" fill="#101010"/>
+                <path d="M13 10C13 10 16 8 20 8C24 8 27 10 27 10" stroke="#101010" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M20 8V12" stroke="#101010" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="advantage-title" data-i18n="home.advOriginalTitle">原创设计</h3>
+            <p class="advantage-desc" data-i18n="home.advOriginalDesc">独特原创角色设计</p>
+          </div>
+
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- 6. Product Showcase -->
+      <section class="showcase">
+        <h2 class="section-title" data-i18n="home.worksTitle">我们的作品</h2>
+        <div class="showcase-scroll">
+
+          <a class="product-card" href="/works-detail.html?id=banli">
+            <picture>
+              <source srcset="/assets/image_2_wv337u.webp" type="image/webp">
+              <img src="/assets/image_2_wv337u.jpg" alt="兽装作品 - 板栗" loading="lazy" decoding="async" width="280" height="280" />
+            </picture>
+            <div class="product-card-body">
+              <h3 class="product-card-title">板栗</h3>
+              <p class="product-card-desc" data-i18n="home.workCase">全装定制案例</p>
+            </div>
+          </a>
+
+          <a class="product-card" href="/works-detail.html?id=huiqi">
+            <picture>
+              <source srcset="/assets/image_3_wv337u.webp" type="image/webp">
+              <img src="/assets/image_3_wv337u.jpg" alt="兽装作品 - 灰崎" loading="lazy" decoding="async" width="280" height="280" />
+            </picture>
+            <div class="product-card-body">
+              <h3 class="product-card-title">灰崎</h3>
+              <p class="product-card-desc" data-i18n="home.workCase">全装定制案例</p>
+            </div>
+          </a>
+
+          <a class="product-card" href="/works-detail.html?id=redian">
+            <picture>
+              <source srcset="/assets/image_4_wv337u.webp" type="image/webp">
+              <img src="/assets/image_4_wv337u.jpg" alt="兽装作品 - 热点" loading="lazy" decoding="async" width="280" height="280" />
+            </picture>
+            <div class="product-card-body">
+              <h3 class="product-card-title">热点</h3>
+              <p class="product-card-desc" data-i18n="home.workCase">全装定制案例</p>
+            </div>
+          </a>
+
+          <a class="product-card" href="/works-detail.html?id=shantong">
+            <picture>
+              <source srcset="/assets/image_5_8ofe40.webp" type="image/webp">
+              <img src="/assets/image_5_8ofe40.jpg" alt="兽装作品 - 山桐" loading="lazy" decoding="async" width="280" height="280" />
+            </picture>
+            <div class="product-card-body">
+              <h3 class="product-card-title">山桐</h3>
+              <p class="product-card-desc" data-i18n="home.workCase">全装定制案例</p>
+            </div>
+          </a>
+
+          <a class="product-card" href="/works-detail.html?id=yusan">
+            <picture>
+              <source srcset="/assets/image_6_wv337u.webp" type="image/webp">
+              <img src="/assets/image_6_wv337u.jpg" alt="兽装作品 - 渔弎" loading="lazy" decoding="async" width="280" height="280" />
+            </picture>
+            <div class="product-card-body">
+              <h3 class="product-card-title">渔弎</h3>
+              <p class="product-card-desc" data-i18n="home.workCase">全装定制案例</p>
+            </div>
+          </a>
+
+        </div>
+      </section>
+
+      <!-- 7. Footer -->
+      <footer class="site-footer">
+        <p class="footer-contact" data-i18n="home.contact">联系邮箱：hello@longwoo.studio</p>
+        <p class="footer-copyright">&copy; 2026 LongWoo Studio. All rights reserved.</p>
+      </footer>
+
+    </main>
+
+    <!-- 8. Bottom Navigation -->
+    <nav class="bottom-nav">
+
+      <!-- 购买兽装 -->
+      <a href="/order-step1.html" class="nav-item active">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#101010" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V6L18 2H6Z"/>
+            <path d="M3 6H21"/>
+            <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10"/>
+          </svg>
+        </div>
+        <span class="nav-item-label" data-i18n="nav.buyFursuit">购买兽装</span>
+      </a>
+
+      <!-- 龙灵工坊（原 AI 助手） -->
+      <a href="/ai/characters" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 13.6 2.35 15.12 3 16.48L2.5 21.5L7.52 21C8.88 21.65 10.4 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z"/>
+            <path d="M8 9H8.01"/>
+            <path d="M12 9H12.01"/>
+            <path d="M16 9H16.01"/>
+            <path d="M8 13C9.2 14.5 10.6 15.2 12 15.2C13.4 15.2 14.8 14.5 16 13"/>
+          </svg>
+        </div>
+        <span class="nav-item-label" data-i18n="nav.lingWork">龙灵工坊</span>
+      </a>
+
+      <!-- 购买掉落 -->
+      <a href="/preorder-step1.html" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L12 16"/>
+            <path d="M12 16L7 11"/>
+            <path d="M12 16L17 11"/>
+            <path d="M4 19H20"/>
+          </svg>
+        </div>
+        <span class="nav-item-label" data-i18n="nav.buyDrop">购买掉落</span>
+      </a>
+
+      <!-- 查询进度&售后 -->
+      <a href="/order/query" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 7V12L15 15"/>
+          </svg>
+        </div>
+        <span class="nav-item-label" data-i18n="nav.progress">进度&售后</span>
+      </a>
+
+      <!-- 个人中心（原我的订单） -->
+      <a href="/profile" class="nav-item">
+        <div class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(16,16,16,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <span class="nav-item-label">个人中心</span>
+      </a>
+
+    </nav>
+
+  </div>
+
+    <style>
+    body {
+      font-family: var(--font-family);
+      background-color: var(--color-background);
+      color: var(--color-primary);
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .page-wrapper {
+      max-width: var(--content-max-width);
+      margin: 0 auto;
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: var(--content-max-width);
+      height: var(--nav-height);
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--color-border-light);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-md);
+      box-sizing: border-box;
+    }
+
+    .logo-text {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--color-primary);
+    }
+
+    .login-btn {
+      font-size: var(--font-size-sm);
+      font-weight: 500;
+      color: var(--color-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      padding: var(--space-xs) var(--space-md);
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .login-btn:hover {
+      background: var(--color-primary-lightest2);
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      width: 100%;
+      height: 360px;
+      overflow: hidden;
+      position: relative;
+      margin-top: var(--nav-height);
+    }
+
+    .hero-banner img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .hero-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60%;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: var(--space-lg);
+      box-sizing: border-box;
+    }
+
+    .hero-title {
+      font-size: var(--font-size-2xl);
+      font-weight: 700;
+      color: #FFFFFF;
+      line-height: var(--line-height-tight);
+      margin: 0 0 var(--space-xs) 0;
+      letter-spacing: -0.5px;
+    }
+
+    .hero-subtitle {
+      font-size: var(--font-size-base);
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.85);
+      margin: 0;
+      line-height: var(--line-height);
+    }
+
+    /* CTA Buttons */
+    .cta-section {
+      padding: var(--space-lg) var(--space-md);
+      box-sizing: border-box;
+    }
+
+    .cta-primary {
+      display: block;
+      width: 100%;
+      padding: var(--space-md) var(--space-lg);
+      background-color: var(--color-primary);
+      color: #FFFFFF;
+      font-size: var(--font-size-md);
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: opacity 0.2s ease;
+      box-sizing: border-box;
+      margin-bottom: var(--space-md);
+    }
+
+    .cta-primary:hover {
+      opacity: 0.85;
+    }
+
+    .cta-secondary {
+      display: block;
+      width: 100%;
+      padding: var(--space-md) var(--space-lg);
+      background-color: transparent;
+      color: var(--color-primary);
+      font-size: var(--font-size-md);
+      font-weight: 500;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .cta-secondary:hover {
+      background: var(--color-primary-lightest2);
+      border-color: var(--color-primary-lighter);
+    }
+
+    /* Studio Intro */
+    .studio-intro {
+      padding: var(--space-lg) var(--space-md);
+      box-sizing: border-box;
+    }
+
+    .intro-image {
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: var(--space-md);
+    }
+
+    .intro-image img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .intro-text {
+      font-size: var(--font-size-base);
+      color: var(--color-primary-light);
+      line-height: var(--line-height);
+      margin: 0;
+    }
+
+    /* Section Title */
+    .section-title {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--color-primary);
+      margin: 0 0 var(--space-lg) 0;
+      letter-spacing: -0.3px;
+    }
+
+    /* Advantages */
+    .advantages {
+      padding: var(--space-lg) var(--space-md);
+      box-sizing: border-box;
+    }
+
+    .advantage-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-md);
+    }
+
+    .advantage-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      box-sizing: border-box;
+    }
+
+    .advantage-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: var(--space-sm);
+    }
+
+    .advantage-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .advantage-title {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--color-primary);
+      margin: 0 0 var(--space-xs) 0;
+    }
+
+    .advantage-desc {
+      font-size: var(--font-size-sm);
+      color: var(--color-primary-light);
+      line-height: var(--line-height);
+      margin: 0;
+    }
+
+    /* Product Showcase */
+    .showcase {
+      padding: var(--space-lg) var(--space-md);
+      padding-bottom: calc(var(--bottom-nav-height) + var(--space-3xl));
+      box-sizing: border-box;
+    }
+
+    .showcase-scroll {
+      display: flex;
+      gap: var(--space-md);
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: var(--space-sm);
+      margin: 0 calc(var(--space-md) * -1);
+      padding-left: var(--space-md);
+      padding-right: var(--space-md);
+    }
+
+    .showcase-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .product-card {
+      min-width: 220px;
+      max-width: 220px;
+      scroll-snap-align: start;
+      flex-shrink: 0;
+      background: var(--color-background);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--color-border-light);
+      transition: box-shadow 0.2s ease;
+      text-decoration: none;
+      display: block;
+    }
+
+    .product-card:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    .product-card img {
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .product-card-body {
+      padding: var(--space-md);
+      box-sizing: border-box;
+    }
+
+    .product-card-title {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--color-primary);
+      margin: 0 0 var(--space-xs) 0;
+    }
+
+    .product-card-desc {
+      font-size: var(--font-size-sm);
+      color: var(--color-primary-light);
+      line-height: var(--line-height);
+      margin: 0;
+    }
+
+    /* Footer */
+    .site-footer {
+      padding: var(--space-2xl) var(--space-md) var(--space-lg) var(--space-md);
+      padding-bottom: calc(var(--bottom-nav-height) + var(--space-2xl));
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    .footer-contact {
+      font-size: var(--font-size-sm);
+      color: var(--color-primary-light);
+      margin-bottom: var(--space-md);
+    }
+
+    .footer-copyright {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-lighter);
+      margin: 0;
+    }
+
+    .footer-version {
+      font-size: var(--font-size-xs);
+      color: var(--color-primary-lighter);
+      margin: 4px 0 0;
+    }
+
+    /* Bottom Navigation - 公共规则已抽取至 theme.css */
+
+    /* Divider */
+    .section-divider {
+      height: 8px;
+      background: var(--color-surface);
+    }
+  </style>
+<script>
+(async function() {
+  try {
+    const res = await fetch('/api/session-check');
+    const data = await res.json();
+    
+    if (data.loggedIn && data.profile) {
+      const loginBtn = document.querySelector('.login-btn');
+      if (loginBtn) {
+        const profile = data.profile;
+        const rawName = profile.display_name || '用户';
+        // HTML 转义防止 XSS
+        const escapeHtml = (str) => {
+          const div = document.createElement('div');
+          div.textContent = str;
+          return div.innerHTML;
+        };
+        const displayName = escapeHtml(rawName);
+        const avatarUrl = profile.avatar_url ? escapeHtml(profile.avatar_url) : '';
+        
+        const isAdmin = profile.role === 'admin';
+        const dashboardLink = isAdmin ? '/admin/dashboard' : '/profile';
+        
+        // 创建用户菜单（铃铛在头像左侧，flex 布局保证对齐不挤占）
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'position:relative;display:flex;align-items:center;gap:8px;';
+        wrapper.innerHTML = `
+          <div style="position:relative;display:flex;align-items:center;flex-shrink:0;">
+            <button class="notify-btn" style="position:relative;padding:6px;border-radius:9999px;background:rgba(16,16,16,0.05);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="通知">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span class="notify-badge" style="display:none;position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:9999px;background:#EF4444;color:#fff;font-size:10px;font-weight:600;line-height:16px;text-align:center;font-family:inherit;"></span>
+            </button>
+            <div class="notify-dropdown" style="display:none;position:fixed;top:0;left:0;background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);overflow:hidden;z-index:100;width:calc(100vw - 32px);max-width:340px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #F3F3F3;">
+                <span style="font-size:var(--font-size-sm);font-weight:600;color:var(--color-primary);font-family:inherit;">通知</span>
+                <span class="notify-readall" style="font-size:12px;color:#2563EB;cursor:pointer;font-family:inherit;">全部已读</span>
+              </div>
+              <div class="notify-list" style="max-height:60vh;overflow-y:auto;"></div>
+            </div>
+          </div>
+          <button class="user-menu-btn" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9999px;background:rgba(16,16,16,0.05);border:none;cursor:pointer;font-size:var(--font-size-sm);font-weight:500;color:var(--color-primary);font-family:inherit;flex-shrink:0;">
+            <span style="width:24px;height:24px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;overflow:hidden;">${avatarUrl ? `<img src="${avatarUrl}" alt="${displayName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />` : `<span>${escapeHtml(rawName.charAt(0).toUpperCase())}</span>`}</span>
+            <span style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${displayName}</span>
+          </button>
+          <div class="user-dropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);overflow:hidden;z-index:100;min-width:140px;">
+            <a href="${dashboardLink}" style="display:block;padding:10px 16px;font-size:var(--font-size-sm);color:var(--color-primary);text-decoration:none;font-family:inherit;">${isAdmin ? '管理后台' : '个人中心'}</a>
+            <a href="/" style="display:block;padding:10px 16px;font-size:var(--font-size-sm);color:var(--color-primary);text-decoration:none;font-family:inherit;">返回首页</a>
+            <button class="logout-btn" style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:var(--font-size-sm);color:#EF4444;background:none;border:none;cursor:pointer;font-family:inherit;">退出登录</button>
+          </div>
+        `;
+        
+        loginBtn.parentNode.replaceChild(wrapper, loginBtn);
+        
+        // 下拉菜单交互
+        const btn = wrapper.querySelector('.user-menu-btn');
+        const dropdown = wrapper.querySelector('.user-dropdown');
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', function() {
+          dropdown.style.display = 'none';
+        });
+        
+        // 退出登录
+        const logoutBtn = wrapper.querySelector('.logout-btn');
+        logoutBtn.addEventListener('click', async function() {
+          try {
+            await fetch('/api/authentication/logout', { method: 'POST' });
+          } catch(e) {}
+          window.location.href = '/login';
+        });
+
+        // ==================== 通知铃铛 ====================
+        const notifyBtn = wrapper.querySelector('.notify-btn');
+        const notifyDropdown = wrapper.querySelector('.notify-dropdown');
+        const notifyList = wrapper.querySelector('.notify-list');
+        const notifyBadge = wrapper.querySelector('.notify-badge');
+        const notifyReadAll = wrapper.querySelector('.notify-readall');
+
+        let notifyItems = [];
+        let notifyUnread = 0;
+
+        // 相对时间格式化
+        function formatNotifyTime(iso) {
+          const d = new Date(iso);
+          if (isNaN(d.getTime())) return '';
+          const diff = Date.now() - d.getTime();
+          if (diff < 60 * 1000) return '刚刚';
+          if (diff < 3600 * 1000) return Math.floor(diff / 60000) + '分钟前';
+          if (diff < 86400 * 1000) return Math.floor(diff / 3600000) + '小时前';
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return d.getFullYear() + '-' + m + '-' + day;
+        }
+
+        // 渲染通知列表
+        function renderNotifications() {
+          if (!notifyItems.length) {
+            notifyList.innerHTML = '<div style="padding:30px 14px;text-align:center;color:#9CA3AF;font-size:var(--font-size-sm);font-family:inherit;">暂无通知</div>';
+            return;
+          }
+          notifyList.innerHTML = notifyItems.map(function(n) {
+            return '<div class="notify-item" data-id="' + n.id + '" style="padding:10px 14px;border-bottom:1px solid #F8F8F8;cursor:pointer;' + (n.is_read ? '' : 'background:#EFF6FF;') + '">'
+              + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+              + '<span style="font-size:var(--font-size-sm);font-weight:500;color:var(--color-primary);font-family:inherit;">' + escapeHtml(n.title) + (n.is_read ? '' : '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#EF4444;margin-left:6px;vertical-align:middle;"></span>') + '</span>'
+              + '<span style="font-size:11px;color:#9CA3AF;flex-shrink:0;font-family:inherit;">' + escapeHtml(formatNotifyTime(n.created_at)) + '</span>'
+              + '</div>'
+              + '<div style="font-size:12px;color:#6B7280;margin-top:3px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-family:inherit;white-space:pre-wrap;">' + escapeHtml(n.content) + '</div>'
+              + '</div>';
+          }).join('');
+
+          notifyList.querySelectorAll('.notify-item').forEach(function(el) {
+            el.addEventListener('click', function() {
+              openNotifyDetail(this.getAttribute('data-id'));
+            });
+          });
+        }
+
+        // 打开公告详情弹窗（查看完整内容）并标记已读
+        function openNotifyDetail(id) {
+          var item = notifyItems.find(function(n) { return n.id === id; });
+          if (!item) return;
+          if (!item.is_read) markNotifyRead(id);
+          var overlay = document.createElement('div');
+          overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+          overlay.innerHTML = ''
+            + '<div style="background:#fff;border-radius:14px;max-width:420px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.15);">'
+            +   '<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #F3F3F3;">'
+            +     '<h3 style="font-size:15px;font-weight:600;color:var(--color-primary);font-family:inherit;flex:1;padding-right:8px;margin:0;">' + escapeHtml(item.title) + '</h3>'
+            +     '<button class="notify-detail-close" style="background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:18px;line-height:1;padding:0 2px;font-family:inherit;" aria-label="关闭">&times;</button>'
+            +   '</div>'
+            +   '<div style="padding:16px 18px;overflow-y:auto;flex:1;">'
+            +     '<p style="font-size:12px;color:#9CA3AF;margin:0 0 12px;font-family:inherit;">' + escapeHtml(formatNotifyTime(item.created_at)) + '</p>'
+            +     '<p style="font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap;word-break:break-word;margin:0;font-family:inherit;">' + escapeHtml(item.content) + '</p>'
+            +   '</div>'
+            +   '<div style="padding:12px 18px;border-top:1px solid #F3F3F3;display:flex;justify-content:flex-end;">'
+            +     '<button class="notify-detail-close" style="padding:8px 16px;border:1px solid #E5E7EB;border-radius:8px;background:#fff;color:#4B5563;font-size:13px;cursor:pointer;font-family:inherit;">关闭</button>'
+            +   '</div>'
+            + '</div>';
+          document.body.appendChild(overlay);
+          function closeDetail() {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            document.removeEventListener('click', overlayClickHandler, true);
+          }
+          function overlayClickHandler(ev) {
+            if (ev.target === overlay) closeDetail();
+          }
+          overlay.querySelectorAll('.notify-detail-close').forEach(function(btn) {
+            btn.addEventListener('click', closeDetail);
+          });
+          document.addEventListener('click', overlayClickHandler, true);
+        }
+
+        // 更新未读徽标
+        function updateNotifyBadge() {
+          if (notifyUnread > 0) {
+            notifyBadge.style.display = 'block';
+            notifyBadge.textContent = notifyUnread > 99 ? '99+' : notifyUnread;
+          } else {
+            notifyBadge.style.display = 'none';
+          }
+        }
+
+        // 加载通知
+        async function loadNotifications() {
+          try {
+            const res = await fetch('/api/notifications?limit=20');
+            if (res.status === 401) return;
+            const data = await res.json();
+            if (data.success) {
+              notifyItems = data.items || [];
+              notifyUnread = data.unreadCount || 0;
+              if (notifyDropdown.style.display !== 'none') renderNotifications();
+              updateNotifyBadge();
+            }
+          } catch(e) {}
+        }
+
+        // 标记单条已读
+        async function markNotifyRead(id) {
+          try {
+            await fetch('/api/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) });
+            const item = notifyItems.find(function(n) { return n.id === id; });
+            if (item) { item.is_read = true; renderNotifications(); }
+            notifyUnread = Math.max(0, notifyUnread - 1);
+            updateNotifyBadge();
+          } catch(e) {}
+        }
+
+        // 铃铛点击：展开/收起通知面板（与用户菜单互斥）
+        notifyBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          dropdown.style.display = 'none';
+          const willOpen = notifyDropdown.style.display === 'none';
+          if (willOpen) {
+            // 动态定位：以铃铛按钮视口坐标为准，保证面板不出屏幕
+            var rect = notifyBtn.getBoundingClientRect();
+            var panelWidth = Math.min(window.innerWidth - 32, 340);
+            var left = rect.right - panelWidth;
+            if (left < 8) left = 8; // 防止左溢出
+            if (left + panelWidth > window.innerWidth - 8) left = window.innerWidth - 8 - panelWidth;
+            notifyDropdown.style.top = (rect.bottom + 6) + 'px';
+            notifyDropdown.style.left = left + 'px';
+            notifyDropdown.style.width = panelWidth + 'px';
+            notifyDropdown.style.right = 'auto';
+          }
+          notifyDropdown.style.display = willOpen ? 'block' : 'none';
+          if (willOpen) {
+            if (!notifyItems.length) renderNotifications();
+            loadNotifications();
+          }
+        });
+
+        // 全部已读
+        notifyReadAll.addEventListener('click', async function(e) {
+          e.stopPropagation();
+          try {
+            await fetch('/api/notifications/read-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+            notifyItems.forEach(function(n) { n.is_read = true; });
+            notifyUnread = 0;
+            updateNotifyBadge();
+            renderNotifications();
+          } catch(e) {}
+        });
+
+        // 外部点击关闭通知面板
+        document.addEventListener('click', function() {
+          notifyDropdown.style.display = 'none';
+        });
+
+        // 初始加载 + 定时轮询（Vercel serverless 无实时推送）
+        loadNotifications();
+        setInterval(loadNotifications, 60000);
+      }
+    }
+  } catch(e) {
+    // 静默失败，保持"立即登录"按钮
+  }
+})();
+</script>
+<script>
+// ==================== 我们的作品：动态加载 ====================
+// 从 /api/works 拉取作品数据并渲染作品卡片（管理后台增删改后自动生效）
+// 加载失败时保留页面原有静态卡片（SEO/兜底）
+(function() {
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  function renderWorks(items) {
+    var container = document.querySelector('.showcase-scroll');
+    if (!container || !items || items.length === 0) return;
+    container.innerHTML = items.map(function(w) {
+      var img = w.image_url || '';
+      var imgWebp = '';
+      var m = img.match(/^([^?]+)\.(jpg|jpeg|png)$/i);
+      if (m) imgWebp = m[1] + '.webp';
+      var code = (w.code || '').replace(/^0+/, '');
+      return '<a class="product-card" href="works-detail.html?id=' + encodeURIComponent(w.id) + '">'
+        + '<picture>'
+        +   (imgWebp ? '<source srcset="' + imgWebp + '" type="image/webp">' : '')
+        +   '<img src="' + img + '" alt="兽装作品 - ' + escapeHtml(w.title) + '" loading="lazy" decoding="async" width="280" height="280" />'
+        + '</picture>'
+        + '<div class="product-card-body">'
+        +   '<h3 class="product-card-title">' + escapeHtml(w.title) + '</h3>'
+        +   '<p class="product-card-desc">' + escapeHtml(w.tag || '全装定制案例') + '</p>'
+        + '</div>'
+        + '</a>';
+    }).join('');
+  }
+
+  fetch('/api/works')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.success && Array.isArray(data.items) && data.items.length > 0) {
+        renderWorks(data.items);
+      }
+    })
+    .catch(function() {
+      // 加载失败保留静态卡片
+    });
+})();
+</script>
+<script src="/js/common.js" defer></script>
+</body>
+</html>

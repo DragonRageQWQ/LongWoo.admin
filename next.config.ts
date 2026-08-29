@@ -8,16 +8,15 @@ const nextConfig: NextConfig = {
   // 隐藏 X-Powered-By 响应头，减少信息泄露
   poweredByHeader: false,
 
-  // 首页重定向到 public/index.html（静态文件，CDN 缓存）
-  // 使用 redirects 而非 rewrites/页面内 redirect()：
-  // - redirects 由 Vercel 边缘层处理，不启动 Serverless 函数，彻底消除冷启动等待
-  // - 页面内 redirect() 每次访问都要渲染 Serverless 路由，冷启动可长达数秒
+  // 首页（v2.0.0）：由 src/app/page.tsx 渲染新首页（App Router 动态页面）
+  // 旧版首页已归档至 public/gray-test/test2/index.html（灰度预览）
+  // 旧书签/外链兼容：/index.html（旧首页静态文件地址）301 至新首页
   async redirects() {
     return [
       {
-        source: '/',
-        destination: '/index.html',
-        permanent: false,
+        source: '/index.html',
+        destination: '/',
+        permanent: true,
       },
     ];
   },

@@ -31,9 +31,9 @@ export const grayTestEntries: GrayTestEntry[] = [
   {
     id: "test2",
     label: "test2",
-    title: "新首页交互原型（侧边栏选项卡）",
+    title: "旧版首页（已归档）",
     description:
-      "Agent智能体 / Fursuit委托兽装 / Web Shop / Check / About 五选项卡单页无缝切换（非线性字体动效），左下角气泡集成登录、站内信与语言切换",
+      "旧版官网首页静态页，已由新首页（根路径 /）替代，此处仅供灰度预览（页面顶部有「已归档」标识）",
     href: "/gray-test/test2",
   },
   {

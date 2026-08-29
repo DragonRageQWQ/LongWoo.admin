@@ -128,13 +128,13 @@ export default function ShopPanel({ lang }: { lang: Gt2Lang }) {
         const ok = session.loggedIn && session.profile?.role === "admin";
         if (!ok) {
           window.alert(c.noPermission);
-          window.location.replace("/gray-test/test2?tab=shop");
+          window.location.replace("/?tab=shop");
           return;
         }
         setEditMode(true);
       } catch {
         window.alert(c.noPermission);
-        window.location.replace("/gray-test/test2?tab=shop");
+        window.location.replace("/?tab=shop");
       } finally {
         setEditChecked(true);
       }
@@ -398,7 +398,7 @@ export default function ShopPanel({ lang }: { lang: Gt2Lang }) {
             <button type="button" className="gt2-btn-solid gt2-shop-edit-btn" onClick={startNewDraft}>
               {c.editAdd}
             </button>
-            <a className="gt2-btn-ghost gt2-shop-edit-btn" href="/gray-test/test2?tab=shop">
+            <a className="gt2-btn-ghost gt2-shop-edit-btn" href="/?tab=shop">
               {c.editExit}
             </a>
           </span>
@@ -783,7 +783,7 @@ export default function ShopPanel({ lang }: { lang: Gt2Lang }) {
           </button>
           <a
             className="gt2-btn-solid gt2-fs-query"
-            href={`/gray-test/test2?tab=check&no=${encodeURIComponent(orderNo ?? "")}&email=${encodeURIComponent(email.trim())}`}
+            href={`/?tab=check&no=${encodeURIComponent(orderNo ?? "")}&email=${encodeURIComponent(email.trim())}`}
           >
             {c.queryLink}
           </a>

@@ -8,7 +8,7 @@ import EntryPanel from "./components/EntryPanel";
 import CheckPanel from "./components/CheckPanel";
 import ShopPanel from "./components/ShopPanel";
 import UserBubble from "./components/UserBubble";
-import "./test2.css";
+import "./home.css";
 
 /** 挤压位移的距离衰减系数：紧邻全量、越远越轻（温和档） */
 const NAV_FALLOFF = [0, 1, 0.6, 0.32, 0.15];
@@ -267,13 +267,6 @@ export default function GrayTest2App() {
 
       <main className="gt2-main">
         <div className="gt2-top-actions">
-          <a className="gt2-back-hub" href="/gray-test">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M19 12H5" />
-              <path d="M12 19l-7-7 7-7" />
-            </svg>
-            GRAY TEST
-          </a>
           <UserBubble lang={lang} onLangChange={setLang} />
         </div>
 
