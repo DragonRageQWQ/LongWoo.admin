@@ -546,7 +546,7 @@ export default function ProfileShell({
           <div className="pf-empty">
             <b>{t("profile.noOrders")}</b>
             <p className="text-xs text-neutral-400">{t("profile.noOrdersDesc")}</p>
-            <Link href="/order-step1.html">
+            <Link href="/?tab=fursuit">
               {t("profile.goBuyFursuit")}
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>

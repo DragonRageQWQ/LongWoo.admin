@@ -56,10 +56,10 @@ const NAV_ICONS = {
 } as const;
 
 const NAV_ITEMS = [
-  // 静态 HTML 页用 <a>（跨体系整页跳转，避免 Next RSC 预取 404）；Next 路由用 <Link>
-  { key: "buy", label: "购买兽装", i18nKey: "nav.buyFursuit", href: "/order-step1.html", icon: NAV_ICONS.bag, external: true },
+  // 首页 tab（/?tab=xxx）与 Next 路由均用 <Link> 享受 SPA 客户端导航
+  { key: "buy", label: "购买兽装", i18nKey: "nav.buyFursuit", href: "/?tab=fursuit", icon: NAV_ICONS.bag, external: false },
   { key: "ai", label: "龙灵工坊", i18nKey: "nav.lingWork", href: "/ai/characters", icon: NAV_ICONS.chat, external: false },
-  { key: "drop", label: "购买掉落", i18nKey: "nav.buyDrop", href: "/preorder-step1.html", icon: NAV_ICONS.drop, external: true },
+  { key: "drop", label: "购买掉落", i18nKey: "nav.buyDrop", href: "/?tab=shop", icon: NAV_ICONS.drop, external: false },
   { key: "order", label: "进度&售后", i18nKey: "nav.progress", href: "/?tab=check", icon: NAV_ICONS.clock, external: false },
   { key: "profile", label: "个人中心", i18nKey: "nav.profile", href: "/profile", icon: NAV_ICONS.user, external: false },
 ] as const;
@@ -69,9 +69,7 @@ export default function BottomNav() {
   const { t } = useLanguage();
 
   const isActive = (href: string): boolean => {
-    // 子路由页（如 /ai/characters/xxx）归属父项：前缀匹配；
-    // 静态 HTML 页（/order-step1.html 等）用后缀匹配
-    if (href.endsWith(".html")) return pathname.endsWith(href);
+    // 子路由页（如 /ai/characters/xxx）归属父项：前缀匹配
     return pathname.startsWith(href);
   };
 

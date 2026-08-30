@@ -81,7 +81,7 @@ function HeaderContent() {
           <div className="hidden md:flex items-center gap-3">
             {/* 语言切换（未上线：LangSwitcher 默认不渲染，上线时改 enabled） */}
             <LangSwitcher />
-            <Link href="/order-step1.html">
+            <Link href="/?tab=fursuit">
               <Button variant="primary" size="sm">
                 {t("header.submitOrder")}
               </Button>
@@ -168,7 +168,7 @@ function HeaderContent() {
                 </Link>
               ))}
               <div className="flex flex-col gap-3 mt-2 px-2">
-                <Link href="/order-step1.html" onClick={() => setMobileOpen(false)}>
+                <Link href="/?tab=fursuit" onClick={() => setMobileOpen(false)}>
                   <Button variant="primary" size="sm" className="w-full">
                     {t("header.submitOrder")}
                   </Button>

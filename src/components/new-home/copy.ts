@@ -514,7 +514,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         desc: "预设兽装定期掉落，现货与预售同步开放。无需漫长等待，遇见即是缘分。",
         features: ["预设兽装掉落购买", "现货与预售同步", "工作室直发 · 全程可查"],
         cta: "进入商店",
-        href: "/preorder-step1.html",
+        href: "/?tab=shop",
       },
       check: {
         kicker: "04 / ORDER TRACKING",
@@ -806,7 +806,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         desc: "Pre-made fursuits drop regularly — in-stock and pre-order side by side. No long wait; when you meet the one, it's fate.",
         features: ["Pre-made fursuit drops", "In-stock & pre-order together", "Shipped by the studio · fully trackable"],
         cta: "Enter Shop",
-        href: "/preorder-step1.html",
+        href: "/?tab=shop",
       },
       check: {
         kicker: "04 / ORDER TRACKING",

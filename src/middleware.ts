@@ -11,6 +11,7 @@ import {
   clearAllSessionCookies,
 } from '@/lib/supabase/cookie-utils'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { hasUserTag } from '@/lib/user-tags'
 
 /**
  * 中间件：三级权限路由保护
@@ -37,8 +38,10 @@ export async function middleware(request: NextRequest) {
   // 每请求生成唯一 nonce：script-src 不再使用 'unsafe-inline'，
   // 仅放行 Next.js 自动生成且携带该 nonce 的内联脚本（RSC payload 等），
   // 其余内联脚本一律被 CSP 拦截，显著缩小 XSS 注入执行面。
-  // 注：public/*.html 静态页不走 middleware，由 next.config.ts 的 CSP（含
-  // 'unsafe-inline'）兜底；本 nonce CSP 仅作用于 App Router 动态页面。
+  // 注：public/*.html 静态页默认不走 middleware（matcher 排除 .html），
+  // 由 next.config.ts 的 CSP（含 'unsafe-inline'）兜底；本 nonce CSP 仅作用于
+  // App Router 动态页面。旧版静态下单流程页（order-step*.html 等）因需做
+  // 权限判定而单独加入 matcher，管理员放行时会移除本 nonce CSP 保持页面可用。
   // 使用 Web Crypto API（Edge runtime 原生支持，Node crypto 模块不可用）
   const nonce = Buffer.from(globalThis.crypto.randomUUID()).toString('base64')
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -83,13 +86,31 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
+  // 旧版遗留路径（普通用户一律 301 到新首页）：
+  // - public/ 静态下单流程页（order-step1~5.html、preorder-step1.html）
+  // - 旧订单查询 /order/query（已迁移至首页 ?tab=check）
+  // - AI 智能体工作区 /ai/characters（仅管理员与 testA 测试用户开放）
+  const legacyPaths = [
+    '/order-step1.html',
+    '/order-step2.html',
+    '/order-step3.html',
+    '/order-step4.html',
+    '/order-step5.html',
+    '/preorder-step1.html',
+    '/order/query',
+    '/ai/characters',
+  ]
+  const isLegacyPath = legacyPaths.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  )
+
   // 受保护路径：需要登录才能访问
   const protectedPaths = ['/studio', '/admin', '/profile', '/ai', '/gray-test']
   // 仅管理员可访问的路径
   const adminOnlyPaths = ['/admin', '/studio', '/gray-test']
 
-  // 如果不是受保护路径，直接放行
-  if (!protectedPaths.some(p => pathname.startsWith(p))) {
+  // 如果不是受保护路径且非遗留路径，直接放行
+  if (!protectedPaths.some(p => pathname.startsWith(p)) && !isLegacyPath) {
     return response
   }
 
@@ -168,7 +189,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // 未登录用户访问受保护路径 → 重定向到登录页
-  if (!userId && protectedPaths.some(p => pathname.startsWith(p))) {
+  if (!userId) {
+    // 旧版遗留路径：游客（未登录）也一律 301 到新首页
+    if (isLegacyPath) {
+      return applyCsp(NextResponse.redirect(new URL('/', request.url), 301))
+    }
     const loginUrl = new URL('/login', request.url)
     if (hasExpiredSession) {
       loginUrl.searchParams.set('expired', '1')
@@ -179,6 +204,24 @@ export async function middleware(request: NextRequest) {
   const profileAccess = userId ? await getProfileAccess(userId) : null
   if (userId && (!profileAccess || !profileAccess.isActive)) {
     return applyCsp(NextResponse.redirect(new URL('/login?inactive=1', request.url)))
+  }
+
+  // 旧版遗留路径权限：仅管理员可访问；/ai/characters 额外对 testA 测试用户开放
+  if (isLegacyPath) {
+    const isAdmin = profileAccess?.isAdmin === true
+    const isTestA = hasUserTag(profileAccess?.tags, 'testA')
+    const canAccessLegacy =
+      isAdmin || (pathname.startsWith('/ai/characters') && isTestA)
+    if (!canAccessLegacy) {
+      // 普通用户 → 301 永久重定向到新首页
+      return applyCsp(NextResponse.redirect(new URL('/', request.url), 301))
+    }
+    // 静态 HTML 遗留页放行时移除 nonce CSP：其内联脚本无 nonce，
+    // 交由 next.config.ts 中针对 public/*.html 的 'unsafe-inline' CSP 兜底
+    if (pathname.endsWith('.html')) {
+      response.headers.delete('Content-Security-Policy')
+    }
+    return response
   }
 
   // 已登录用户访问管理员专属路径 → 检查角色
@@ -206,14 +249,14 @@ export async function middleware(request: NextRequest) {
  */
 const profileAccessCache = new Map<
   string,
-  { data: { isAdmin: boolean; isActive: boolean }; at: number }
+  { data: { isAdmin: boolean; isActive: boolean; tags: unknown }; at: number }
 >()
 const PROFILE_CACHE_TTL_MS = 60_000
 const PROFILE_CACHE_MAX = 500
 
 async function getProfileAccess(
   userId: string
-): Promise<{ isAdmin: boolean; isActive: boolean } | null> {
+): Promise<{ isAdmin: boolean; isActive: boolean; tags: unknown } | null> {
   const cached = profileAccessCache.get(userId)
   if (cached && Date.now() - cached.at < PROFILE_CACHE_TTL_MS) {
     return cached.data
@@ -224,7 +267,7 @@ async function getProfileAccess(
 
     const { data: profile } = await admin
       .from('profiles')
-      .select('role, is_active')
+      .select('role, is_active, tags')
       .eq('id', userId)
       .single()
 
@@ -232,6 +275,7 @@ async function getProfileAccess(
     const result = {
       isAdmin: profile.role === 'admin',
       isActive: profile.is_active === true,
+      tags: profile.tags ?? [],
     }
     // 写入缓存；超上限时清空（防内存增长）
     if (profileAccessCache.size >= PROFILE_CACHE_MAX) {
@@ -255,5 +299,13 @@ export const config = {
   //   仅由 next.config 的 'unsafe-inline' CSP 兜底。
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|index.html|^$|.*\\.(?:png|jpg|jpeg|svg|gif|webp|avif|css|js|mjs|ico|mp4|woff2?|ttf|html)$).*)',
+    // 旧版静态下单流程页（普通用户 301 到新首页；管理员可访问）：
+    // 默认 matcher 排除 .html，此处单独放行以进入 middleware 权限判定
+    '/order-step1.html',
+    '/order-step2.html',
+    '/order-step3.html',
+    '/order-step4.html',
+    '/order-step5.html',
+    '/preorder-step1.html',
   ],
 }
