@@ -234,8 +234,12 @@ export type Notification = {
   sender_user_id: string | null
   /** 群发批次标识：同批次所有收件人记录共享，供超管按批次修改/删除 */
   batch_id: string | null
-  /** 发送时的目标群体：all=全体用户，admin=全体管理员，user=全体普通成员 */
-  target_role: 'all' | 'admin' | 'user'
+  /** 发送时的目标群体：all=全体用户，admin=仅限管理员，user=全部普通成员，tag=指定标签成员，users=指定成员 */
+  target_role: 'all' | 'admin' | 'user' | 'tag' | 'users'
+  /** 指定标签成员时的标签列表 */
+  target_tags: string[] | null
+  /** 指定成员时的用户 id 列表 */
+  target_user_ids: string[] | null
   title: string
   content: string
   is_read: boolean

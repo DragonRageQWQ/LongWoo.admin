@@ -4,12 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Bell,
   Send,
+  Mail,
   Loader2,
   CheckCircle,
   AlertCircle,
-  Users,
-  Shield,
-  User,
   History,
   Pencil,
   Trash2,
@@ -20,49 +18,22 @@ import {
 } from "lucide-react";
 import {
   sendNotification,
+  sendEmailBroadcast,
   listSentNotifications,
+  listEmailSendHistory,
   listOrderNotifications,
   updateSentNotification,
   deleteSentNotification,
 } from "@/actions/notification-actions";
+import NoticeAudienceSelector, {
+  DEFAULT_TARGET_VALUE,
+  type NoticeTargetValue,
+} from "./NoticeAudienceSelector";
 import type { NotificationTargetRole } from "@/lib/notification-utils";
+import type { EmailHistoryRow } from "@/lib/notification-utils";
+import { USER_TAG_LABELS, type UserTagKey } from "@/lib/user-tags";
 import { formatDate } from "@/lib/utils";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
-
-// 目标群体选项
-const targetOptions: Array<{
-  value: NotificationTargetRole;
-  label: string;
-  i18nKey: string;
-  description: string;
-  i18nDescKey: string;
-  icon: React.ElementType;
-}> = [
-  {
-    value: "all",
-    label: "全体用户",
-    i18nKey: "admin.notice.targetAll",
-    description: "所有已注册用户（含管理员）",
-    i18nDescKey: "admin.notice.targetAllDesc",
-    icon: Users,
-  },
-  {
-    value: "admin",
-    label: "全体管理员",
-    i18nKey: "admin.notice.targetAdmin",
-    description: "所有管理员",
-    i18nDescKey: "admin.notice.targetAdminDesc",
-    icon: Shield,
-  },
-  {
-    value: "user",
-    label: "全体普通成员",
-    i18nKey: "admin.notice.targetUser",
-    description: "所有普通用户",
-    i18nDescKey: "admin.notice.targetUserDesc",
-    icon: User,
-  },
-];
 
 interface SentRecord {
   id: string;
@@ -70,6 +41,8 @@ interface SentRecord {
   title: string;
   content: string;
   target_role: NotificationTargetRole;
+  target_tags: string[] | null;
+  target_user_ids: string[] | null;
   recipient_count: number;
   created_at: string;
 }
@@ -83,17 +56,13 @@ interface OrderNotifyRecord {
   created_at: string;
 }
 
-const targetLabels: Record<NotificationTargetRole, string> = {
-  all: "全体用户",
-  admin: "全体管理员",
-  user: "全体普通成员",
-};
-
 // 目标群体标签的 i18n key（渲染处用 t() 转换，避免模块级常量引用 hook）
 const TARGET_LABEL_KEYS: Record<NotificationTargetRole, string> = {
   all: "admin.notice.targetAll",
   admin: "admin.notice.targetAdmin",
   user: "admin.notice.targetUser",
+  tag: "admin.notice.targetTag",
+  users: "admin.notice.targetUsers",
 };
 
 interface ToastState {
@@ -107,15 +76,30 @@ export default function NotificationManagement({
   isSuperAdmin?: boolean;
 }) {
   const { t } = useLanguage();
-  // 发送表单
-  const [targetRole, setTargetRole] = useState<NotificationTargetRole>("all");
+
+  // 发送通知表单
+  const [noticeTarget, setNoticeTarget] = useState<NoticeTargetValue>(
+    DEFAULT_TARGET_VALUE
+  );
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
 
+  // 发送邮件表单
+  const [emailTarget, setEmailTarget] = useState<NoticeTargetValue>(
+    DEFAULT_TARGET_VALUE
+  );
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailContent, setEmailContent] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+
   // 历史记录
   const [history, setHistory] = useState<SentRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+
+  // 邮件发送历史
+  const [emailHistory, setEmailHistory] = useState<EmailHistoryRow[]>([]);
+  const [emailHistoryLoading, setEmailHistoryLoading] = useState(true);
 
   // 委托单通知历史（新窗口）
   const [orderHistory, setOrderHistory] = useState<OrderNotifyRecord[]>([]);
@@ -141,6 +125,28 @@ export default function NotificationManagement({
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // 目标群体展示名（历史记录/发送结果）
+  const renderTargetLabel = useCallback(
+    (input: {
+      target_role: NotificationTargetRole;
+      target_tags: string[] | null;
+      target_user_ids: string[] | null;
+    }) => {
+      if (input.target_role === "tag") {
+        const names = (input.target_tags || [])
+          .map((tag) => USER_TAG_LABELS[tag as UserTagKey] ?? tag)
+          .join("、");
+        return `${t("admin.notice.targetTag")}（${names}）`;
+      }
+      if (input.target_role === "users") {
+        return `${t("admin.notice.targetUsers")}（${
+          input.target_user_ids?.length ?? 0}人）`;
+      }
+      return t(TARGET_LABEL_KEYS[input.target_role]);
+    },
+    [t]
+  );
+
   // 加载发送历史
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
@@ -153,6 +159,21 @@ export default function NotificationManagement({
       console.error("加载发送记录异常:", err);
     } finally {
       setHistoryLoading(false);
+    }
+  }, []);
+
+  // 加载邮件发送历史
+  const loadEmailHistory = useCallback(async () => {
+    setEmailHistoryLoading(true);
+    try {
+      const result = await listEmailSendHistory({ limit: 20 });
+      if (result.success) {
+        setEmailHistory((result.data || []) as EmailHistoryRow[]);
+      }
+    } catch (err) {
+      console.error("加载邮件发送记录异常:", err);
+    } finally {
+      setEmailHistoryLoading(false);
     }
   }, []);
 
@@ -174,8 +195,9 @@ export default function NotificationManagement({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadHistory();
+    loadEmailHistory();
     loadOrderHistory();
-  }, [loadHistory, loadOrderHistory]);
+  }, [loadHistory, loadEmailHistory, loadOrderHistory]);
 
   // 打开编辑弹窗
   const openEdit = (record: SentRecord) => {
@@ -240,7 +262,7 @@ export default function NotificationManagement({
     }
   };
 
-  // 发送
+  // 发送通知
   const handleSend = async () => {
     if (sending) return;
 
@@ -252,14 +274,33 @@ export default function NotificationManagement({
       setToast({ type: "error", message: t("admin.notice.err.contentRequired") });
       return;
     }
+    if (noticeTarget.targetRole === "tag" && noticeTarget.tags.length === 0) {
+      setToast({ type: "error", message: t("admin.notice.err.tagRequired") });
+      return;
+    }
+    if (noticeTarget.targetRole === "users" && noticeTarget.userIds.length === 0) {
+      setToast({ type: "error", message: t("admin.notice.err.usersRequired") });
+      return;
+    }
 
     setSending(true);
     try {
-      const result = await sendNotification({ targetRole, title, content });
+      const result = await sendNotification({
+        targetRole: noticeTarget.targetRole,
+        title,
+        content,
+        tags: noticeTarget.targetRole === "tag" ? noticeTarget.tags : undefined,
+        userIds:
+          noticeTarget.targetRole === "users" ? noticeTarget.userIds : undefined,
+      });
       if (result.success) {
         setToast({
           type: "success",
-          message: `已发送给${targetLabels[targetRole]}（${result.count ?? 0}人）`,
+          message: `已发送给${renderTargetLabel({
+            target_role: noticeTarget.targetRole,
+            target_tags: noticeTarget.tags,
+            target_user_ids: noticeTarget.userIds,
+          })}（${result.count ?? 0}人）`,
         });
         setTitle("");
         setContent("");
@@ -272,6 +313,66 @@ export default function NotificationManagement({
       setToast({ type: "error", message: t("admin.notice.err.sendUnknown") });
     } finally {
       setSending(false);
+    }
+  };
+
+  // 发送邮件
+  const handleSendEmail = async () => {
+    if (emailSending) return;
+
+    if (!emailSubject.trim()) {
+      setToast({ type: "error", message: t("admin.notice.err.subjectRequired") });
+      return;
+    }
+    if (!emailContent.trim()) {
+      setToast({ type: "error", message: t("admin.notice.err.emailContentRequired") });
+      return;
+    }
+    if (emailTarget.targetRole === "tag" && emailTarget.tags.length === 0) {
+      setToast({ type: "error", message: t("admin.notice.err.tagRequired") });
+      return;
+    }
+    if (emailTarget.targetRole === "users" && emailTarget.userIds.length === 0) {
+      setToast({ type: "error", message: t("admin.notice.err.usersRequired") });
+      return;
+    }
+
+    setEmailSending(true);
+    try {
+      const result = await sendEmailBroadcast({
+        targetRole: emailTarget.targetRole,
+        subject: emailSubject,
+        content: emailContent,
+        tags: emailTarget.targetRole === "tag" ? emailTarget.tags : undefined,
+        userIds:
+          emailTarget.targetRole === "users" ? emailTarget.userIds : undefined,
+      });
+      if (result.success) {
+        setToast({
+          type: "success",
+          message: `${t("admin.notice.emailSuccess")}：${renderTargetLabel({
+            target_role: emailTarget.targetRole,
+            target_tags: emailTarget.tags,
+            target_user_ids: emailTarget.userIds,
+          })}（成功 ${result.successCount}/${result.count}）`,
+        });
+        setEmailSubject("");
+        setEmailContent("");
+        loadEmailHistory();
+      } else {
+        setToast({
+          type: "error",
+          message:
+            result.error === "未配置 RESEND_API_KEY，邮件服务不可用"
+              ? t("admin.notice.err.emailServiceUnavailable")
+              : result.error || t("admin.notice.err.emailSendFailed"),
+        });
+      }
+    } catch (err) {
+      console.error("发送邮件异常:", err);
+      setToast({ type: "error", message: t("admin.notice.err.emailSendUnknown") });
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -305,7 +406,7 @@ export default function NotificationManagement({
         </p>
       </div>
 
-      {/* 发送表单 */}
+      {/* 发送通知表单 */}
       <div className="bg-white rounded-2xl shadow-sm">
         <div className="p-4 sm:p-5 border-b border-gray-100">
           <div className="flex items-center gap-2">
@@ -320,41 +421,11 @@ export default function NotificationManagement({
             <label className="block text-sm font-medium text-gray-600 mb-2">
               {t("admin.notice.target")}
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {targetOptions.map((opt) => {
-                const Icon = opt.icon;
-                const isActive = targetRole === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setTargetRole(opt.value)}
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-colors cursor-pointer ${
-                      isActive
-                        ? "border-lw-accent bg-blue-50"
-                        : "border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    <Icon
-                      className={`w-4 h-4 flex-shrink-0 ${
-                        isActive ? "text-lw-accent" : "text-gray-400"
-                      }`}
-                    />
-                    <div className="min-w-0">
-                      <p
-                        className={`text-sm font-medium ${
-                          isActive ? "text-lw-accent" : "text-lw-black"
-                        }`}
-                      >
-                        {t(opt.i18nKey)}
-                      </p>
-                      <p className="text-xs text-gray-400 truncate">
-                        {t(opt.i18nDescKey)}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <NoticeAudienceSelector
+              value={noticeTarget}
+              onChange={setNoticeTarget}
+              disabled={sending}
+            />
           </div>
 
           {/* 标题 */}
@@ -408,6 +479,79 @@ export default function NotificationManagement({
         </div>
       </div>
 
+      {/* 发送邮件表单 */}
+      <div className="bg-white rounded-2xl shadow-sm">
+        <div className="p-4 sm:p-5 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-lw-accent" />
+            <h2 className="text-sm font-semibold text-lw-black">{t("admin.notice.emailSend")}</h2>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5 space-y-4">
+          {/* 目标群体选择 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-2">
+              {t("admin.notice.target")}
+            </label>
+            <NoticeAudienceSelector
+              value={emailTarget}
+              onChange={setEmailTarget}
+              disabled={emailSending}
+            />
+          </div>
+
+          {/* 邮件主题 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-2">
+              {t("admin.notice.emailSubjectLabel")}
+            </label>
+            <input
+              type="text"
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              maxLength={100}
+              placeholder={t("admin.notice.emailSubjectPh")}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors"
+            />
+          </div>
+
+          {/* 邮件内容 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-2">
+              {t("admin.notice.emailContentLabel")}
+            </label>
+            <textarea
+              value={emailContent}
+              onChange={(e) => setEmailContent(e.target.value)}
+              maxLength={2000}
+              rows={5}
+              placeholder={t("admin.notice.emailContentPh")}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors resize-y"
+            />
+            <p className="text-xs text-gray-400 mt-1 text-right">
+              {emailContent.length}/2000
+            </p>
+          </div>
+
+          {/* 发送按钮 */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleSendEmail}
+              disabled={emailSending}
+              className="inline-flex items-center gap-1.5 px-5 py-2 bg-lw-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {emailSending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Mail className="w-4 h-4" />
+              )}
+              {emailSending ? t("admin.notice.emailSending") : t("admin.notice.emailSend")}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* 发送历史 */}
       <div className="bg-white rounded-2xl shadow-sm">
         <div className="p-4 sm:p-5 border-b border-gray-100">
@@ -439,7 +583,7 @@ export default function NotificationManagement({
                     {record.title}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {t(TARGET_LABEL_KEYS[record.target_role])} · {record.recipient_count}{t("admin.notice.people")}
+                    {renderTargetLabel(record)} · {record.recipient_count}{t("admin.notice.people")}
                     · {formatDate(record.created_at)}
                   </p>
                 </div>
@@ -461,6 +605,49 @@ export default function NotificationManagement({
                     </button>
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 邮件发送历史 */}
+      <div className="bg-white rounded-2xl shadow-sm">
+        <div className="p-4 sm:p-5 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-lw-accent" />
+            <h2 className="text-sm font-semibold text-lw-black">{t("admin.notice.emailHistory")}</h2>
+          </div>
+        </div>
+
+        {emailHistoryLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-5 h-5 text-lw-accent animate-spin" />
+            <span className="ml-2 text-sm text-gray-400">{t("admin.notice.loading")}</span>
+          </div>
+        ) : emailHistory.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+            <Mail className="w-10 h-10 mb-2 text-gray-300" />
+            <p className="text-sm">{t("admin.notice.emailEmpty")}</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {emailHistory.map((record) => (
+              <div
+                key={record.id}
+                className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-lw-black truncate">
+                    {record.subject}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5 truncate">
+                    {record.content}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {renderTargetLabel(record)} · {t("admin.notice.emailCount")}：{record.success_count}/{record.failed_count} · {formatDate(record.created_at)}
+                  </p>
+                </div>
               </div>
             ))}
           </div>

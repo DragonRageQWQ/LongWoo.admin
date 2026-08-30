@@ -6,17 +6,22 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin, requireZeroUser } from '@/lib/auth'
 import { validateCsrf } from '@/lib/csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { getClientIp } from '@/lib/server-utils'
+import { getClientIp, sendEmail } from '@/lib/server-utils'
 import {
   validateNotificationInput,
-  resolveTargetRoleFilter,
+  resolveTargetFilter,
   buildNotificationRows,
+  buildEmailHtml,
+  buildEmailHistoryRow,
   type NotificationTargetRole,
+  type EmailHistoryRow,
 } from '@/lib/notification-utils'
 import { RATE_LIMIT_NOTIFY_MAX, RATE_LIMIT_NOTIFY_WINDOW } from '@/lib/constants'
 
 // 批量插入分块大小（避免单次请求过大）
 const INSERT_CHUNK_SIZE = 100
+// 邮件并发发送路数
+const EMAIL_SEND_CONCURRENCY = 5
 
 export interface SendNotificationResult {
   success: boolean
@@ -29,8 +34,10 @@ export interface SendNotificationResult {
  *
  * 目标群体（targetRole）：
  *   - all   ：全体用户（所有已注册用户）
- *   - admin ：全体管理员
- *   - user  ：全体普通成员
+ *   - admin ：仅限管理员
+ *   - user  ：全部普通成员
+ *   - tag   ：指定 tag 成员（tags 数组，任一命中即纳入）
+ *   - users ：指定成员（userIds 数组）
  *
  * 实现：查询目标用户列表，按收件人批量插入 notifications 表
  * （单表 + 每用户一条记录），写入审计日志。
@@ -41,6 +48,8 @@ export async function sendNotification(input: {
   targetRole: NotificationTargetRole
   title: string
   content: string
+  tags?: string[]
+  userIds?: string[]
 }): Promise<SendNotificationResult> {
   // 1) CSRF 保护（最先）
   const csrfError = await validateCsrf()
@@ -73,7 +82,11 @@ export async function sendNotification(input: {
   }
 
   // 5) 目标群体校验与映射
-  const target = resolveTargetRoleFilter(input.targetRole)
+  const target = resolveTargetFilter({
+    targetRole: input.targetRole,
+    tags: input.tags,
+    userIds: input.userIds,
+  })
   if (!target.ok) {
     return { success: false, error: target.error }
   }
@@ -85,6 +98,10 @@ export async function sendNotification(input: {
     let targetQuery = admin.from('profiles').select('id, is_active')
     if (target.query.kind === 'eq') {
       targetQuery = targetQuery.eq('role', target.query.value)
+    } else if (target.query.kind === 'tags') {
+      targetQuery = targetQuery.overlaps('tags', target.query.value)
+    } else if (target.query.kind === 'ids') {
+      targetQuery = targetQuery.in('id', target.query.value)
     }
     const { data: targets, error: targetError } = await targetQuery
 
@@ -104,6 +121,8 @@ export async function sendNotification(input: {
     const content = input.content.trim()
     const now = new Date().toISOString()
     const batchId = randomUUID()
+    const targetTags = target.query.kind === 'tags' ? target.query.value : undefined
+    const targetUserIds = target.query.kind === 'ids' ? target.query.value : undefined
 
     const rows = buildNotificationRows({
       targetUserIds: activeTargets.map((t) => t.id),
@@ -113,6 +132,8 @@ export async function sendNotification(input: {
       content,
       batchId,
       createdAt: now,
+      tags: targetTags,
+      userIds: targetUserIds,
     })
 
     for (let i = 0; i < rows.length; i += INSERT_CHUNK_SIZE) {
@@ -136,6 +157,8 @@ export async function sendNotification(input: {
           batch_id: batchId,
           target_role: input.targetRole,
           target_label: target.label,
+          target_tags: targetTags ?? null,
+          target_user_ids: targetUserIds ?? null,
           recipient_count: activeTargets.length,
           title,
         },
@@ -149,6 +172,226 @@ export async function sendNotification(input: {
   } catch (error) {
     console.error('发送通知异常:', error)
     return { success: false, error: '操作时发生未知错误' }
+  }
+}
+
+export interface SendEmailResult {
+  success: boolean
+  count?: number
+  successCount?: number
+  failedCount?: number
+  error?: string
+}
+
+/**
+ * 管理员向目标群体发送邮件（Resend）
+ *
+ * 目标群体与 sendNotification 一致（all/admin/user/tag/users）。
+ * 发送成功/失败计数会写入 email_send_history 发送历史表，
+ * 供管理后台「邮件发送历史」查看。
+ *
+ * 安全：CSRF → 管理员鉴权 → 速率限制 → 输入校验 → 目标群体校验 → 邮件服务可用性
+ */
+export async function sendEmailBroadcast(input: {
+  targetRole: NotificationTargetRole
+  subject: string
+  content: string
+  tags?: string[]
+  userIds?: string[]
+}): Promise<SendEmailResult> {
+  // 1) CSRF 保护（最先）
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 2) 鉴权：仅管理员
+  const authResult = await requireAdmin()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+  const operator = authResult.user
+
+  // 3) 速率限制：按 IP 防轰炸
+  const ip = await getClientIp()
+  const rateLimitResult = await checkRateLimit(
+    `admin-email:${ip}`,
+    RATE_LIMIT_NOTIFY_MAX,
+    RATE_LIMIT_NOTIFY_WINDOW
+  )
+  if (!rateLimitResult.allowed) {
+    return { success: false, error: '操作过于频繁，请稍后再试' }
+  }
+
+  // 4) 输入校验（主题复用标题校验规则）
+  const validationError = validateNotificationInput(input.subject, input.content)
+  if (validationError) {
+    return { success: false, error: validationError }
+  }
+
+  // 5) 目标群体校验与映射
+  const target = resolveTargetFilter({
+    targetRole: input.targetRole,
+    tags: input.tags,
+    userIds: input.userIds,
+  })
+  if (!target.ok) {
+    return { success: false, error: target.error }
+  }
+
+  // 6) 邮件服务可用性
+  if (!process.env.RESEND_API_KEY) {
+    return { success: false, error: '未配置 RESEND_API_KEY，邮件服务不可用' }
+  }
+
+  const admin = createAdminClient()
+
+  try {
+    // 7) 查询目标用户列表（需邮箱）
+    let targetQuery = admin.from('profiles').select('id, email, is_active')
+    if (target.query.kind === 'eq') {
+      targetQuery = targetQuery.eq('role', target.query.value)
+    } else if (target.query.kind === 'tags') {
+      targetQuery = targetQuery.overlaps('tags', target.query.value)
+    } else if (target.query.kind === 'ids') {
+      targetQuery = targetQuery.in('id', target.query.value)
+    }
+    const { data: targets, error: targetError } = await targetQuery
+
+    if (targetError) {
+      console.error('查询目标用户失败:', targetError.message)
+      return { success: false, error: '查询目标用户失败，请稍后重试' }
+    }
+
+    // 启用账户且已绑定邮箱
+    type EmailRecipient = { id: string; email: string; is_active: boolean | null }
+    const recipients: EmailRecipient[] = (targets ?? []).filter(
+      (t): t is EmailRecipient =>
+        t.is_active !== false &&
+        typeof t.email === 'string' &&
+        t.email.trim().length > 0
+    )
+    if (recipients.length === 0) {
+      return { success: false, error: '该群体暂无可发送的邮箱用户' }
+    }
+
+    // 8) 并发发送（默认 5 路并发），统计成功/失败数
+    const subject = input.subject.trim()
+    const content = input.content.trim()
+    const html = buildEmailHtml(subject, content)
+    const now = new Date().toISOString()
+    const batchId = randomUUID()
+
+    let successCount = 0
+    let failedCount = 0
+    let cursor = 0
+
+    const worker = async () => {
+      while (cursor < recipients.length) {
+        const current = recipients[cursor++]
+        const ok = await sendEmail(current.email, subject, html)
+        if (ok) successCount++
+        else failedCount++
+      }
+    }
+
+    await Promise.all(
+      Array.from(
+        { length: Math.min(EMAIL_SEND_CONCURRENCY, recipients.length) },
+        () => worker()
+      )
+    )
+
+    // 9) 写入发送历史（无论成败均记录计数）
+    const historyRow = buildEmailHistoryRow({
+      batchId,
+      subject,
+      content,
+      targetRole: input.targetRole,
+      tags: target.query.kind === 'tags' ? target.query.value : undefined,
+      userIds: target.query.kind === 'ids' ? target.query.value : undefined,
+      recipientCount: recipients.length,
+      successCount,
+      failedCount,
+      senderUid: operator.uid,
+      senderEmail: operator.profile?.email ?? null,
+      createdAt: now,
+    })
+    const { error: historyError } = await admin
+      .from('email_send_history')
+      .insert(historyRow)
+    if (historyError) {
+      console.error('写入邮件发送历史失败:', historyError.message)
+    }
+
+    // 10) 审计日志（静默失败，不影响主流程）
+    try {
+      await admin.from('admin_audit_log').insert({
+        operator_uid: operator.uid,
+        operator_email: operator.profile?.email ?? null,
+        action: 'send_email_broadcast',
+        target_uid: null,
+        target_email: null,
+        details: {
+          batch_id: batchId,
+          target_role: input.targetRole,
+          target_label: target.label,
+          recipient_count: recipients.length,
+          success_count: successCount,
+          failed_count: failedCount,
+          subject,
+        },
+      })
+    } catch (auditError) {
+      console.error('写入审计日志失败:', auditError)
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true, count: recipients.length, successCount, failedCount }
+  } catch (error) {
+    console.error('发送邮件异常:', error)
+    return { success: false, error: '操作时发生未知错误' }
+  }
+}
+
+/**
+ * 查询邮件发送历史（按时间倒序）
+ * 仅管理员可调用
+ *
+ * 数据源：email_send_history 表（每次广播一条记录）。
+ */
+export async function listEmailSendHistory(options?: {
+  limit?: number
+}): Promise<{
+  success: boolean
+  data?: EmailHistoryRow[]
+  error?: string
+}> {
+  // 鉴权：仅管理员
+  const authResult = await requireAdmin()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+
+  const admin = createAdminClient()
+  const limit = Math.min(options?.limit ?? 20, 50)
+
+  try {
+    const { data, error } = await admin
+      .from('email_send_history')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('查询邮件发送历史失败:', error.message)
+      return { success: false, error: '查询失败，请稍后重试' }
+    }
+
+    return { success: true, data: (data ?? []) as EmailHistoryRow[] }
+  } catch (error) {
+    console.error('查询邮件发送历史异常:', error)
+    return { success: false, error: '查询时发生未知错误' }
   }
 }
 
@@ -175,6 +418,8 @@ export async function listSentNotifications(options?: {
     title: string
     content: string
     target_role: NotificationTargetRole
+    target_tags: string[] | null
+    target_user_ids: string[] | null
     recipient_count: number
     created_at: string
   }>
@@ -193,7 +438,7 @@ export async function listSentNotifications(options?: {
     // 拉取足够多的批次记录（按时间倒序），在内存中按 batch_id 分组聚合
     const { data, error } = await admin
       .from('notifications')
-      .select('batch_id, title, content, target_role, created_at')
+      .select('batch_id, title, content, target_role, target_tags, target_user_ids, created_at')
       .not('batch_id', 'is', null)
       .order('created_at', { ascending: false })
       .limit(500)
@@ -219,6 +464,8 @@ export async function listSentNotifications(options?: {
       title: string
       content: string
       target_role: NotificationTargetRole
+      target_tags: string[] | null
+      target_user_ids: string[] | null
       created_at: string
       recipient_count: number
     }>()
@@ -236,6 +483,8 @@ export async function listSentNotifications(options?: {
           title: row.title,
           content: row.content,
           target_role: row.target_role as NotificationTargetRole,
+          target_tags: row.target_tags ?? null,
+          target_user_ids: row.target_user_ids ?? null,
           created_at: row.created_at,
           recipient_count: 1,
         })
@@ -254,6 +503,8 @@ export async function listSentNotifications(options?: {
         title: b.title,
         content: b.content,
         target_role: b.target_role,
+        target_tags: b.target_tags,
+        target_user_ids: b.target_user_ids,
         recipient_count: b.recipient_count,
         created_at: b.created_at,
       })),
