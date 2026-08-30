@@ -256,6 +256,7 @@ export interface Gt2Copy {
     markReadFail: string;
     loadFail: string;
     retry: string;
+    close: string;
     logout: string;
     loggingOut: string;
     adminPanel: string;
@@ -553,6 +554,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       markReadFail: "操作失败，请重试",
       loadFail: "加载失败",
       retry: "重试",
+      close: "关闭",
       logout: "退出登录",
       loggingOut: "退出中…",
       adminPanel: "管理后台",
@@ -848,6 +850,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       markReadFail: "Failed, please retry",
       loadFail: "Failed to load",
       retry: "Retry",
+      close: "Close",
       logout: "Sign out",
       loggingOut: "Signing out…",
       adminPanel: "Admin",

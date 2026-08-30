@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, Loader2, LogOut, Shield, UserRound } from "lucide-react";
@@ -41,7 +42,10 @@ export default function UserBubble({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  // 站内信详情：点击列表项打开完整内容弹层（null=未打开）
+  const [activeNotif, setActiveNotif] = useState<NotificationItem | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // 性能优化（PERF-09）：账户菜单展开时立即预取个人中心/管理后台的 RSC，
   // 用户点击"个人中心"时命中预载缓存，页面（含 loading 骨架）即时呈现，
@@ -84,12 +88,21 @@ export default function UserBubble({
   useEffect(() => {
     if (panel === "none") return;
     const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideDock = wrapRef.current?.contains(target);
+      const insideModal = modalRef.current?.contains(target);
+      if (!insideDock && !insideModal) {
         setPanel("none");
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setPanel("none");
+      if (e.key !== "Escape") return;
+      // 详情弹层打开时先关闭弹层，再关闭下拉
+      if (activeNotif) {
+        setActiveNotif(null);
+        return;
+      }
+      setPanel("none");
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
@@ -97,7 +110,7 @@ export default function UserBubble({
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [panel]);
+  }, [panel, activeNotif]);
 
   const handleRead = useCallback(async (id: string) => {
     try {
@@ -127,16 +140,27 @@ export default function UserBubble({
     }
   }, []);
 
+  // 点击站内信：标记已读并打开完整详情弹层（长内容不再截断）
   const handleOpenNotif = useCallback(
     (item: NotificationItem) => {
       if (!item.is_read) handleRead(item.id);
-      const orderNo = extractOrderNo(item.content);
-      if (orderNo) {
-        setPanel("none");
-        window.location.assign(`/?tab=check&no=${encodeURIComponent(orderNo)}`);
-      }
+      setActiveNotif(item);
     },
     [handleRead]
+  );
+
+  const handleCloseNotifDetail = useCallback(() => setActiveNotif(null), []);
+
+  // 详情弹层内跳转订单进度：关闭弹层与下拉后进入首页查询面板
+  const handleGoOrder = useCallback(
+    (item: NotificationItem) => {
+      const orderNo = extractOrderNo(item.content);
+      if (!orderNo) return;
+      setActiveNotif(null);
+      setPanel("none");
+      window.location.assign(`/?tab=check&no=${encodeURIComponent(orderNo)}`);
+    },
+    []
   );
 
   const handleLogout = useCallback(async () => {
@@ -172,7 +196,10 @@ export default function UserBubble({
         <button
           type="button"
           className="gt2-dock-circle"
-          onClick={() => setPanel((p) => (p === "notif" ? "none" : "notif"))}
+          onClick={() => {
+            setPanel((p) => (p === "notif" ? "none" : "notif"));
+            setActiveNotif(null);
+          }}
           aria-expanded={panel === "notif"}
           aria-label={c.notifLabel}
           title={c.notifLabel}
@@ -188,8 +215,14 @@ export default function UserBubble({
             <div className="gt2-dock-panel-head">
               <span>{c.notifLabel}</span>
               <span className="gt2-field-count">{items.length}</span>
-              {unread > 0 && (
-                <button type="button" className="gt2-dock-readall" onClick={handleReadAll}>
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  className="gt2-dock-readall"
+                  onClick={handleReadAll}
+                  disabled={unread === 0}
+                  title={c.readAll}
+                >
                   {c.readAll}
                 </button>
               )}
@@ -301,6 +334,53 @@ export default function UserBubble({
           </Link>
         )}
       </div>
+
+      {/* 站内信详情弹层：点击列表项查看完整内容（长站内信不再截断） */}
+      {activeNotif &&
+        createPortal(
+          <div
+            ref={modalRef}
+            className="gt2-notif-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={c.notifLabel}
+            onClick={handleCloseNotifDetail}
+          >
+            <div className="gt2-notif-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="gt2-notif-modal-head">
+                <span className="gt2-notif-modal-label">{c.notifLabel}</span>
+                <button
+                  type="button"
+                  className="gt2-notif-modal-close"
+                  onClick={handleCloseNotifDetail}
+                  aria-label={c.close}
+                  title={c.close}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" width="15" height="15" aria-hidden="true">
+                    <path d="M18 6 6 18" />
+                    <path d="M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <h3 className="gt2-notif-modal-title">{activeNotif.title}</h3>
+              <p className="gt2-notif-modal-time">{formatDate(activeNotif.created_at)}</p>
+              <div className="gt2-notif-modal-body">{activeNotif.content}</div>
+              {extractOrderNo(activeNotif.content) && (
+                <div className="gt2-notif-modal-foot">
+                  <button
+                    type="button"
+                    className="gt2-notif-modal-order"
+                    onClick={() => handleGoOrder(activeNotif)}
+                  >
+                    {c.viewOrder}
+                    <span aria-hidden="true">→</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

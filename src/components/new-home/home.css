@@ -2668,6 +2668,145 @@ textarea.gt2-input {
   border-color: var(--gt2-ink);
 }
 
+.gt2-dock-readall:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- 站内信详情弹层（点击列表项查看完整内容） ---------- */
+.gt2-notif-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(23, 23, 23, 0.45);
+  animation: gt2-fade 0.28s var(--gt2-ease) both;
+}
+
+.gt2-notif-modal-card {
+  width: min(92vw, 520px);
+  max-height: min(76vh, 680px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 20px;
+  box-shadow: 0 40px 90px -24px rgba(0, 0, 0, 0.35);
+  animation: gt2-pop 0.42s var(--gt2-spring) both;
+  overflow: hidden;
+}
+
+.gt2-notif-modal-head {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px 0;
+}
+
+.gt2-notif-modal-label {
+  flex: 1;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--gt2-soft);
+}
+
+.gt2-notif-modal-close {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: #a3a3a3;
+  cursor: pointer;
+  transition: background 0.22s var(--gt2-ease), color 0.22s var(--gt2-ease);
+}
+
+.gt2-notif-modal-close:hover {
+  background: #f2f2f2;
+  color: var(--gt2-ink);
+}
+
+.gt2-notif-modal-title {
+  margin: 12px 18px 0;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--gt2-ink);
+}
+
+.gt2-notif-modal-time {
+  margin: 8px 18px 0;
+  font-family: var(--gt2-mono);
+  font-size: 10.5px;
+  color: #b8b8b8;
+}
+
+.gt2-notif-modal-body {
+  margin: 14px 18px 18px;
+  padding: 16px;
+  background: #fafaf9;
+  border: 1px solid #f0f0f0;
+  border-radius: 14px;
+  overflow-y: auto;
+  font-size: 13.5px;
+  line-height: 1.9;
+  color: #3f3f3f;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.gt2-notif-modal-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.gt2-notif-modal-body::-webkit-scrollbar-thumb {
+  background: #e4e4e4;
+  border-radius: 99px;
+}
+
+.gt2-notif-modal-foot {
+  padding: 0 18px 18px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.gt2-notif-modal-order {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--gt2-line);
+  background: #fff;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gt2-ink);
+  cursor: pointer;
+  transition: border-color 0.22s var(--gt2-ease);
+}
+
+.gt2-notif-modal-order:hover {
+  border-color: var(--gt2-ink);
+}
+
+@keyframes gt2-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* ============================================================
    移动端：汉堡 + 抽屉
    ============================================================ */
