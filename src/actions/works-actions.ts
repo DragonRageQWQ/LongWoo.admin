@@ -2,18 +2,19 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireZeroUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { validateCsrf } from '@/lib/csrf'
 import type { Work, WorkInput } from '@/types/database'
 
-// ==================== 作品管理（仅超级管理员 uid=10001） ====================
+// ==================== 作品管理（role=admin 可操作） ====================
 //
 // 功能：
 // - 新增作品（图片编码序号自动分配）
 // - 修改作品文案/图片
 // - 删除作品（后续作品序号自动前移重排，保证序号连续自适应）
 //
-// 权限：所有操作经 requireZeroUser() 校验（uid=10001 且 role=admin 且 is_active）
+// 权限：所有操作经 requireAdmin() + validateCsrf() 双重校验（role=admin 即可），
+//       与掉落管理（drop-actions）保持一致；后台作品管理与前台图鉴编辑共用。
 // ====================
 
 interface WorksActionResult {
@@ -64,10 +65,10 @@ function validateWorkInput(input: WorkInput): string | null {
 
 /**
  * 列出全部作品（含未启用），按序号排序
- * 仅超级管理员可调用
+ * 仅管理员可调用
  */
 export async function listWorks(): Promise<WorksActionResult> {
-  const authResult = await requireZeroUser()
+  const authResult = await requireAdmin()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
   }
@@ -92,13 +93,13 @@ export async function listWorks(): Promise<WorksActionResult> {
 /**
  * 新增作品
  * 图片编码序号自动分配（当前最大序号 + 1）
- * 仅超级管理员可调用
+ * 仅管理员可调用
  */
 export async function createWork(input: WorkInput): Promise<WorksActionResult> {
   const csrfError = await validateCsrf()
   if (csrfError) return { success: false, error: csrfError }
 
-  const authResult = await requireZeroUser()
+  const authResult = await requireAdmin()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
   }
@@ -140,6 +141,8 @@ export async function createWork(input: WorkInput): Promise<WorksActionResult> {
     }
 
     revalidatePath('/admin/dashboard')
+    revalidatePath('/gallery')
+    revalidatePath('/gallery/[id]')
     return { success: true, data: created as Work, nextCode: formatCode(nextOrder + 1) }
   } catch (err) {
     console.error('新增作品异常:', err)
@@ -149,13 +152,13 @@ export async function createWork(input: WorkInput): Promise<WorksActionResult> {
 
 /**
  * 修改作品文案/图片（不改变编码序号）
- * 仅超级管理员可调用
+ * 仅管理员可调用
  */
 export async function updateWork(id: string, input: WorkInput): Promise<WorksActionResult> {
   const csrfError = await validateCsrf()
   if (csrfError) return { success: false, error: csrfError }
 
-  const authResult = await requireZeroUser()
+  const authResult = await requireAdmin()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
   }
@@ -189,6 +192,8 @@ export async function updateWork(id: string, input: WorkInput): Promise<WorksAct
     }
 
     revalidatePath('/admin/dashboard')
+    revalidatePath('/gallery')
+    revalidatePath('/gallery/[id]')
     return { success: true, data: updated as Work }
   } catch (err) {
     console.error('修改作品异常:', err)
@@ -199,13 +204,13 @@ export async function updateWork(id: string, input: WorkInput): Promise<WorksAct
 /**
  * 删除作品，并自动前移后续作品序号（图片编码序号自适应重排）
  * 例如删除 03 后：04→03、05→04 ...
- * 仅超级管理员可调用
+ * 仅管理员可调用
  */
 export async function deleteWork(id: string): Promise<WorksActionResult> {
   const csrfError = await validateCsrf()
   if (csrfError) return { success: false, error: csrfError }
 
-  const authResult = await requireZeroUser()
+  const authResult = await requireAdmin()
   if (!authResult.success) {
     return { success: false, error: authResult.error }
   }
@@ -252,6 +257,8 @@ export async function deleteWork(id: string): Promise<WorksActionResult> {
     }
 
     revalidatePath('/admin/dashboard')
+    revalidatePath('/gallery')
+    revalidatePath('/gallery/[id]')
     return { success: true }
   } catch (err) {
     console.error('删除作品异常:', err)

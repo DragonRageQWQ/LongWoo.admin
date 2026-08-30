@@ -6,14 +6,14 @@ import { validateApiCsrf } from '@/lib/api-csrf'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/server-utils'
 import { validateFileMagicNumber } from '@/lib/file-validation'
-import { ZERO_USER_UID, AVATAR_MAX_SIZE, AVATAR_ALLOWED_MIME_TYPES, RATE_LIMIT_AVATAR_WINDOW, RATE_LIMIT_AVATAR_MAX } from '@/lib/constants'
+import { AVATAR_ALLOWED_MIME_TYPES, RATE_LIMIT_AVATAR_WINDOW, RATE_LIMIT_AVATAR_MAX } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/works/upload
  * 上传作品图片（multipart/form-data，字段名 file）
- * 仅超级管理员（uid=10001）可调用
+ * 仅管理员（role=admin 且 is_active）可调用，与掉落图片上传保持一致
  * 返回：{ success, image_url }
  */
 export async function POST(request: NextRequest) {
@@ -25,18 +25,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '未登录' }, { status: 401 })
   }
 
-  // 超管校验：uid === ZERO_USER_UID 且 role=admin 且 is_active
+  // 管理员校验：role=admin 且 is_active
   const admin = createAdminClient()
   const { data: profile, error: profileError } = await admin
     .from('profiles')
-    .select('uid, role, is_active')
+    .select('role, is_active')
     .eq('id', user.id)
     .single()
   if (profileError || !profile) {
     return NextResponse.json({ success: false, error: '未找到用户信息' }, { status: 401 })
   }
-  if (profile.uid !== ZERO_USER_UID || profile.role !== 'admin' || profile.is_active !== true) {
-    return NextResponse.json({ success: false, error: '无权操作，仅超级管理员可上传作品图片' }, { status: 403 })
+  if (profile.role !== 'admin' || profile.is_active !== true) {
+    return NextResponse.json({ success: false, error: '无权操作，仅管理员可上传作品图片' }, { status: 403 })
   }
 
   // 速率限制

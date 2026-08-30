@@ -207,3 +207,230 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   图鉴编辑模式（管理员直接编辑，?galleryEdit=1）
+   ============================================================ */
+.gl-edit-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--soft);
+}
+
+.gl-edit-hint-exit {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.gl-btn-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 18px;
+  border: 1px solid var(--ink);
+  border-radius: 10px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+}
+
+.gl-btn-solid:hover {
+  opacity: 0.85;
+}
+
+.gl-btn-solid:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.gl-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.3s var(--ease), color 0.3s var(--ease);
+}
+
+.gl-btn-ghost:hover {
+  border-color: var(--ink);
+}
+
+.gl-edit-add {
+  margin-left: auto;
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
+.gl-edit-msg {
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  border: 1px solid #f2c8c5;
+  background: #fdf3f2;
+  color: #b42318;
+}
+
+.gl-edit-msg--ok {
+  border-color: #c6e0cc;
+  background: #f2faf3;
+  color: #1e7b34;
+}
+
+.gl-card--edit {
+  padding: 0;
+}
+
+.gl-edit-new-wrap {
+  margin-bottom: 18px;
+}
+
+.gl-edit-form {
+  padding: 18px;
+}
+
+.gl-edit-img-block {
+  margin-bottom: 8px;
+}
+
+.gl-edit-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  display: block;
+  margin-bottom: 10px;
+}
+
+.gl-edit-img-empty {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px dashed var(--line);
+  color: var(--mute);
+  font-size: 12px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.gl-edit-tip {
+  font-size: 12px;
+  color: var(--mute);
+  margin: 0 0 8px;
+}
+
+.gl-edit-upload {
+  cursor: pointer;
+  font-size: 12px;
+  padding: 7px 14px;
+}
+
+.gl-edit-file {
+  display: none;
+}
+
+.gl-edit-label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--soft);
+  margin: 12px 0 5px;
+}
+
+.gl-edit-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13px;
+  color: var(--ink);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.3s var(--ease);
+}
+
+.gl-edit-input:focus {
+  border-color: var(--ink);
+}
+
+textarea.gl-edit-input {
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.gl-edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.gl-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.gl-edit-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
+.gl-edit-btn--danger {
+  color: #b42318;
+  border-color: #e5b8b4;
+}
+
+.gl-edit-btn--danger:hover {
+  border-color: #b42318;
+}
+
+.gl-card-code {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.72);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(6px);
+}
+
+.gl-card-edit-actions {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+@media (max-width: 560px) {
+  .gl-edit-row {
+    grid-template-columns: 1fr;
+  }
+}
