@@ -4,6 +4,8 @@ import { getSessionUser } from '@/lib/supabase/server'
 import { validateApiCsrf } from '@/lib/api-csrf'
 import { validateCharacterFields, AI_CHARACTER_MAX_COUNT } from '@/lib/ai-character'
 import { isSessionUserSoftBanned } from '@/lib/user-guard'
+import { getCurrentUser } from '@/lib/auth'
+import { hasUserTag } from '@/lib/user-tags'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,8 +51,9 @@ export async function POST(request: NextRequest) {
   const csrfError = validateApiCsrf(request)
   if (csrfError) return csrfError
 
-  const user = await getSessionUser()
-  if (!user) {
+  // 登录校验（含 ban 硬封禁：被硬封禁的用户视为未登录）
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
     return NextResponse.json({ success: false, error: '未登录' }, { status: 401 })
   }
 
@@ -58,6 +61,16 @@ export async function POST(request: NextRequest) {
   if (await isSessionUserSoftBanned()) {
     return NextResponse.json(
       { success: false, error: '账户已被限制使用，请联系管理员' },
+      { status: 403 }
+    )
+  }
+
+  // A 轮测试权限：智能体创建功能仅对管理员与携带 testA 标签的普通用户开放
+  const isAdmin = currentUser.role === 'admin'
+  const hasTestA = hasUserTag(currentUser.profile?.tags, 'testA')
+  if (!isAdmin && !hasTestA) {
+    return NextResponse.json(
+      { success: false, error: '智能体创建功能暂未开放，敬请期待' },
       { status: 403 }
     )
   }
@@ -88,7 +101,7 @@ export async function POST(request: NextRequest) {
     const { count, error: countError } = await admin
       .from('ai_characters')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', currentUser.userId)
       .eq('is_active', true)
     if (countError) throw countError
     if (count !== null && count >= AI_CHARACTER_MAX_COUNT) {
@@ -101,7 +114,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await admin
       .from('ai_characters')
       .insert({
-        user_id: user.id,
+        user_id: currentUser.userId,
         name,
         persona: typeof body.persona === 'string' ? body.persona.trim() : null,
         tone: typeof body.tone === 'string' ? body.tone.trim() : null,
