@@ -16,12 +16,28 @@ import {
   type NotificationTargetRole,
   type EmailHistoryRow,
 } from '@/lib/notification-utils'
+import {
+  validateScheduledInput,
+  isDueScheduledTask,
+  buildScheduledSendRow,
+  type ScheduledSendChannel,
+  type ScheduledSendStatus,
+} from '@/lib/notification-schedule-utils'
 import { RATE_LIMIT_NOTIFY_MAX, RATE_LIMIT_NOTIFY_WINDOW } from '@/lib/constants'
 
 // 批量插入分块大小（避免单次请求过大）
 const INSERT_CHUNK_SIZE = 100
 // 邮件并发发送路数
 const EMAIL_SEND_CONCURRENCY = 5
+
+/** 发送操作者信息（Server Action 传管理员；定时任务传系统） */
+export type SendOperator = {
+  userId: string
+  uid: number | null
+  profile: { email?: string | null } | null
+}
+
+const SYSTEM_OPERATOR: SendOperator = { userId: 'system', uid: null, profile: null }
 
 export interface SendNotificationResult {
   success: boolean
@@ -81,7 +97,26 @@ export async function sendNotification(input: {
     return { success: false, error: validationError }
   }
 
-  // 5) 目标群体校验与映射
+  // 5) 执行发送（目标校验/查询/插入/审计 均在 perform 内完成）
+  return performNotificationSend(input, operator)
+}
+
+/**
+ * 执行站内通知群发（不含 CSRF/鉴权/限流）
+ *
+ * 供 Server Action（sendNotification）与定时任务（cron）复用。
+ */
+export async function performNotificationSend(
+  input: {
+    targetRole: NotificationTargetRole
+    title: string
+    content: string
+    tags?: string[]
+    userIds?: string[]
+  },
+  operator: SendOperator
+): Promise<SendNotificationResult> {
+  // 目标群体校验与映射
   const target = resolveTargetFilter({
     targetRole: input.targetRole,
     tags: input.tags,
@@ -94,7 +129,7 @@ export async function sendNotification(input: {
   const admin = createAdminClient()
 
   try {
-    // 6) 查询目标用户列表
+    // 查询目标用户列表
     let targetQuery = admin.from('profiles').select('id, is_active')
     if (target.query.kind === 'eq') {
       targetQuery = targetQuery.eq('role', target.query.value)
@@ -116,7 +151,7 @@ export async function sendNotification(input: {
       return { success: false, error: '该群体暂无可用用户' }
     }
 
-    // 7) 批量插入通知（每收件人一条，共享同一 batchId 便于超管后续修改/删除）
+    // 批量插入通知（每收件人一条，共享同一 batchId 便于超管后续修改/删除）
     const title = input.title.trim()
     const content = input.content.trim()
     const now = new Date().toISOString()
@@ -126,7 +161,7 @@ export async function sendNotification(input: {
 
     const rows = buildNotificationRows({
       targetUserIds: activeTargets.map((t) => t.id),
-      senderUserId: operator.userId,
+      senderUserId: operator.userId === 'system' ? null : operator.userId,
       targetRole: input.targetRole,
       title,
       content,
@@ -145,7 +180,7 @@ export async function sendNotification(input: {
       }
     }
 
-    // 8) 审计日志（静默失败，不影响主流程）
+    // 审计日志（静默失败，不影响主流程）
     try {
       await admin.from('admin_audit_log').insert({
         operator_uid: operator.uid,
@@ -229,7 +264,26 @@ export async function sendEmailBroadcast(input: {
     return { success: false, error: validationError }
   }
 
-  // 5) 目标群体校验与映射
+  // 5) 执行发送（目标校验/查询/发送/历史/审计 均在 perform 内完成）
+  return performEmailSend(input, operator)
+}
+
+/**
+ * 执行邮件群发（不含 CSRF/鉴权/限流）
+ *
+ * 供 Server Action（sendEmailBroadcast）与定时任务（cron）复用。
+ */
+export async function performEmailSend(
+  input: {
+    targetRole: NotificationTargetRole
+    subject: string
+    content: string
+    tags?: string[]
+    userIds?: string[]
+  },
+  operator: SendOperator
+): Promise<SendEmailResult> {
+  // 目标群体校验与映射
   const target = resolveTargetFilter({
     targetRole: input.targetRole,
     tags: input.tags,
@@ -239,7 +293,7 @@ export async function sendEmailBroadcast(input: {
     return { success: false, error: target.error }
   }
 
-  // 6) 邮件服务可用性
+  // 邮件服务可用性
   if (!process.env.RESEND_API_KEY) {
     return { success: false, error: '未配置 RESEND_API_KEY，邮件服务不可用' }
   }
@@ -247,7 +301,7 @@ export async function sendEmailBroadcast(input: {
   const admin = createAdminClient()
 
   try {
-    // 7) 查询目标用户列表（需邮箱）
+    // 查询目标用户列表（需邮箱）
     let targetQuery = admin.from('profiles').select('id, email, is_active')
     if (target.query.kind === 'eq') {
       targetQuery = targetQuery.eq('role', target.query.value)
@@ -275,7 +329,7 @@ export async function sendEmailBroadcast(input: {
       return { success: false, error: '该群体暂无可发送的邮箱用户' }
     }
 
-    // 8) 并发发送（默认 5 路并发），统计成功/失败数
+    // 并发发送（默认 5 路并发），统计成功/失败数
     const subject = input.subject.trim()
     const content = input.content.trim()
     const html = buildEmailHtml(subject, content)
@@ -302,7 +356,7 @@ export async function sendEmailBroadcast(input: {
       )
     )
 
-    // 9) 写入发送历史（无论成败均记录计数）
+    // 写入发送历史（无论成败均记录计数）
     const historyRow = buildEmailHistoryRow({
       batchId,
       subject,
@@ -324,7 +378,7 @@ export async function sendEmailBroadcast(input: {
       console.error('写入邮件发送历史失败:', historyError.message)
     }
 
-    // 10) 审计日志（静默失败，不影响主流程）
+    // 审计日志（静默失败，不影响主流程）
     try {
       await admin.from('admin_audit_log').insert({
         operator_uid: operator.uid,
@@ -789,4 +843,332 @@ export async function deleteSentNotification(input: {
     console.error('删除通知异常:', error)
     return { success: false, error: '操作时发生未知错误' }
   }
+}
+
+// ===== 定时发送 =====
+
+export interface ScheduleSendResult {
+  success: boolean
+  id?: string
+  error?: string
+}
+
+export interface ScheduledSendItem {
+  id: string
+  channel: ScheduledSendChannel
+  target_role: NotificationTargetRole
+  target_tags: string[] | null
+  target_user_ids: string[] | null
+  title: string
+  content: string
+  scheduled_at: string
+  status: ScheduledSendStatus
+  result: Record<string, unknown> | null
+  created_by_email: string | null
+  created_at: string
+  executed_at: string | null
+}
+
+/**
+ * 管理员创建定时发送任务（通知 / 邮件）
+ *
+ * scheduledAtInput 为 datetime-local 输入值（YYYY-MM-DDTHH:mm），
+ * 统一按北京时间（Asia/Shanghai）解析为 UTC 存储。
+ *
+ * 安全：CSRF → 管理员鉴权 → 速率限制 → 输入校验 → 目标校验 → 时间校验
+ */
+export async function scheduleSend(input: {
+  channel: ScheduledSendChannel
+  targetRole: NotificationTargetRole
+  title: string
+  content: string
+  tags?: string[]
+  userIds?: string[]
+  scheduledAtInput: string
+}): Promise<ScheduleSendResult> {
+  // 1) CSRF 保护（最先）
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 2) 鉴权：仅管理员
+  const authResult = await requireAdmin()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+  const operator = authResult.user
+
+  // 3) 速率限制：按 IP 防轰炸
+  const ip = await getClientIp()
+  const rateLimitResult = await checkRateLimit(
+    `admin-schedule:${ip}`,
+    RATE_LIMIT_NOTIFY_MAX,
+    RATE_LIMIT_NOTIFY_WINDOW
+  )
+  if (!rateLimitResult.allowed) {
+    return { success: false, error: '操作过于频繁，请稍后再试' }
+  }
+
+  // 4) 输入校验（通知标题 / 邮件主题统一用标题校验规则）
+  const validationError = validateNotificationInput(input.title, input.content)
+  if (validationError) {
+    return { success: false, error: validationError }
+  }
+
+  // 5) 渠道校验
+  if (input.channel !== 'notification' && input.channel !== 'email') {
+    return { success: false, error: '渠道无效' }
+  }
+
+  // 6) 目标群体校验与映射
+  const target = resolveTargetFilter({
+    targetRole: input.targetRole,
+    tags: input.tags,
+    userIds: input.userIds,
+  })
+  if (!target.ok) {
+    return { success: false, error: target.error }
+  }
+
+  // 7) 定时时间校验（北京时间）
+  const scheduled = validateScheduledInput(input.scheduledAtInput, new Date())
+  if (!scheduled.ok) {
+    return { success: false, error: scheduled.error }
+  }
+
+  const admin = createAdminClient()
+
+  try {
+    // 8) 写入定时任务
+    const row = buildScheduledSendRow({
+      channel: input.channel,
+      targetRole: input.targetRole,
+      tags: target.query.kind === 'tags' ? target.query.value : undefined,
+      userIds: target.query.kind === 'ids' ? target.query.value : undefined,
+      title: input.title,
+      content: input.content,
+      scheduledAt: scheduled.scheduledAt,
+      createdByUid: operator.uid,
+      createdByEmail: operator.profile?.email ?? null,
+    })
+    const { data: inserted, error: insertError } = await admin
+      .from('scheduled_sends')
+      .insert(row)
+      .select('id')
+      .single()
+
+    if (insertError) {
+      console.error('创建定时任务失败:', insertError.message)
+      return { success: false, error: '创建定时任务失败，请稍后重试' }
+    }
+
+    // 9) 审计日志（静默失败）
+    try {
+      await admin.from('admin_audit_log').insert({
+        operator_uid: operator.uid,
+        operator_email: operator.profile?.email ?? null,
+        action: 'schedule_send',
+        target_uid: null,
+        target_email: null,
+        details: {
+          scheduled_send_id: inserted?.id,
+          channel: input.channel,
+          target_role: input.targetRole,
+          target_label: target.label,
+          scheduled_at: scheduled.scheduledAt,
+          title: input.title.trim(),
+        },
+      })
+    } catch (auditError) {
+      console.error('写入审计日志失败:', auditError)
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true, id: inserted?.id }
+  } catch (error) {
+    console.error('创建定时任务异常:', error)
+    return { success: false, error: '操作时发生未知错误' }
+  }
+}
+
+/**
+ * 查询定时发送任务列表（按创建时间倒序）
+ * 仅管理员可调用
+ */
+export async function listScheduledSends(options?: {
+  limit?: number
+}): Promise<{
+  success: boolean
+  data?: ScheduledSendItem[]
+  error?: string
+}> {
+  // 鉴权：仅管理员
+  const authResult = await requireAdmin()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+
+  const admin = createAdminClient()
+  const limit = Math.min(options?.limit ?? 50, 100)
+
+  try {
+    const { data, error } = await admin
+      .from('scheduled_sends')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('查询定时任务失败:', error.message)
+      return { success: false, error: '查询失败，请稍后重试' }
+    }
+
+    return { success: true, data: (data ?? []) as ScheduledSendItem[] }
+  } catch (error) {
+    console.error('查询定时任务异常:', error)
+    return { success: false, error: '查询时发生未知错误' }
+  }
+}
+
+/**
+ * 取消定时发送任务（仅 pending 状态可取消）
+ *
+ * 安全：CSRF → 管理员鉴权 → 速率限制
+ */
+export async function cancelScheduledSend(input: {
+  id: string
+}): Promise<ManageNotificationResult> {
+  // 1) CSRF 保护（最先）
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 2) 鉴权：仅管理员
+  const authResult = await requireAdmin()
+  if (!authResult.success) {
+    return { success: false, error: authResult.error }
+  }
+
+  // 3) 速率限制
+  const ip = await getClientIp()
+  const rateLimitResult = await checkRateLimit(
+    `admin-schedule:${ip}`,
+    RATE_LIMIT_NOTIFY_MAX,
+    RATE_LIMIT_NOTIFY_WINDOW
+  )
+  if (!rateLimitResult.allowed) {
+    return { success: false, error: '操作过于频繁，请稍后再试' }
+  }
+
+  // 4) 参数校验
+  if (!input.id || typeof input.id !== 'string') {
+    return { success: false, error: '任务参数错误' }
+  }
+
+  const admin = createAdminClient()
+
+  try {
+    // 5) 条件更新：仅 pending 可取消（防止取消正在执行/已执行的任务）
+    const { data: updated, error: updateError } = await admin
+      .from('scheduled_sends')
+      .update({ status: 'cancelled' })
+      .eq('id', input.id)
+      .eq('status', 'pending')
+      .select('id')
+
+    if (updateError) {
+      console.error('取消定时任务失败:', updateError.message)
+      return { success: false, error: '取消失败，请稍后重试' }
+    }
+    if (!updated || updated.length === 0) {
+      return { success: false, error: '该任务已不可取消' }
+    }
+
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('取消定时任务异常:', error)
+    return { success: false, error: '操作时发生未知错误' }
+  }
+}
+
+/**
+ * 执行所有到点的定时发送任务（供 Vercel Cron 调用）
+ *
+ * 无用户上下文，无需 CSRF/鉴权（cron 路由通过 CRON_SECRET 验证来源）。
+ * 原子抢占：先将任务置为 sending（条件更新 status=pending），
+ * 防止并发重复执行；执行后回写 sent/failed 与结果。
+ */
+export async function executeDueScheduledSends(): Promise<{
+  scanned: number
+  executed: number
+}> {
+  const admin = createAdminClient()
+  const now = new Date()
+
+  const { data: dueTasks, error: queryError } = await admin
+    .from('scheduled_sends')
+    .select('*')
+    .eq('status', 'pending')
+    .lte('scheduled_at', now.toISOString())
+    .order('scheduled_at', { ascending: true })
+    .limit(10)
+
+  if (queryError) {
+    console.error('查询到点定时任务失败:', queryError.message)
+    return { scanned: 0, executed: 0 }
+  }
+
+  let executed = 0
+
+  for (const task of dueTasks ?? []) {
+    if (!isDueScheduledTask(task, now)) continue
+
+    // 原子抢占：仅当仍为 pending 时标记 sending
+    const { data: claimed, error: claimError } = await admin
+      .from('scheduled_sends')
+      .update({ status: 'sending' })
+      .eq('id', task.id)
+      .eq('status', 'pending')
+      .select('id')
+    if (claimError || !claimed || claimed.length === 0) continue
+
+    executed += 1
+    const base = {
+      targetRole: task.target_role as NotificationTargetRole,
+      tags: (task.target_tags ?? undefined) as string[] | undefined,
+      userIds: (task.target_user_ids ?? undefined) as string[] | undefined,
+    }
+
+    let result: { success: boolean; count?: number; successCount?: number; failedCount?: number; error?: string }
+    try {
+      if (task.channel === 'email') {
+        result = await performEmailSend(
+          { ...base, subject: task.title, content: task.content },
+          SYSTEM_OPERATOR
+        )
+      } else {
+        result = await performNotificationSend(
+          { ...base, title: task.title, content: task.content },
+          SYSTEM_OPERATOR
+        )
+      }
+    } catch (err) {
+      console.error('定时任务执行异常:', err)
+      result = { success: false, error: '执行时发生未知错误' }
+    }
+
+    await admin
+      .from('scheduled_sends')
+      .update({
+        status: result.success ? 'sent' : 'failed',
+        result,
+        executed_at: new Date().toISOString(),
+      })
+      .eq('id', task.id)
+  }
+
+  return { scanned: (dueTasks ?? []).length, executed }
 }

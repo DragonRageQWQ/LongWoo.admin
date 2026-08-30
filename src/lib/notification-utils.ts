@@ -148,7 +148,7 @@ export function resolveTargetFilter(input: {
  */
 export function buildNotificationRows(input: {
   targetUserIds: string[]
-  senderUserId: string
+  senderUserId: string | null
   targetRole: NotificationTargetRole
   title: string
   content: string
@@ -158,7 +158,7 @@ export function buildNotificationRows(input: {
   userIds?: string[]
 }): Array<{
   user_id: string
-  sender_user_id: string
+  sender_user_id: string | null
   target_role: NotificationTargetRole
   title: string
   content: string

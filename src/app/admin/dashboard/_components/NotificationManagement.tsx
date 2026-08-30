@@ -15,25 +15,34 @@ import {
   Package,
   ChevronDown,
   ChevronUp,
+  Clock,
 } from "lucide-react";
 import {
   sendNotification,
   sendEmailBroadcast,
+  scheduleSend,
+  listScheduledSends,
+  cancelScheduledSend,
   listSentNotifications,
   listEmailSendHistory,
   listOrderNotifications,
   updateSentNotification,
   deleteSentNotification,
 } from "@/actions/notification-actions";
+import type { ScheduledSendItem } from "@/actions/notification-actions";
+import type { ScheduledSendStatus } from "@/lib/notification-schedule-utils";
 import NoticeAudienceSelector, {
   DEFAULT_TARGET_VALUE,
   type NoticeTargetValue,
 } from "./NoticeAudienceSelector";
 import type { NotificationTargetRole } from "@/lib/notification-utils";
 import type { EmailHistoryRow } from "@/lib/notification-utils";
+import { formatBeijingDateTime } from "@/lib/notification-schedule-utils";
 import { USER_TAG_LABELS, type UserTagKey } from "@/lib/user-tags";
 import { formatDate } from "@/lib/utils";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
+
+type SendMode = "now" | "schedule";
 
 interface SentRecord {
   id: string;
@@ -84,6 +93,8 @@ export default function NotificationManagement({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
+  const [noticeMode, setNoticeMode] = useState<SendMode>("now");
+  const [noticeScheduleAt, setNoticeScheduleAt] = useState("");
 
   // 发送邮件表单
   const [emailTarget, setEmailTarget] = useState<NoticeTargetValue>(
@@ -92,6 +103,15 @@ export default function NotificationManagement({
   const [emailSubject, setEmailSubject] = useState("");
   const [emailContent, setEmailContent] = useState("");
   const [emailSending, setEmailSending] = useState(false);
+  const [emailMode, setEmailMode] = useState<SendMode>("now");
+  const [emailScheduleAt, setEmailScheduleAt] = useState("");
+
+  // 当前北京时间（定时发送选择参考）
+  const [beijingNow, setBeijingNow] = useState("");
+
+  // 定时发送任务列表
+  const [scheduledTasks, setScheduledTasks] = useState<ScheduledSendItem[]>([]);
+  const [scheduledLoading, setScheduledLoading] = useState(true);
 
   // 历史记录
   const [history, setHistory] = useState<SentRecord[]>([]);
@@ -124,6 +144,23 @@ export default function NotificationManagement({
     const timer = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  // 当前北京时间：进入页面即刷新，此后每 30 秒更新一次
+  useEffect(() => {
+    const update = () => setBeijingNow(formatBeijingDateTime(new Date()));
+    update();
+    const timer = setInterval(update, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 定时任务状态展示
+  const STATUS_LABEL_KEYS: Record<ScheduledSendStatus, string> = {
+    pending: "admin.notice.taskStatusPending",
+    sending: "admin.notice.taskStatusSending",
+    sent: "admin.notice.taskStatusSent",
+    failed: "admin.notice.taskStatusFailed",
+    cancelled: "admin.notice.taskStatusCancelled",
+  };
 
   // 目标群体展示名（历史记录/发送结果）
   const renderTargetLabel = useCallback(
@@ -192,12 +229,28 @@ export default function NotificationManagement({
     }
   }, []);
 
+  // 加载定时发送任务
+  const loadScheduledTasks = useCallback(async () => {
+    setScheduledLoading(true);
+    try {
+      const result = await listScheduledSends({ limit: 50 });
+      if (result.success) {
+        setScheduledTasks((result.data || []) as ScheduledSendItem[]);
+      }
+    } catch (err) {
+      console.error("加载定时任务异常:", err);
+    } finally {
+      setScheduledLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadHistory();
     loadEmailHistory();
     loadOrderHistory();
-  }, [loadHistory, loadEmailHistory, loadOrderHistory]);
+    loadScheduledTasks();
+  }, [loadHistory, loadEmailHistory, loadOrderHistory, loadScheduledTasks]);
 
   // 打开编辑弹窗
   const openEdit = (record: SentRecord) => {
@@ -262,7 +315,7 @@ export default function NotificationManagement({
     }
   };
 
-  // 发送通知
+  // 发送通知（立即 / 定时）
   const handleSend = async () => {
     if (sending) return;
 
@@ -282,16 +335,41 @@ export default function NotificationManagement({
       setToast({ type: "error", message: t("admin.notice.err.usersRequired") });
       return;
     }
+    if (noticeMode === "schedule" && !noticeScheduleAt) {
+      setToast({ type: "error", message: t("admin.notice.err.scheduleTimeRequired") });
+      return;
+    }
 
     setSending(true);
     try {
-      const result = await sendNotification({
+      const payload = {
         targetRole: noticeTarget.targetRole,
-        title,
-        content,
         tags: noticeTarget.targetRole === "tag" ? noticeTarget.tags : undefined,
         userIds:
           noticeTarget.targetRole === "users" ? noticeTarget.userIds : undefined,
+      };
+      if (noticeMode === "schedule") {
+        const result = await scheduleSend({
+          channel: "notification",
+          ...payload,
+          title,
+          content,
+          scheduledAtInput: noticeScheduleAt,
+        });
+        if (result.success) {
+          setToast({ type: "success", message: t("admin.notice.scheduledCreate") });
+          setTitle("");
+          setContent("");
+          loadScheduledTasks();
+        } else {
+          setToast({ type: "error", message: result.error || t("admin.notice.scheduledCreateFailed") });
+        }
+        return;
+      }
+      const result = await sendNotification({
+        ...payload,
+        title,
+        content,
       });
       if (result.success) {
         setToast({
@@ -310,13 +388,19 @@ export default function NotificationManagement({
       }
     } catch (err) {
       console.error("发送通知异常:", err);
-      setToast({ type: "error", message: t("admin.notice.err.sendUnknown") });
+      setToast({
+        type: "error",
+        message:
+          noticeMode === "schedule"
+            ? t("admin.notice.err.scheduleUnknown")
+            : t("admin.notice.err.sendUnknown"),
+      });
     } finally {
       setSending(false);
     }
   };
 
-  // 发送邮件
+  // 发送邮件（立即 / 定时）
   const handleSendEmail = async () => {
     if (emailSending) return;
 
@@ -336,16 +420,41 @@ export default function NotificationManagement({
       setToast({ type: "error", message: t("admin.notice.err.usersRequired") });
       return;
     }
+    if (emailMode === "schedule" && !emailScheduleAt) {
+      setToast({ type: "error", message: t("admin.notice.err.scheduleTimeRequired") });
+      return;
+    }
 
     setEmailSending(true);
     try {
-      const result = await sendEmailBroadcast({
+      const payload = {
         targetRole: emailTarget.targetRole,
-        subject: emailSubject,
-        content: emailContent,
         tags: emailTarget.targetRole === "tag" ? emailTarget.tags : undefined,
         userIds:
           emailTarget.targetRole === "users" ? emailTarget.userIds : undefined,
+      };
+      if (emailMode === "schedule") {
+        const result = await scheduleSend({
+          channel: "email",
+          ...payload,
+          title: emailSubject,
+          content: emailContent,
+          scheduledAtInput: emailScheduleAt,
+        });
+        if (result.success) {
+          setToast({ type: "success", message: t("admin.notice.scheduledCreate") });
+          setEmailSubject("");
+          setEmailContent("");
+          loadScheduledTasks();
+        } else {
+          setToast({ type: "error", message: result.error || t("admin.notice.scheduledCreateFailed") });
+        }
+        return;
+      }
+      const result = await sendEmailBroadcast({
+        ...payload,
+        subject: emailSubject,
+        content: emailContent,
       });
       if (result.success) {
         setToast({
@@ -370,11 +479,86 @@ export default function NotificationManagement({
       }
     } catch (err) {
       console.error("发送邮件异常:", err);
-      setToast({ type: "error", message: t("admin.notice.err.emailSendUnknown") });
+      setToast({
+        type: "error",
+        message:
+          emailMode === "schedule"
+            ? t("admin.notice.err.scheduleUnknown")
+            : t("admin.notice.err.emailSendUnknown"),
+      });
     } finally {
       setEmailSending(false);
     }
   };
+
+  // 取消定时任务
+  const handleCancelTask = async (id: string) => {
+    try {
+      const result = await cancelScheduledSend({ id });
+      if (result.success) {
+        setToast({ type: "success", message: t("admin.notice.scheduledCancelled") });
+        loadScheduledTasks();
+      } else {
+        setToast({ type: "error", message: result.error || t("admin.notice.scheduledCancelFailed") });
+      }
+    } catch (err) {
+      console.error("取消定时任务异常:", err);
+      setToast({ type: "error", message: t("admin.notice.scheduledCancelFailed") });
+    }
+  };
+
+  // 发送方式切换（立即 / 定时）+ 定时时间输入（北京时间）
+  const renderSendMode = (
+    mode: SendMode,
+    onModeChange: (m: SendMode) => void,
+    scheduleAt: string,
+    onScheduleAtChange: (v: string) => void
+  ) => (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-600">
+        {t("admin.notice.sendNow")} / {t("admin.notice.scheduleSend")}
+      </label>
+      <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => onModeChange("now")}
+          className={`px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
+            mode === "now"
+              ? "bg-lw-accent text-white"
+              : "text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          {t("admin.notice.sendNow")}
+        </button>
+        <button
+          type="button"
+          onClick={() => onModeChange("schedule")}
+          className={`px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
+            mode === "schedule"
+              ? "bg-lw-accent text-white"
+              : "text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          {t("admin.notice.scheduleSend")}
+        </button>
+      </div>
+      {mode === "schedule" && (
+        <div className="rounded-lg border border-gray-200 p-3 space-y-2">
+          <p className="text-xs text-gray-500">
+            {t("admin.notice.beijingNow")}：
+            <span className="font-mono font-medium text-lw-accent">{beijingNow}</span>
+          </p>
+          <input
+            type="datetime-local"
+            value={scheduleAt}
+            onChange={(e) => onScheduleAtChange(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-lw-accent focus:ring-1 focus:ring-lw-accent transition-colors"
+          />
+          <p className="text-xs text-gray-400">{t("admin.notice.scheduleTimeLabel")}</p>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-5">
@@ -426,6 +610,11 @@ export default function NotificationManagement({
               onChange={setNoticeTarget}
               disabled={sending}
             />
+          </div>
+
+          {/* 发送方式（立即 / 定时） */}
+          <div>
+            {renderSendMode(noticeMode, setNoticeMode, noticeScheduleAt, setNoticeScheduleAt)}
           </div>
 
           {/* 标题 */}
@@ -501,6 +690,11 @@ export default function NotificationManagement({
             />
           </div>
 
+          {/* 发送方式（立即 / 定时） */}
+          <div>
+            {renderSendMode(emailMode, setEmailMode, emailScheduleAt, setEmailScheduleAt)}
+          </div>
+
           {/* 邮件主题 */}
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">
@@ -550,6 +744,79 @@ export default function NotificationManagement({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* 定时发送任务 */}
+      <div className="bg-white rounded-2xl shadow-sm">
+        <div className="p-4 sm:p-5 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-lw-accent" />
+            <h2 className="text-sm font-semibold text-lw-black">{t("admin.notice.scheduledTasks")}</h2>
+          </div>
+        </div>
+
+        {scheduledLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-5 h-5 text-lw-accent animate-spin" />
+            <span className="ml-2 text-sm text-gray-400">{t("admin.notice.loading")}</span>
+          </div>
+        ) : scheduledTasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+            <Clock className="w-10 h-10 mb-2 text-gray-300" />
+            <p className="text-sm">{t("admin.notice.scheduledEmpty")}</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {scheduledTasks.map((task) => (
+              <div
+                key={task.id}
+                className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] flex-shrink-0">
+                      {task.channel === "email"
+                        ? t("admin.notice.channelEmail")
+                        : t("admin.notice.channelNotification")}
+                    </span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 ${
+                        task.status === "pending"
+                          ? "bg-amber-50 text-amber-700"
+                          : task.status === "sent"
+                          ? "bg-green-50 text-green-700"
+                          : task.status === "failed"
+                          ? "bg-red-50 text-red-700"
+                          : task.status === "cancelled"
+                          ? "bg-gray-100 text-gray-500"
+                          : "bg-blue-50 text-lw-accent"
+                      }`}
+                    >
+                      {t(STATUS_LABEL_KEYS[task.status])}
+                    </span>
+                    <p className="text-sm font-medium text-lw-black truncate">
+                      {task.title}
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {renderTargetLabel(task)} · {formatBeijingDateTime(task.scheduled_at)}
+                    {task.status === "failed" && task.result?.error
+                      ? ` · ${String(task.result.error)}`
+                      : ""}
+                  </p>
+                </div>
+                {task.status === "pending" && (
+                  <button
+                    onClick={() => handleCancelTask(task.id)}
+                    className="text-xs text-red-500 hover:text-red-600 border border-red-200 rounded-lg px-2.5 py-1 hover:bg-red-50 transition-colors cursor-pointer flex-shrink-0"
+                  >
+                    {t("admin.notice.cancelTask")}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 发送历史 */}
