@@ -342,8 +342,12 @@ export const EN_ADMIN: Record<string, string> = {
   'admin.settings.edit': 'Edit',
 
   'admin.works.title': 'Works Management',
-  'admin.works.subtitle': 'Manage the "Our Works" section on the homepage (super admin only)',
+  'admin.works.subtitle': 'Manage the "Our Works" section on the homepage (admins only)',
   'admin.works.tip': 'Note: work images are also used as the gray-test page background library; changes take effect immediately',
+  'admin.works.interfaceLabel': 'Gallery page:',
+  'admin.works.viewUser': 'View Gallery page (user view)',
+  'admin.works.editAdmin': 'Edit on Gallery page (admin mode)',
+  'admin.works.interfaceHint': 'Edit works directly on the user view, same as drop edit mode; admins only',
   'admin.works.add': 'Add Work',
   'admin.works.autoCode': 'Auto-assigned code: Work ',
   'admin.works.fieldTitle': 'Work Title *',

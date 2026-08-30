@@ -342,8 +342,12 @@ export const ZH_ADMIN: Record<string, string> = {
   'admin.settings.edit': '编辑',
 
   'admin.works.title': '作品管理',
-  'admin.works.subtitle': '管理首页「我们的作品」展示内容（仅超级管理员可用）',
+  'admin.works.subtitle': '管理首页「我们的作品」展示内容（管理员可用）',
   'admin.works.tip': '提示：作品图片将同步作为灰度测试页背景库，增删改即时生效',
+  'admin.works.interfaceLabel': '作品界面：',
+  'admin.works.viewUser': '查看作品界面（用户视角）',
+  'admin.works.editAdmin': '在作品界面编辑（管理员模式）',
+  'admin.works.interfaceHint': '在用户视图直接编辑作品，与掉落模式一致；仅管理员可用',
   'admin.works.add': '新增作品',
   'admin.works.autoCode': '将自动分配编码：作品 ',
   'admin.works.fieldTitle': '作品名称 *',

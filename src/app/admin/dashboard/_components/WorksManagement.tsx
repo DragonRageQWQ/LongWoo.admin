@@ -12,6 +12,7 @@ import {
   X,
   Upload,
   Eye,
+  ExternalLink,
 } from "lucide-react";
 import {
   listWorks,
@@ -305,6 +306,11 @@ export default function WorksManagement() {
       </div>
     );
 
+  // 跳转到龙坞图鉴作品界面（用户视角 / 管理员编辑模式）
+  const goToGalleryPage = (editMode: boolean) => {
+    window.open(`/gallery${editMode ? "?galleryEdit=1" : ""}`, "_blank");
+  };
+
   return (
     <div className="space-y-6">
       {/* 头部 */}
@@ -316,6 +322,30 @@ export default function WorksManagement() {
         <p className="text-xs text-gray-400 mt-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-lg inline-block">
           {t("admin.works.tip")}
         </p>
+      </div>
+
+      {/* 操作入口：跳转作品界面 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-50 p-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-gray-700">{t("admin.works.interfaceLabel")}</span>
+          <button
+            onClick={() => goToGalleryPage(false)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+          >
+            <ExternalLink className="w-4 h-4" />
+            {t("admin.works.viewUser")}
+          </button>
+          <button
+            onClick={() => goToGalleryPage(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-lw-accent text-white text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer"
+          >
+            <Pencil className="w-4 h-4" />
+            {t("admin.works.editAdmin")}
+          </button>
+          <span className="text-xs text-gray-400">
+            {t("admin.works.interfaceHint")}
+          </span>
+        </div>
       </div>
 
       {/* 新增表单 */}
