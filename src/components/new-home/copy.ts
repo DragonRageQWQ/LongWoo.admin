@@ -53,6 +53,9 @@ export interface Gt2Copy {
     errCreate: string;
     errNetwork: string;
     loginHint: string;
+    loginPromptText: string;
+    goLogin: string;
+    keepEdit: string;
     tonePresets: string[];
     chatMy: string;
     chatEmpty: string;
@@ -296,6 +299,9 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errCreate: "创建失败，请稍后重试",
       errNetwork: "网络异常，请稍后重试",
       loginHint: "创建角色需要先登录",
+      loginPromptText: "创建角色需要先登录，你的设定草稿已保存，登录后会自动恢复",
+      goLogin: "去登录",
+      keepEdit: "继续编辑",
       tonePresets: ["温柔", "活泼", "傲娇", "高冷", "幽默", "可爱", "沉稳", "热情", "毒舌", "元气", "慵懒", "神秘"],
       chatMy: "我的角色",
       chatEmpty: "还没有角色，创建你的第一个角色吧",
@@ -588,6 +594,9 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       errCreate: "Failed to create, please retry",
       errNetwork: "Network error, please retry",
       loginHint: "Sign in first to create a character",
+      loginPromptText: "Sign in to create this character. Your draft is saved and will be restored after signing in.",
+      goLogin: "Sign In",
+      keepEdit: "Keep Editing",
       tonePresets: ["Gentle", "Lively", "Tsundere", "Aloof", "Humorous", "Cute", "Calm", "Warm", "Snarky", "Energetic", "Lazy", "Mysterious"],
       chatMy: "My Characters",
       chatEmpty: "No characters yet — create your first one",

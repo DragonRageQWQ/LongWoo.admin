@@ -1,8 +1,14 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { COPY, type Gt2Lang } from "../copy";
+import { useSession } from "@/components/providers/SessionProvider";
+import {
+  clearAiCharacterDraft,
+  loadAiCharacterDraft,
+  saveAiCharacterDraft,
+} from "@/lib/ai-character-draft";
 import AgentChatView from "./AgentChatView";
 
 const MAX_LENGTHS = {
@@ -17,6 +23,7 @@ const AVATAR_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
   const c = COPY[lang].agent;
+  const { profile, loading: sessionLoading } = useSession();
 
   const [view, setView] = useState<"hero" | "form" | "chat">("hero");
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -28,9 +35,46 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 游客点击"创建角色"后的登录引导提示（草稿已保存）
+  const [loginPrompt, setLoginPrompt] = useState(false);
+  // 已恢复草稿且等待登录态解析，用于登录后自动回到表单视图
+  const [draftPending, setDraftPending] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingAvatarRef = useRef<File | null>(null);
+  const draftRestoredRef = useRef(false);
+
+  // 挂载时恢复本地草稿（游客登录接力）：回填表单字段；
+  // 若已登录（登录跳回场景），等 session 解析完成后自动打开表单视图。
+  useEffect(() => {
+    if (draftRestoredRef.current) return;
+    const draft = loadAiCharacterDraft();
+    if (!draft) return;
+    draftRestoredRef.current = true;
+    // 挂载后从外部存储（localStorage）同步草稿是合法副作用，同 SessionProvider 做法
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setName(draft.name);
+    setPersona(draft.persona);
+    setTone(draft.tone);
+    setGreeting(draft.greeting);
+    setUserNickname(draft.user_nickname);
+    setDraftPending(true);
+  }, []);
+
+  useEffect(() => {
+    if (!draftPending || sessionLoading) return;
+    if (profile) {
+      // 登录态解析完成后自动回到表单视图（登录回跳场景），属外部状态驱动的同步
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setView("form");
+      setDraftPending(false);
+    }
+  }, [draftPending, sessionLoading, profile]);
+
+  // 引导游客去登录（草稿已在点击创建时保存，登录后自动回填）
+  const goLogin = useCallback(() => {
+    window.location.href = "/login?next=/";
+  }, []);
 
   const handleAvatarChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,9 +104,25 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
       setError(c.errName);
       return;
     }
+    // session 尚未解析完成时不提交，避免误判为游客
+    if (sessionLoading) return;
+
+    // 游客：先把完整草稿存到本地，再提示登录（登录后自动回填，文案不丢失）
+    if (!profile) {
+      saveAiCharacterDraft({
+        name: trimmedName,
+        persona: persona.trim(),
+        tone: tone.trim(),
+        greeting: greeting.trim(),
+        user_nickname: userNickname.trim(),
+      });
+      setLoginPrompt(true);
+      return;
+    }
 
     setSaving(true);
     setError(null);
+    setLoginPrompt(false);
     try {
       const createRes = await fetch("/api/ai/characters", {
         method: "POST",
@@ -79,7 +139,15 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
       const createData = await createRes.json();
 
       if (createRes.status === 401) {
-        setError(c.loginHint);
+        // 会话过期等边界情况：同样先存草稿再引导登录
+        saveAiCharacterDraft({
+          name: trimmedName,
+          persona: persona.trim(),
+          tone: tone.trim(),
+          greeting: greeting.trim(),
+          user_nickname: userNickname.trim(),
+        });
+        setLoginPrompt(true);
         setSaving(false);
         return;
       }
@@ -88,6 +156,10 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
         setSaving(false);
         return;
       }
+
+      // 创建成功：清除本地草稿
+      clearAiCharacterDraft();
+      setDraftPending(false);
 
       const newId = createData.character.id as string;
 
@@ -118,7 +190,7 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
       setError(c.errNetwork);
       setSaving(false);
     }
-  }, [name, persona, tone, greeting, userNickname, avatarUrl, c]);
+  }, [name, persona, tone, greeting, userNickname, avatarUrl, profile, sessionLoading, c]);
 
   return (
     <div className="gt2-agent-stage">
@@ -277,6 +349,20 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
           </div>
 
           {error && <div className="gt2-form-error">{error}</div>}
+
+          {loginPrompt && (
+            <div className="gt2-login-prompt">
+              <p>{c.loginPromptText}</p>
+              <div className="gt2-login-prompt-actions">
+                <button type="button" className="gt2-btn-ghost" onClick={() => setLoginPrompt(false)}>
+                  {c.keepEdit}
+                </button>
+                <button type="button" className="gt2-btn-solid" onClick={goLogin}>
+                  {c.goLogin}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="gt2-form-actions">
             <button type="button" className="gt2-btn-ghost" onClick={() => setView("hero")} disabled={saving}>

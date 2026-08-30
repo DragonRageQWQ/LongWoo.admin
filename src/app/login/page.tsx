@@ -15,6 +15,7 @@ import {
 import PasswordResetModal from "@/components/auth/PasswordResetModal";
 import LangSwitcher from "@/components/i18n/LangSwitcher";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
+import { safeLoginNext } from "@/lib/ai-character-draft";
 import "./login.css";
 
 type LoginTab = "email" | "password" | "qq";
@@ -151,7 +152,9 @@ function LoginForm() {
     // router.push() 是客户端软导航，可能在浏览器处理 Set-Cookie 之前发起 RSC 请求
     // 导致中间件读不到 session cookie → 重定向回 /login → 用户看到登录页不动
     // window.location.href 是整页跳转，浏览器会先处理 Server Action 响应中的 Set-Cookie
-    const target = role === "admin" ? "/admin/dashboard" : "/profile";
+    // ?next= 支持从首页 Agent 表单等入口登录后回跳（仅放行站内相对路径，防开放重定向）
+    const next = safeLoginNext(searchParams.get("next"));
+    const target = next || (role === "admin" ? "/admin/dashboard" : "/profile");
     window.location.href = target;
   };
 
