@@ -90,6 +90,7 @@ export async function middleware(request: NextRequest) {
   // - public/ 静态下单流程页（order-step1~5.html、preorder-step1.html）
   // - 旧订单查询 /order/query（已迁移至首页 ?tab=check）
   // - AI 智能体工作区 /ai/characters（仅管理员与 testA 测试用户开放）
+  // - 旧版作品详情页 /works-detail.html（已重构为 /gallery/[id]）
   const legacyPaths = [
     '/order-step1.html',
     '/order-step2.html',
@@ -97,6 +98,7 @@ export async function middleware(request: NextRequest) {
     '/order-step4.html',
     '/order-step5.html',
     '/preorder-step1.html',
+    '/works-detail.html',
     '/order/query',
     '/ai/characters',
   ]
@@ -307,5 +309,6 @@ export const config = {
     '/order-step4.html',
     '/order-step5.html',
     '/preorder-step1.html',
+    '/works-detail.html',
   ],
 }
