@@ -523,7 +523,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         desc: "输入订单号与邮箱，随时查看委托进度、留言沟通与售后记录。",
         features: ["订单进度实时查询", "留言与售后沟通", "附件与设定图回顾"],
         cta: "查询订单",
-        href: "/order/query",
+        href: "/?tab=check",
       },
       about: {
         kicker: "05 / ACCOUNT",
@@ -815,7 +815,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         desc: "Enter your order number and email to track commission progress, messages and after-sales records anytime.",
         features: ["Real-time order tracking", "Messages & after-sales", "Attachments & reference review"],
         cta: "Track Order",
-        href: "/order/query",
+        href: "/?tab=check",
       },
       about: {
         kicker: "05 / ACCOUNT",

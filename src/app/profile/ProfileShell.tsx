@@ -524,7 +524,7 @@ export default function ProfileShell({
         <p className="pf-kicker">03 / ORDERS</p>
         <div className="pf-section-head">
           <span className="pf-sub" style={{ margin: 0 }}>{t("profile.myOrders")}</span>
-          <Link href="/order/query">
+          <Link href="/?tab=check">
             {t("profile.viewMore")}
             <ArrowRight className="w-3 h-3" />
           </Link>
@@ -537,7 +537,7 @@ export default function ProfileShell({
         ) : ordersError ? (
           <div className="pf-empty">
             <p className="text-sm text-red-500">{ordersError}</p>
-            <Link href="/order/query">
+            <Link href="/?tab=check">
               {t("profile.goToQueryOrder")}
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -580,7 +580,7 @@ export default function ProfileShell({
                   </p>
                 </div>
                 <Link
-                  href={`/order/query?no=${encodeURIComponent(order.order_no)}&email=${encodeURIComponent(order.customer_email || "")}`}
+                  href={`/?tab=check&no=${encodeURIComponent(order.order_no)}&email=${encodeURIComponent(order.customer_email || "")}`}
                   className="pf-order-link"
                 >
                   {t("profile.viewDetails")}

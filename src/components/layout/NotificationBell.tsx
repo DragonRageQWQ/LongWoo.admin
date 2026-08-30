@@ -140,9 +140,9 @@ export default function NotificationBell() {
         handleRead(item.id);
       }
       setOpen(false);
-      // 跳转订单查询页并预填单号（用户输入手机号即可查询）
+      // 跳转新版订单查询（首页 Check 选项卡）并预填单号（用户输入手机号即可查询）
       // 使用相对路径跳转，兼容子路径部署
-      const target = `/order/query?no=${encodeURIComponent(orderNo)}`;
+      const target = `/?tab=check&no=${encodeURIComponent(orderNo)}`;
       setTimeout(() => {
         window.location.assign(target);
       }, 0);

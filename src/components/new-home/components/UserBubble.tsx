@@ -133,7 +133,7 @@ export default function UserBubble({
       const orderNo = extractOrderNo(item.content);
       if (orderNo) {
         setPanel("none");
-        window.location.assign(`/order/query?no=${encodeURIComponent(orderNo)}`);
+        window.location.assign(`/?tab=check&no=${encodeURIComponent(orderNo)}`);
       }
     },
     [handleRead]

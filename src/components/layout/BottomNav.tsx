@@ -60,7 +60,7 @@ const NAV_ITEMS = [
   { key: "buy", label: "购买兽装", i18nKey: "nav.buyFursuit", href: "/order-step1.html", icon: NAV_ICONS.bag, external: true },
   { key: "ai", label: "龙灵工坊", i18nKey: "nav.lingWork", href: "/ai/characters", icon: NAV_ICONS.chat, external: false },
   { key: "drop", label: "购买掉落", i18nKey: "nav.buyDrop", href: "/preorder-step1.html", icon: NAV_ICONS.drop, external: true },
-  { key: "order", label: "进度&售后", i18nKey: "nav.progress", href: "/order/query", icon: NAV_ICONS.clock, external: false },
+  { key: "order", label: "进度&售后", i18nKey: "nav.progress", href: "/?tab=check", icon: NAV_ICONS.clock, external: false },
   { key: "profile", label: "个人中心", i18nKey: "nav.profile", href: "/profile", icon: NAV_ICONS.user, external: false },
 ] as const;
 

@@ -41,7 +41,7 @@ const EMAIL_SHELL_HEAD = `<!DOCTYPE html>
           <h2 style="color:#0D3B3B;font-size:18px;font-weight:700;margin:0 0 16px;">{{EMAIL_TITLE}}</h2>
           <p style="color:#666;font-size:15px;line-height:1.7;margin:0 0 20px;">{{EMAIL_BODY}}</p>
           <p style="color:#999;font-size:13px;line-height:1.6;margin:0;">委托单号：{{ORDER_NO}}</p>
-          <a href="{{SITE_URL}}/order/query?no={{ORDER_NO}}" style="display:inline-block;margin-top:16px;padding:10px 28px;background-color:#0D3B3B;color:#FFFFFF;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;">查看委托单</a>
+          <a href="{{SITE_URL}}/?tab=check&no={{ORDER_NO}}" style="display:inline-block;margin-top:16px;padding:10px 28px;background-color:#0D3B3B;color:#FFFFFF;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;">查看委托单</a>
         </td></tr>
         <tr><td style="padding:0 40px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EEE;"><tr><td style="height:1px;line-height:1px;font-size:1px;">&nbsp;</td></tr></table>

@@ -115,6 +115,16 @@ export default function OrderQueryPage() {
       <Header />
 
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-[calc(64px+3rem)]">
+        {/* 已废弃提示：订单查询已迁移至新版官网首页 Check 选项卡 */}
+        <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-300 rounded-lg text-sm text-amber-800">
+          <strong>此页面已废弃。</strong>{" "}
+          订单查询已迁移至新版官网，请前往{" "}
+          <a href="/?tab=check" className="underline font-medium hover:text-amber-900">
+            新版订单查询
+          </a>
+          。
+        </div>
+
         {/* 页面标题 */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-lw-black">{t("query.title")}</h1>
