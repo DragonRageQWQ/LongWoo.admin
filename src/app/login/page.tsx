@@ -34,6 +34,16 @@ function QQIcon({ className = "" }: { className?: string }) {
 }
 
 // ==================== 主组件 ====================
+// 登录接口错误统一携带 code（AUTH_xxxx / CSRF_xxxx），
+// 展示时附带错误码，便于用户反馈与问题定位。
+function formatApiError(
+  result: { error?: string; code?: string } | null,
+  fallback: string
+): string {
+  if (!result?.error) return fallback;
+  return result.code ? `${result.error}（${result.code}）` : result.error;
+}
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const { t } = useLanguage();
@@ -207,7 +217,7 @@ function LoginForm() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        setError(result.error ?? t("login.err.verifyFailed"));
+        setError(formatApiError(result, t("login.err.verifyFailed")));
         return;
       }
 
@@ -290,7 +300,7 @@ function LoginForm() {
       const result = await response.json();
 
       if (!response.ok || !result?.success) {
-        setError(result?.error ?? t("login.err.loginFailed"));
+        setError(formatApiError(result, t("login.err.loginFailed")));
         return;
       }
 

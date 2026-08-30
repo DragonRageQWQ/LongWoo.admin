@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { CSRF_ERROR_CODES, type CsrfErrorCode } from './auth-errors'
 
 /**
  * 获取允许的站点 Origin 白名单（固定列表，而非反射 Host 头）
@@ -123,13 +124,22 @@ export function validateOrigin(
 }
 
 /**
+ * CSRF 错误文案 → 错误码映射（登录接口错误码体系的一部分）
+ */
+const CSRF_ERROR_CODE_MAP: Record<string, CsrfErrorCode> = {
+  '跨站请求被拒绝': CSRF_ERROR_CODES.FORBIDDEN,
+  '缺少请求来源信息': CSRF_ERROR_CODES.MISSING_SOURCE,
+  '无效的请求来源': CSRF_ERROR_CODES.INVALID_SOURCE,
+}
+
+/**
  * API 路由 CSRF 保护
  *
  * 验证 Origin/Referer 头，防止跨站请求伪造。
  * 当 Origin 头缺失时回退到 Referer 头检查；
  * 两者均缺失时拒绝请求（不跳过校验）。
  *
- * 内部委托给核心函数 validateOrigin，并将错误消息包装为 NextResponse。
+ * 错误响应附带 code 字段（CSRF_xxxx），便于前端展示与日志定位。
  *
  * @returns 验证通过返回 null，失败返回 403 响应
  */
@@ -142,8 +152,9 @@ export function validateApiCsrf(request: Request): NextResponse | null {
   const errorMessage = validateOrigin(origin, referer, host)
 
   if (errorMessage) {
+    const code = CSRF_ERROR_CODE_MAP[errorMessage] ?? CSRF_ERROR_CODES.FORBIDDEN
     return NextResponse.json(
-      { success: false, error: errorMessage },
+      { success: false, code, error: errorMessage },
       { status: 403 }
     )
   }

@@ -10,6 +10,7 @@ import {
 } from '@/lib/supabase/cookie-utils'
 import { checkRateLimit, peekRateLimit } from '@/lib/rate-limit'
 import { validateApiCsrf } from '@/lib/api-csrf'
+import { buildLoginError, LOGIN_ERROR_CODES } from '@/lib/auth-errors'
 import { fetchWithRetry } from '@/lib/network-utils'
 import { extractClientIpFromRequest } from '@/lib/server-utils'
 import { hasUserTag } from '@/lib/user-tags'
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
 
     if (!email || (!code && !password)) {
       return NextResponse.json(
-        { success: false, error: '请输入完整登录信息' },
+        buildLoginError(LOGIN_ERROR_CODES.MISSING_PARAMS, '请输入完整登录信息'),
         { status: 400 }
       )
     }
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
     const normalizedEmail = email.trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return NextResponse.json(
-        { success: false, error: '请输入有效的邮箱地址' },
+        buildLoginError(LOGIN_ERROR_CODES.INVALID_EMAIL, '请输入有效的邮箱地址'),
         { status: 400 }
       )
     }
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
     if (password) {
       if (password.length < 6 || password.length > 64) {
         return NextResponse.json(
-          { success: false, error: '邮箱或密码错误' },
+          buildLoginError(LOGIN_ERROR_CODES.INVALID_PASSWORD_LENGTH, '邮箱或密码错误'),
           { status: 400 }
         )
       }
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
       const lockCheck = await peekRateLimit(lockKey, RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS)
       if (!lockCheck.allowed) {
         return NextResponse.json(
-          { success: false, error: '登录失败次数过多，账户已临时锁定，请15分钟后再试' },
+          buildLoginError(LOGIN_ERROR_CODES.ACCOUNT_LOCKED, '登录失败次数过多，账户已临时锁定，请15分钟后再试'),
           { status: 429 }
         )
       }
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
       ])
       if (!ipLimit.allowed || !emailLimit.allowed) {
         return NextResponse.json(
-          { success: false, error: '登录尝试过于频繁，请稍后再试' },
+          buildLoginError(LOGIN_ERROR_CODES.RATE_LIMITED, '登录尝试过于频繁，请稍后再试'),
           { status: 429 }
         )
       }
@@ -126,7 +127,7 @@ export async function POST(request: Request) {
         // 安全加固（SEC-12）：记录失败次数（15 分钟窗口），达到阈值触发锁定
         await checkRateLimit(lockKey, RATE_LIMIT_LOGIN_MAX_FAILS, RATE_LIMIT_LOGIN_LOCK_MS)
         return NextResponse.json(
-          { success: false, error: '邮箱或密码错误' },
+          buildLoginError(LOGIN_ERROR_CODES.INVALID_CREDENTIALS, '邮箱或密码错误'),
           { status: 401 }
         )
       }
@@ -134,7 +135,7 @@ export async function POST(request: Request) {
       const passwordSession = await passwordResponse.json()
       if (!passwordSession.access_token || !passwordSession.refresh_token || !passwordSession.user?.id) {
         return NextResponse.json(
-          { success: false, error: '登录会话创建失败，请稍后重试' },
+          buildLoginError(LOGIN_ERROR_CODES.SESSION_CREATE_FAILED, '登录会话创建失败，请稍后重试'),
           { status: 500 }
         )
       }
@@ -146,14 +147,14 @@ export async function POST(request: Request) {
       })
       if (!passwordProfile.is_active) {
         return NextResponse.json(
-          { success: false, error: '账户已停用，请联系管理员' },
+          buildLoginError(LOGIN_ERROR_CODES.ACCOUNT_INACTIVE, '账户已停用，请联系管理员'),
           { status: 403 }
         )
       }
       // 硬封禁（ban）：伪装成网络超时，不暴露封禁信息，账号无法正常登录
       if (hasUserTag(passwordProfile.tags, 'ban')) {
         return NextResponse.json(
-          { success: false, error: '请求超时，请稍后重试' },
+          buildLoginError(LOGIN_ERROR_CODES.ACCOUNT_BANNED, '请求超时，请稍后重试'),
           { status: 504 }
         )
       }
@@ -174,7 +175,7 @@ export async function POST(request: Request) {
 
     if (!code || code.length !== 6) {
       return NextResponse.json(
-        { success: false, error: '请输入6位验证码' },
+        buildLoginError(LOGIN_ERROR_CODES.INVALID_OTP_FORMAT, '请输入6位验证码'),
         { status: 400 }
       )
     }
@@ -187,7 +188,7 @@ export async function POST(request: Request) {
     )
     if (!ipRateLimit.allowed) {
       return NextResponse.json(
-        { success: false, error: '尝试过于频繁，请1分钟后再试' },
+        buildLoginError(LOGIN_ERROR_CODES.RATE_LIMITED, '尝试过于频繁，请1分钟后再试'),
         { status: 429 }
       )
     }
@@ -200,7 +201,7 @@ export async function POST(request: Request) {
     )
     if (!emailRateLimit.allowed) {
       return NextResponse.json(
-        { success: false, error: '该邮箱尝试过于频繁，请稍后再试' },
+        buildLoginError(LOGIN_ERROR_CODES.RATE_LIMITED, '该邮箱尝试过于频繁，请稍后再试'),
         { status: 429 }
       )
     }
@@ -224,12 +225,12 @@ export async function POST(request: Request) {
       // 提示重试而非"验证码无效"，验证码错误则提示重新获取。
       if (otpResult.systemError) {
         return NextResponse.json(
-          { success: false, error: '系统繁忙，请重试' },
+          buildLoginError(LOGIN_ERROR_CODES.OTP_SYSTEM_ERROR, '系统繁忙，请重试'),
           { status: 500 }
         )
       }
       return NextResponse.json(
-        { success: false, error: '验证码无效或已过期，请重新获取' },
+        buildLoginError(LOGIN_ERROR_CODES.OTP_INVALID, '验证码无效或已过期，请重新获取'),
         { status: 400 }
       )
     }
@@ -270,7 +271,7 @@ export async function POST(request: Request) {
         linkError?.status
       )
       return NextResponse.json(
-        { success: false, error: '系统繁忙，请重试' },
+        buildLoginError(LOGIN_ERROR_CODES.OTP_SYSTEM_ERROR, '系统繁忙，请重试'),
         { status: 500 }
       )
     }
@@ -285,7 +286,7 @@ export async function POST(request: Request) {
     if (!tokenHash) {
       debugError('[Login API] token_hash 缺失')
       return NextResponse.json(
-        { success: false, error: '登录令牌异常，请稍后重试' },
+        buildLoginError(LOGIN_ERROR_CODES.TOKEN_ABNORMAL, '登录令牌异常，请稍后重试'),
         { status: 500 }
       )
     }
@@ -315,7 +316,7 @@ export async function POST(request: Request) {
     if (!verifyJson) {
       debugError('[Login API] verify 失败（重试后仍失败）')
       return NextResponse.json(
-        { success: false, error: '系统繁忙，请重试' },
+        buildLoginError(LOGIN_ERROR_CODES.OTP_SYSTEM_ERROR, '系统繁忙，请重试'),
         { status: 500 }
       )
     }
@@ -337,7 +338,7 @@ export async function POST(request: Request) {
     ) {
       debugError('[Login API] verify 返回数据不完整')
       return NextResponse.json(
-        { success: false, error: '系统繁忙，请重试' },
+        buildLoginError(LOGIN_ERROR_CODES.OTP_SYSTEM_ERROR, '系统繁忙，请重试'),
         { status: 500 }
       )
     }
@@ -356,14 +357,14 @@ export async function POST(request: Request) {
 
     if (!profileResult.is_active) {
       return NextResponse.json(
-        { success: false, error: '账户已停用，请联系管理员' },
+        buildLoginError(LOGIN_ERROR_CODES.ACCOUNT_INACTIVE, '账户已停用，请联系管理员'),
         { status: 403 }
       )
     }
     // 硬封禁（ban）：伪装成网络超时，不暴露封禁信息，账号无法正常登录
     if (hasUserTag(profileResult.tags, 'ban')) {
       return NextResponse.json(
-        { success: false, error: '请求超时，请稍后重试' },
+        buildLoginError(LOGIN_ERROR_CODES.ACCOUNT_BANNED, '请求超时，请稍后重试'),
         { status: 504 }
       )
     }
@@ -408,13 +409,14 @@ export async function POST(request: Request) {
 
     return response
   } catch (error) {
-    // 异常始终记录（无论 DEBUG_AUTH 是否开启）
+    // 异常始终记录（无论 DEBUG_AUTH 是否开启），
+    // 返回 AUTH_9999 供前端展示/用户上报，真实原因通过日志定位
     console.error(
       '[Login API] 异常:',
       error instanceof Error ? error.message : String(error)
     )
     return NextResponse.json(
-      { success: false, error: '验证时发生未知错误，请稍后重试' },
+      buildLoginError(LOGIN_ERROR_CODES.UNKNOWN, '验证时发生未知错误，请稍后重试'),
       { status: 500 }
     )
   }
