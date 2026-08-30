@@ -40,6 +40,13 @@ const toDraft = (w: Work): Draft => ({
   image_url: w.image_url,
 });
 
+/** 图片地址规范化：数据库中历史数据为相对路径（assets/...），统一转为根路径绝对地址 */
+function absImageUrl(url?: string): string {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url) || url.startsWith("/")) return url;
+  return `/${url}`;
+}
+
 /**
  * 龙坞图鉴 - 作品详情视图
  * 纸墨极简 UI（与新主页/图鉴一致）。管理员通过 ?galleryEdit=1 进入编辑模式，
@@ -218,7 +225,7 @@ export default function WorkDetailView({ work: initial, others }: WorkDetailProp
               {draft.image_url ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="gd-edit-img" src={draft.image_url} alt="preview" />
+                  <img className="gd-edit-img" src={absImageUrl(draft.image_url)} alt="preview" />
                   <p className="gd-edit-tip">重新上传将替换当前图片</p>
                 </>
               ) : (
@@ -293,12 +300,12 @@ export default function WorkDetailView({ work: initial, others }: WorkDetailProp
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     className="gd-img"
-                    src={work.image_url}
+                    src={absImageUrl(work.image_url)}
                     alt={work.title}
                     width={800}
                     height={800}
                     decoding="async"
-                    onClick={() => setLightbox(work.image_url)}
+                    onClick={() => setLightbox(absImageUrl(work.image_url))}
                     role="button"
                     aria-label="查看大图"
                     title="查看大图"
@@ -355,7 +362,7 @@ export default function WorkDetailView({ work: initial, others }: WorkDetailProp
                   <div className="gd-more-img-wrap">
                     {w.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img className="gd-more-img" src={w.image_url} alt={w.title} loading="lazy" decoding="async" width={400} height={400} />
+                      <img className="gd-more-img" src={absImageUrl(w.image_url)} alt={w.title} loading="lazy" decoding="async" width={400} height={400} />
                     ) : (
                       <div className="gd-more-img gd-more-img--empty" aria-hidden="true" />
                     )}

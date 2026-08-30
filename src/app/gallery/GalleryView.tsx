@@ -33,6 +33,13 @@ const emptyDraft: Draft = {
   image_url: "",
 };
 
+/** 图片地址规范化：数据库中历史数据为相对路径（assets/...），统一转为根路径绝对地址 */
+function absImageUrl(url?: string): string {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url) || url.startsWith("/")) return url;
+  return `/${url}`;
+}
+
 /**
  * 龙坞图鉴页：独立页面展示工作室全部作品。
  * 图片性能优化：首屏 6 张 eager+fetchpriority，其余 loading=lazy；
@@ -233,7 +240,7 @@ export default function GalleryView() {
             {draft.image_url ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="gl-edit-img" src={draft.image_url} alt="preview" />
+                <img className="gl-edit-img" src={absImageUrl(draft.image_url)} alt="preview" />
                 <p className="gl-edit-tip">重新上传将替换当前图片</p>
               </>
             ) : (
@@ -326,7 +333,7 @@ export default function GalleryView() {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               className="gl-img"
-              src={w.image_url}
+              src={absImageUrl(w.image_url)}
               alt={w.title}
               loading={i < 3 ? "eager" : "lazy"}
               fetchPriority={i < 3 ? "high" : undefined}
