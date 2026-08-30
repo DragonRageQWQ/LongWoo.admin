@@ -7,7 +7,7 @@
     },
     {
       "path": "/api/cron/scheduled-send",
-      "schedule": "* * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }
