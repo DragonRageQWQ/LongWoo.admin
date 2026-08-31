@@ -2,18 +2,19 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import FabricSampler from "@/components/gray-test/FabricSampler";
+import UnifiedSampler from "@/components/gray-test/UnifiedSampler";
 
 /**
- * 灰度测试 · 毛布取样器
+ * 灰度测试 · 图片与毛布合体取样器
  *
- * 上传图片后点击像素取色，客户端在毛布数据库（真实 fabric-data.json 或
- * 内置示例）中按 OKLab 色差自动匹配 Top N 毛布，结果卡片按需加载图片。
+ * 上传图片后点击像素选点（最多 10 点），参数框直接显示每个选点的
+ * sRGB / OKLab / 潘通参考色，并自动匹配毛布库（客户端 OKLab 色差，
+ * Top 3 预览 + 选中点 Top 20 完整匹配），毛布图片按需加载。
  * 权限：服务端二次鉴权（纵深防御）——未登录跳转登录页，
  *      非管理员跳转个人中心。middleware 已做路由级保护。
  */
 export const metadata = {
-  title: "毛布取样器 | LongWoo",
+  title: "图片与毛布取样器 | LongWoo",
   robots: { index: false, follow: false },
 };
 
@@ -54,9 +55,9 @@ export default async function FabricSamplerPage() {
               中间页
             </Link>
             <div className="min-w-0">
-              <h1 className="text-base font-bold tracking-tight truncate">毛布取样器</h1>
+              <h1 className="text-base font-bold tracking-tight truncate">图片与毛布取样器</h1>
               <p className="text-[10px] text-slate-500 mt-0.5 font-mono tracking-wider truncate">
-                FABRIC COLOR SAMPLER · CLIENT-SIDE OKLAB MATCH
+                PIXEL & FABRIC SAMPLER · sRGB / OKLAB / PANTONE / FABRIC MATCH
               </p>
             </div>
           </div>
@@ -68,7 +69,7 @@ export default async function FabricSamplerPage() {
 
       {/* 主体 */}
       <div className="relative z-10 flex-1 min-h-0 max-w-7xl w-full mx-auto px-5 py-4">
-        <FabricSampler />
+        <UnifiedSampler />
       </div>
     </main>
   );
