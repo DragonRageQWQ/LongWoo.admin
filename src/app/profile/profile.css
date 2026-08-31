@@ -205,6 +205,9 @@
   border-radius: 50%;
   opacity: 0;
   transition: opacity 0.3s var(--ease);
+  /* 修复：遮罩仅作悬停视觉提示，不拦截鼠标事件，
+     点击穿透到底层的头像按钮以触发文件选择 */
+  pointer-events: none;
 }
 
 .pf-avatar-wrap:hover .pf-avatar-hint {
