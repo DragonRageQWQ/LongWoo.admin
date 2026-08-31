@@ -24,8 +24,8 @@ import { useLanguage } from "@/components/i18n/LanguageProvider";
 export type AdminTab = "all-orders" | "overview" | "users" | "notifications" | "feedback" | "settings" | "works" | "drops";
 
 // 站点版本号（仅管理员后台可见，便于确认部署版本）
-const APP_VERSION = "v2.0.0(830)";
-const BUILD_NUMBER = "830";
+const APP_VERSION = "v2.0.1(831)";
+const BUILD_NUMBER = "831";
 
 interface NavItem {
   key: AdminTab | "gray-test";

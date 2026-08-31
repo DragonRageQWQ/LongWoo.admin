@@ -125,8 +125,8 @@ export async function getSystemSettings(): Promise<{
     environment: {
       nodeEnv: process.env.NODE_ENV || 'development',
       siteUrl: process.env.NEXT_PUBLIC_SITE_URL || '未配置',
-      appVersion: 'v2.0.0(830)',
-      buildNumber: '830',
+      appVersion: 'v2.0.1(831)',
+      buildNumber: '831',
       deployedAt: null,
       zeroUserUid: ZERO_USER_UID,
     },
