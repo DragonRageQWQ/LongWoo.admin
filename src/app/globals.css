@@ -69,6 +69,18 @@ picture, figure {
   }
 }
 
+/* 灰度测试页：取色器选点标记 / 色卡出现动画 */
+@keyframes colorPickPop {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* 灰度测试页：不透明度滑块焦点可见样式（无障碍） */
 input[type="range"]#gray-test-opacity {
   accent-color: var(--color-lw-accent);

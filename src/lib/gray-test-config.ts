@@ -37,6 +37,14 @@ export const grayTestEntries: GrayTestEntry[] = [
     href: "/gray-test/test2",
   },
   {
+    id: "colorpicker",
+    label: "test3",
+    title: "图片取色器",
+    description:
+      "上传图片进行像素级选点（最多 10 点），自动计算 sRGB / OKLab / 潘通参考色并展示在下方菜单",
+    href: "/gray-test/colorpicker",
+  },
+  {
     id: "sampler",
     label: "new",
     title: "毛布取样器",
