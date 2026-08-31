@@ -48,8 +48,9 @@ export const grayTestEntries: GrayTestEntry[] = [
     id: "sampler",
     label: "new",
     title: "毛布取样器",
-    description: "毛布材质在线取样入口（待开发，暂未开放）",
-    href: "",
+    description:
+      "上传图片像素取色，客户端按 OKLab 色差自动匹配毛布库 Top 20（图片按需加载）",
+    href: "/gray-test/sampler",
   },
   {
     id: "ai-chat",
