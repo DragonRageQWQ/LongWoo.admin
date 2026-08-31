@@ -41,7 +41,7 @@ export const grayTestEntries: GrayTestEntry[] = [
     label: "new",
     title: "图片与毛布取样器",
     description:
-      "上传图片像素选点（≤10点），参数框显示 sRGB/OKLab/潘通参考色并自动匹配毛布库 Top20（客户端匹配，图片按需加载）",
+      "上传图片像素选点（≤10点），参数框显示 sRGB/OKLab/潘通参考色并自动匹配毛布库 Top3（客户端匹配，图片按需加载）",
     href: "/gray-test/sampler",
   },
   {

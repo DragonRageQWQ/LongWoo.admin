@@ -1,26 +1,26 @@
 "use client";
 
 /**
- * 图片与毛布合体取样器（灰度测试）
+ * 图片与毛布合体取样器（灰度测试 · 纸墨极简风格）
  *
- * 操作逻辑（与图片取色器一致）：
- * 1. 上传图片（拖拽 / 点击选择）
- * 2. 点击图片任意像素选点（最多 10 个，悬停像素放大镜辅助，点击已选点可删除）
- * 3. 底部参数框：每个选点直接显示 sRGB（hex/rgb）、OKLab、潘通参考色（1391 色近似匹配）
- * 4. 参数框内同时显示该选点的毛布匹配（Top 3 预览）；
- *    点击参数框选中该点，下方主区域展示完整毛布匹配 Top 20
+ * 布局：
+ * - 左侧 ~60%：图片工作区（自适应图片大小，点击像素选点 ≤10 点，
+ *   悬停像素放大镜辅助，点击已选点可删除）
+ * - 右侧 ~40%：参数区（可滚动），每个选点一张参数卡
  *
- * 架构要点：
- * - 匹配全部在客户端（毛布库 OKLab 欧氏距离 + 潘通参考匹配），服务器零计算；
- * - 毛布图片只按需加载（lazy + 失败回退 sRGB 色块占位）；
- * - 毛布数据：真实 fabric-data.json 优先，缺失回退内置示例数据。
+ * 参数卡排版（从左到右）：
+ * - 左端：匹配色块（带坐标与数字编号，可删除）
+ * - 中段：sRGB(hex) / OKLab / 潘通参考色（三项）
+ * - 右端：参考毛布 Top 3（图片缩略图按需加载，失败回退色块）
+ *
+ * 匹配全部在客户端（OKLab 欧氏距离），服务器零计算；
+ * 毛布数据：真实 fabric-data.json 优先，缺失回退内置示例数据。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Upload, ImagePlus, MousePointerClick, RefreshCw, Ruler, Tag, Layers, X } from "lucide-react";
+import { Upload, ImagePlus, MousePointerClick, X, Loader2 } from "lucide-react";
 import {
   type FabricMatch,
   type NormalizedFabric,
-  cidInfo,
   fabricHex,
   fabricImagePath,
   fabricOklab,
@@ -42,8 +42,7 @@ interface PickPoint {
 }
 
 const MAX_POINTS = 10
-const PREVIEW_N = 3 // 参数框内毛布预览条数
-const MAIN_N = 20 // 主区域毛布完整条数
+const PREVIEW_N = 3 // 参数卡内毛布预览条数
 const LOUPE_SIZE = 7
 const LOUPE_CELL = 12
 const LOUPE_PX = LOUPE_SIZE * LOUPE_CELL
@@ -57,7 +56,6 @@ export default function UnifiedSampler() {
 
   // ===== 选点 =====
   const [points, setPoints] = useState<PickPoint[]>([])
-  const [selectedId, setSelectedId] = useState<number | null>(null)
 
   // ===== 毛布数据 =====
   const [fabrics, setFabrics] = useState<NormalizedFabric[]>([])
@@ -84,15 +82,12 @@ export default function UnifiedSampler() {
     return { x: (containerSize.w - w) / 2, y: (containerSize.h - h) / 2, w, h }
   }, [containerSize, imageSize])
 
-  // 当前选中点（默认最近选点）
-  const selectedPoint = useMemo(() => {
-    if (points.length === 0) return null
-    return points.find((p) => p.id === selectedId) ?? points[points.length - 1]
-  }, [points, selectedId])
-
-  // 每点派生数据：OKLab / Pantone / 毛布 Top3 预览
+  // 每点派生数据：OKLab / Pantone / 毛布 Top3
   const pointDerived = useMemo(() => {
-    const map = new Map<number, { oklab: [number, number, number]; pantone: ReturnType<typeof matchPantone>; previews: FabricMatch[] }>()
+    const map = new Map<
+      number,
+      { oklab: [number, number, number]; pantone: ReturnType<typeof matchPantone>; previews: FabricMatch[] }
+    >()
     for (const p of points) {
       const oklab = fabricOklab(p.r, p.g, p.b)
       map.set(p.id, {
@@ -103,12 +98,6 @@ export default function UnifiedSampler() {
     }
     return map
   }, [points, fabrics])
-
-  // 选中点的毛布完整匹配 Top 20
-  const mainMatches = useMemo(() => {
-    if (!selectedPoint) return []
-    return matchFabrics(fabricOklab(selectedPoint.r, selectedPoint.g, selectedPoint.b), fabrics, MAIN_N)
-  }, [selectedPoint, fabrics])
 
   const showStatus = useCallback((msg: string) => {
     setStatus(msg)
@@ -174,7 +163,6 @@ export default function UnifiedSampler() {
             srcCanvasRef.current = c
           }
           setPoints([])
-          setSelectedId(null)
           nextIdRef.current = 1
           showStatus(`已载入 ${img.naturalWidth} × ${img.naturalHeight}px · 点击图片选点（最多 ${MAX_POINTS} 点）`)
         }
@@ -228,7 +216,6 @@ export default function UnifiedSampler() {
       if (hitIdx >= 0) {
         const removed = points[hitIdx]
         setPoints((prev) => prev.filter((_, i) => i !== hitIdx))
-        setSelectedId((cur) => (cur === removed.id ? null : cur))
         showStatus(`已删除点 ${removed.id}（${px}, ${py}）`)
         return
       }
@@ -246,9 +233,10 @@ export default function UnifiedSampler() {
       if (!ctx) return
       const d = ctx.getImageData(px, py, 1, 1).data
       const id = nextIdRef.current++
-      const point: PickPoint = { id, x: px, y: py, r: d[0], g: d[1], b: d[2], dispX, dispY }
-      setPoints((prev) => [...prev, point])
-      setSelectedId(id)
+      setPoints((prev) => [
+        ...prev,
+        { id, x: px, y: py, r: d[0], g: d[1], b: d[2], dispX, dispY },
+      ])
       showStatus(`已选点 ${id} · 像素（${px}, ${py}）· #${rgbToHex(d[0], d[1], d[2])}`)
     },
     [points, fitRect, imageSize, toPixel, showStatus]
@@ -269,7 +257,7 @@ export default function UnifiedSampler() {
       const sx = Math.min(imageSize.w - LOUPE_SIZE, Math.max(0, px - half))
       const sy = Math.min(imageSize.h - LOUPE_SIZE, Math.max(0, py - half))
       ctx.drawImage(src, sx, sy, LOUPE_SIZE, LOUPE_SIZE, 0, 0, LOUPE_PX, LOUPE_PX)
-      ctx.strokeStyle = "rgba(255,255,255,0.14)"
+      ctx.strokeStyle = "rgba(10,10,10,0.14)"
       ctx.lineWidth = 1
       for (let i = 1; i < LOUPE_SIZE; i++) {
         ctx.beginPath(); ctx.moveTo(i * LOUPE_CELL, 0); ctx.lineTo(i * LOUPE_CELL, LOUPE_PX); ctx.stroke()
@@ -277,12 +265,12 @@ export default function UnifiedSampler() {
       }
       const cx = (px - sx) * LOUPE_CELL
       const cy = (py - sy) * LOUPE_CELL
-      ctx.strokeStyle = "rgba(255,255,255,0.9)"
+      ctx.strokeStyle = "rgba(10,10,10,0.85)"
       ctx.lineWidth = 1.5
       ctx.strokeRect(cx + 0.5, cy + 0.5, LOUPE_CELL - 1, LOUPE_CELL - 1)
-      ctx.fillStyle = "rgba(255,255,255,0.12)"
+      ctx.fillStyle = "rgba(10,10,10,0.10)"
       ctx.fillRect(cx, cy, LOUPE_CELL, LOUPE_CELL)
-      ctx.strokeStyle = "rgba(255,255,255,0.55)"
+      ctx.strokeStyle = "rgba(10,10,10,0.45)"
       ctx.lineWidth = 1
       ctx.beginPath(); ctx.moveTo(LOUPE_PX / 2, 0); ctx.lineTo(LOUPE_PX / 2, LOUPE_PX); ctx.stroke()
       ctx.beginPath(); ctx.moveTo(0, LOUPE_PX / 2); ctx.lineTo(LOUPE_PX, LOUPE_PX / 2); ctx.stroke()
@@ -334,295 +322,277 @@ export default function UnifiedSampler() {
     dataSource === "external" ? "真实数据库" : dataSource === "loading" ? "加载中…" : "示例数据"
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* ===== 顶部操作栏 ===== */}
-      <div className="flex items-center justify-between gap-3 pb-4 flex-wrap">
-        <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
-          <MousePointerClick className="w-4 h-4 text-blue-400 flex-shrink-0" />
-          <span>上传图片 → 点击像素选点 → 参数框显示 sRGB / OKLab / 潘通 / 毛布匹配</span>
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border ${
-              dataSource === "external"
-                ? "bg-emerald-400/10 border-emerald-400/25 text-emerald-300"
-                : dataSource === "loading"
-                  ? "bg-white/5 border-white/10 text-slate-400"
-                  : "bg-amber-400/10 border-amber-400/25 text-amber-300"
-            }`}
-          >
-            {sourceLabel} · {fabrics.length} 条
-          </span>
+    <div className="flex flex-col lg:flex-row gap-6 h-full min-h-0">
+      {/* ===== 左侧：图片工作区（约 60%，自适应图片大小）===== */}
+      <div className="w-full lg:w-[60%] flex flex-col min-h-0">
+        <div className="flex items-center justify-between gap-3 pb-3 flex-wrap">
+          <p className="flex items-center gap-1.5 text-xs text-neutral-500">
+            <MousePointerClick className="w-3.5 h-3.5" />
+            点击图片选点（最多 {MAX_POINTS} 点）· 点击已选点可删除
+          </p>
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-medium border ${
+                dataSource === "external"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  : dataSource === "loading"
+                    ? "bg-neutral-50 border-neutral-200 text-neutral-400"
+                    : "bg-amber-50 border-amber-200 text-amber-700"
+              }`}
+            >
+              {dataSource === "loading" && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
+              {sourceLabel} · {fabrics.length} 条
+            </span>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 min-h-[36px] px-4 rounded-full text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-700 transition-colors cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              {hasImage ? "更换图片" : "上传图片"}
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickFile} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setPoints([])
-              setSelectedId(null)
-              showStatus("已清空全部选点")
-            }}
-            disabled={points.length === 0}
-            className="inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg text-xs font-medium text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            清空全部
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 min-h-[36px] px-4 rounded-lg text-xs font-semibold text-slate-900 bg-blue-400 hover:bg-blue-300 transition-colors cursor-pointer"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            {hasImage ? "更换图片" : "上传图片"}
-          </button>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickFile} />
-        </div>
-      </div>
 
-      {/* ===== 图片工作区 ===== */}
-      <div
-        ref={containerRef}
-        className="relative h-[300px] rounded-2xl overflow-hidden border border-white/10 bg-slate-900/50 select-none"
-        onDragOver={(e) => {
-          e.preventDefault()
-          setDragOver(true)
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-      >
-        {!hasImage ? (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className={`absolute inset-0 flex flex-col items-center justify-center gap-3 transition-colors cursor-pointer ${
-              dragOver ? "bg-blue-500/10 border-blue-400/50" : ""
-            }`}
-          >
-            <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-              <ImagePlus className="w-7 h-7 text-slate-400" />
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-slate-300">拖拽图片到此处，或点击选择</p>
-              <p className="text-xs text-slate-500 mt-1">本地处理，不上传服务器 · 支持 jpg / png / webp / gif</p>
-            </div>
-          </button>
-        ) : (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- 本地 dataURL 需精确像素渲染与坐标换算 */}
-            <img
-              ref={imgRef}
-              src={imageUrl}
-              alt="取样源图"
-              draggable={false}
-              className="absolute inset-0 w-full h-full object-contain"
-              onClick={handleImageClick}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-              style={{ cursor: "crosshair" }}
-            />
-            {/* 选点标记 */}
-            {points.map((p, idx) => (
-              <div
-                key={p.id}
-                className="absolute z-10 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ left: p.dispX, top: p.dispY }}
-              >
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block w-5 h-px bg-white/90" />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block w-px h-5 bg-white/90" />
-                <span
-                  className="relative flex items-center justify-center w-7 h-7 rounded-full border-2 text-[11px] font-bold text-white shadow-lg"
-                  style={{
-                    borderColor: `rgb(${p.r},${p.g},${p.b})`,
-                    backgroundColor: p.id === selectedPoint?.id ? "rgba(37,99,235,0.8)" : "rgba(0,0,0,0.55)",
-                    animation: "colorPickPop 0.22s ease-out",
-                  }}
-                >
-                  {idx + 1}
-                </span>
+        {/* 图片容器：桌面撑满剩余高度（自适应图片大小），移动端固定高度 */}
+        <div
+          ref={containerRef}
+          className={`relative rounded-2xl border border-neutral-200 overflow-hidden select-none ${
+            hasImage ? "lg:flex-1 lg:min-h-0 h-[320px]" : "h-[320px] lg:h-auto lg:flex-1"
+          } bg-neutral-50`}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragOver(true)
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+        >
+          {!hasImage ? (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className={`absolute inset-0 flex flex-col items-center justify-center gap-3 transition-colors cursor-pointer rounded-2xl border-2 border-dashed ${
+                dragOver ? "border-neutral-900 bg-neutral-100" : "border-neutral-300 hover:border-neutral-500"
+              }`}
+            >
+              <div className="w-14 h-14 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center">
+                <ImagePlus className="w-6 h-6 text-neutral-400" />
               </div>
-            ))}
-            {/* 像素放大镜 */}
-            <div ref={loupeWrapRef} className="absolute z-20 hidden" style={{ display: "none" }}>
-              <canvas
-                ref={loupeCanvasRef}
-                width={LOUPE_PX}
-                height={LOUPE_PX}
-                className="block rounded-lg border border-white/25 shadow-xl bg-slate-900"
+              <div className="text-center">
+                <p className="text-sm font-medium text-neutral-600">拖拽图片到此处，或点击选择</p>
+                <p className="text-xs text-neutral-400 mt-1">本地处理，不上传服务器 · 支持 jpg / png / webp / gif</p>
+              </div>
+            </button>
+          ) : (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- 本地 dataURL 需精确像素渲染与坐标换算 */}
+              <img
+                ref={imgRef}
+                src={imageUrl}
+                alt="取样源图"
+                draggable={false}
+                className="absolute inset-0 w-full h-full object-contain"
+                onClick={handleImageClick}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+                style={{ cursor: "crosshair" }}
               />
-              <div
-                data-loupe-info
-                className="mt-1 px-2 py-1 rounded-md bg-slate-900/90 border border-white/10 text-[10px] font-mono text-slate-200 text-center"
-              />
+              {/* 选点标记（纸墨风格：墨色描边 + 白底编号） */}
+              {points.map((p, idx) => (
+                <div
+                  key={p.id}
+                  className="absolute z-10 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ left: p.dispX, top: p.dispY }}
+                >
+                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block w-5 h-px bg-neutral-900/80" />
+                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block w-px h-5 bg-neutral-900/80" />
+                  <span
+                    className="relative flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold shadow border"
+                    style={{
+                      borderColor: `rgb(${p.r},${p.g},${p.b})`,
+                      color: "#0a0a0a",
+                      backgroundColor: "rgba(255,255,255,0.92)",
+                      animation: "colorPickPop 0.22s ease-out",
+                    }}
+                  >
+                    {idx + 1}
+                  </span>
+                </div>
+              ))}
+              {/* 像素放大镜（浅色） */}
+              <div ref={loupeWrapRef} className="absolute z-20 hidden" style={{ display: "none" }}>
+                <canvas
+                  ref={loupeCanvasRef}
+                  width={LOUPE_PX}
+                  height={LOUPE_PX}
+                  className="block rounded-lg border border-neutral-300 shadow-lg bg-white"
+                />
+                <div
+                  data-loupe-info
+                  className="mt-1 px-2 py-1 rounded-md bg-white border border-neutral-200 text-[10px] font-mono text-neutral-700 text-center shadow"
+                />
+              </div>
+              {imageSize && (
+                <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-white/85 border border-neutral-200 text-[10px] font-mono text-neutral-500">
+                  {imageSize.w} × {imageSize.h}px
+                </span>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* 状态条 */}
+        <div className="mt-2 flex items-center gap-3 min-h-5 text-xs">
+          {status ? (
+            <span className="inline-flex items-center gap-1.5 text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 animate-pulse" />
+              {status}
+            </span>
+          ) : (
+            <span className="text-neutral-400">{hasImage ? `已选 ${points.length} / ${MAX_POINTS} 点` : "等待上传图片"}</span>
+          )}
+        </div>
+      </div>
+
+      {/* ===== 右侧：参数区（约 40%，可滚动查看详细参数）===== */}
+      <div className="w-full lg:w-[40%] min-h-0 flex flex-col">
+        <div className="flex items-center justify-between pb-2">
+          <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-neutral-400">Sampler · 取样参数</p>
+          {points.length > 0 && (
+            <button
+              onClick={() => {
+                setPoints([])
+                showStatus("已清空全部选点")
+              }}
+              className="inline-flex items-center gap-1 text-[11px] text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+              清空
+            </button>
+          )}
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
+          {!hasImage ? (
+            <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-2xl border border-dashed border-neutral-300 text-xs text-neutral-400">
+              <MousePointerClick className="w-5 h-5" />
+              上传图片并点击选点后，参数显示在这里
             </div>
-            {imageSize && (
-              <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/50 text-[10px] font-mono text-slate-300 border border-white/10">
-                {imageSize.w} × {imageSize.h}px
-              </span>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* ===== 状态条 ===== */}
-      <div className="mt-2 flex items-center gap-3 min-h-6 text-xs">
-        {status ? (
-          <span className="inline-flex items-center gap-1.5 text-slate-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            {status}
-          </span>
-        ) : (
-          <span className="text-slate-600">
-            {hasImage ? `已选 ${points.length} / ${MAX_POINTS} 点` : "等待上传图片"}
-          </span>
-        )}
-        {fabrics.length > 0 && (
-          <span className="ml-auto text-slate-600 hidden sm:inline">
-            点击参数框切换查看各选点的完整毛布匹配（Top {MAIN_N}）
-          </span>
-        )}
-      </div>
-
-      {/* ===== 底部参数框（每点：sRGB / OKLab / Pantone / 毛布 Top3）===== */}
-      {hasImage && (
-        <div className="mt-2 pb-1">
-          {points.length === 0 ? (
-            <div className="flex items-center gap-2 justify-center h-16 rounded-xl border border-dashed border-white/10 text-xs text-slate-500">
-              <MousePointerClick className="w-4 h-4" />
-              在上方图片中点击像素，参数与毛布匹配将显示在这里
+          ) : points.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-2xl border border-dashed border-neutral-300 text-xs text-neutral-400">
+              <MousePointerClick className="w-5 h-5" />
+              在上方图片中点击像素选点（最多 {MAX_POINTS} 点）
             </div>
           ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
-              {points.map((p, idx) => {
-                const derived = pointDerived.get(p.id)
-                const isSelected = p.id === selectedPoint?.id
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelectedId(p.id)}
-                    className={`flex-shrink-0 w-72 text-left rounded-xl border transition-colors cursor-pointer overflow-hidden ${
-                      isSelected
-                        ? "bg-blue-500/[0.07] border-blue-400/60"
-                        : "bg-white/[0.04] border-white/10 hover:border-white/25"
-                    }`}
-                    style={{ animation: "colorPickPop 0.22s ease-out" }}
-                  >
-                    {/* 色块头 */}
-                    <div className="relative h-12 flex items-end" style={{ backgroundColor: `rgb(${p.r},${p.g},${p.b})` }}>
-                      <span className="absolute top-1.5 left-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-black/45 text-[10px] font-bold text-white border border-white/40">
-                        {idx + 1}
-                      </span>
-                      <span className="absolute bottom-1 right-1.5 px-1.5 py-0.5 rounded bg-black/45 text-[9px] font-mono text-white/90">
-                        ({p.x}, {p.y})
-                      </span>
-                      <span
-                        role="button"
-                        tabIndex={-1}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setPoints((prev) => prev.filter((q) => q.id !== p.id))
-                          setSelectedId((cur) => (cur === p.id ? null : cur))
-                        }}
-                        className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/45 text-white/80 hover:bg-black/70 hover:text-white flex items-center justify-center"
-                        aria-label={`删除选点 ${idx + 1}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </span>
-                    </div>
-
-                    <div className="p-3 space-y-2">
-                      {/* sRGB */}
-                      <div>
-                        <p className="text-[9px] uppercase tracking-wider text-slate-500 mb-0.5">sRGB</p>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold font-mono text-slate-100">
-                            {rgbToHex(p.r, p.g, p.b)}
-                          </span>
-                          <span className="text-[10px] font-mono text-slate-400">
-                            rgb({p.r}, {p.g}, {p.b})
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* OKLab */}
-                      {derived && (
-                        <div>
-                          <p className="text-[9px] uppercase tracking-wider text-slate-500 mb-0.5">OKLab</p>
-                          <p className="text-[10px] font-mono text-slate-300">
-                            L {derived.oklab[0].toFixed(3)} · a{" "}
-                            {(derived.oklab[1] >= 0 ? "+" : "") + derived.oklab[1].toFixed(3)} · b{" "}
-                            {(derived.oklab[2] >= 0 ? "+" : "") + derived.oklab[2].toFixed(3)}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* 潘通参考 */}
-                      {derived?.pantone && (
-                        <div>
-                          <p className="text-[9px] uppercase tracking-wider text-slate-500 mb-0.5">Pantone 参考</p>
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className="w-3.5 h-3.5 rounded border border-white/20 flex-shrink-0"
-                              style={{ backgroundColor: derived.pantone.hex }}
-                            />
-                            <span className="text-[10px] font-medium text-slate-200 truncate">
-                              {derived.pantone.name === derived.pantone.code
-                                ? derived.pantone.code
-                                : `${derived.pantone.code} ${derived.pantone.name}`}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 毛布匹配 Top3 */}
-                      <div>
-                        <p className="text-[9px] uppercase tracking-wider text-slate-500 mb-1">
-                          毛布匹配（Top {PREVIEW_N}）
-                        </p>
-                        {fabrics.length === 0 ? (
-                          <p className="text-[10px] text-slate-500">毛布库加载中…</p>
-                        ) : derived && derived.previews.length > 0 ? (
-                          <div className="space-y-1">
-                            {derived.previews.map((m) => (
-                              <FabricRow key={m.fabric.id} match={m} />
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-[10px] text-slate-500">无匹配</p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            points.map((p, idx) => (
+              <PointCard
+                key={p.id}
+                point={p}
+                index={idx}
+                derived={pointDerived.get(p.id)}
+                onDelete={() => {
+                  setPoints((prev) => prev.filter((q) => q.id !== p.id))
+                  showStatus(`已删除点 ${idx + 1}`)
+                }}
+              />
+            ))
           )}
-          <p className="text-[9px] text-slate-600 mt-1">
-            毛布色值来自商家色卡（社区/示例数据，非分光仪实测），潘通为近似匹配，正式交付请以官方色卡为准 · 点击参数框切换查看完整 Top {MAIN_N}
+
+          <p className="text-[10px] text-neutral-300 leading-relaxed">
+            毛布色值来自商家色卡（社区/示例数据，非分光仪实测）；潘通为近似匹配，正式交付请以官方色卡为准
           </p>
         </div>
-      )}
-
-      {/* ===== 主区域：选中点完整毛布匹配 Top 20 ===== */}
-      {selectedPoint && (
-        <div className="mt-3 pb-2">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-blue-400" />
-              毛布完整匹配
-              <span className="text-slate-500 font-normal">
-                · 目标 #{selectedPoint.id} {rgbToHex(selectedPoint.r, selectedPoint.g, selectedPoint.b)}（{selectedPoint.x}, {selectedPoint.y}）
-                · {mainMatches.length} 条按色差 Δ 升序
-              </span>
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {mainMatches.map((m, idx) => (
-              <FabricCard key={m.fabric.id} match={m} rank={idx + 1} />
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
 
-// ==================== 毛布紧凑行（参数框内预览） ====================
+// ==================== 参数卡（三栏：色块 | sRGB/OKLab/Pantone | 参考毛布 Top3）====================
+
+interface Derived {
+  oklab: [number, number, number]
+  pantone: ReturnType<typeof matchPantone>
+  previews: FabricMatch[]
+}
+
+function PointCard({
+  point,
+  index,
+  derived,
+  onDelete,
+}: {
+  point: PickPoint
+  index: number
+  derived?: Derived
+  onDelete: () => void
+}) {
+  const p = point
+  const hex = rgbToHex(p.r, p.g, p.b)
+  const oklab = derived?.oklab
+  const pantone = derived?.pantone
+  const previews = derived?.previews ?? []
+
+  return (
+    <div className="flex gap-4 rounded-2xl border border-neutral-200 bg-white p-3.5 shadow-sm">
+      {/* 左端：匹配色块（带坐标与数字编号） */}
+      <div className="relative w-[76px] h-[76px] rounded-xl flex-shrink-0 overflow-hidden" style={{ backgroundColor: hex }}>
+        <span className="absolute top-1 left-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-900/70 text-[10px] font-bold text-white">
+          {index + 1}
+        </span>
+        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-neutral-900/55 text-[9px] font-mono text-white">
+          ({p.x}, {p.y})
+        </span>
+        <button
+          onClick={onDelete}
+          aria-label={`删除选点 ${index + 1}`}
+          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-neutral-900/55 text-white/90 hover:bg-neutral-900 hover:text-white flex items-center justify-center cursor-pointer"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+
+      {/* 中段：sRGB / OKLab / 潘通参考色 */}
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div>
+          <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">sRGB</p>
+          <p className="text-xs font-semibold font-mono text-neutral-900">{hex}</p>
+          <p className="text-[10px] font-mono text-neutral-500">rgb({p.r}, {p.g}, {p.b})</p>
+        </div>
+        {oklab && (
+          <div>
+            <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">OKLab</p>
+            <p className="text-[10px] font-mono text-neutral-600">
+              L {oklab[0].toFixed(3)} · a {(oklab[1] >= 0 ? "+" : "") + oklab[1].toFixed(3)} · b{" "}
+              {(oklab[2] >= 0 ? "+" : "") + oklab[2].toFixed(3)}
+            </p>
+          </div>
+        )}
+        {pantone && (
+          <div>
+            <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">Pantone 参考</p>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded border border-neutral-200 flex-shrink-0" style={{ backgroundColor: pantone.hex }} />
+              <span className="text-[11px] text-neutral-700 truncate">
+                {pantone.name === pantone.code ? pantone.code : `${pantone.code} ${pantone.name}`}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 右端：参考毛布 Top3 */}
+      <div className="w-[36%] flex-shrink-0 space-y-1">
+        <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">参考毛布 Top 3</p>
+        {previews.length > 0 ? (
+          previews.map((m) => <FabricRow key={m.fabric.id} match={m} />)
+        ) : (
+          <p className="text-[10px] text-neutral-400">毛布库加载中…</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==================== 毛布紧凑行（参数卡内预览） ====================
 
 function FabricRow({ match }: { match: FabricMatch }) {
   const { fabric, delta } = match
@@ -632,8 +602,8 @@ function FabricRow({ match }: { match: FabricMatch }) {
   const imgPath = fabricImagePath(fabric.source)
 
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-white/[0.04] border border-white/5 px-1.5 py-1">
-      <span className="relative w-7 h-7 rounded flex-shrink-0 overflow-hidden" style={{ backgroundColor: hex }}>
+    <div className="flex items-center gap-1.5 rounded-lg bg-neutral-50 border border-neutral-100 px-1.5 py-1">
+      <span className="relative w-6 h-6 rounded flex-shrink-0 overflow-hidden" style={{ backgroundColor: hex }}>
         {!imgFailed && (
           // eslint-disable-next-line @next/next/no-img-element -- 静态缩略图按需懒加载
           <img
@@ -647,77 +617,13 @@ function FabricRow({ match }: { match: FabricMatch }) {
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-slate-200 truncate">
+        <p className="text-[10px] font-medium text-neutral-800 truncate">
           {fabric.name}
-          <span className="text-slate-500 font-normal"> · {fabric.vendor} · {fabric.skuId}</span>
+          <span className="text-neutral-400 font-normal"> · {fabric.vendor}</span>
         </p>
-        <p className="text-[9px] font-mono text-slate-500 truncate">
-          {fabricPhText(fabric.ph)} · {fabric.fabricKind} · {hex}
-        </p>
+        <p className="text-[8px] font-mono text-neutral-400 truncate">{fabricPhText(fabric.ph)} · {fabric.skuId}</p>
       </div>
-      <span className="flex-shrink-0 text-[9px] font-mono text-emerald-300">Δ {delta.toFixed(3)}</span>
-    </div>
-  );
-}
-
-// ==================== 毛布完整卡片（主区域） ====================
-
-function FabricCard({ match, rank }: { match: FabricMatch; rank: number }) {
-  const { fabric, delta } = match
-  const cid = cidInfo(fabric.cid)
-  const [imgFailed, setImgFailed] = useState(false)
-  const [r, g, b] = fabric.sRGB
-  const hex = fabric.hex ?? fabricHex(r, g, b)
-  const imgPath = fabricImagePath(fabric.source)
-
-  return (
-    <div className="flex flex-col rounded-xl bg-white/[0.04] border border-white/10 overflow-hidden transition-colors hover:border-blue-400/30">
-      <div className="relative aspect-square bg-slate-900" style={{ backgroundColor: hex }}>
-        {!imgFailed && (
-          // eslint-disable-next-line @next/next/no-img-element -- 静态图片按需懒加载
-          <img
-            src={imgPath}
-            alt={`${fabric.name}（${fabric.vendor} ${fabric.skuId}）`}
-            loading="lazy"
-            decoding="async"
-            onError={() => setImgFailed(true)}
-            className="w-full h-full object-cover"
-          />
-        )}
-        <span className="absolute top-1.5 left-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-black/60 text-[10px] font-bold text-white border border-white/30">
-          {rank}
-        </span>
-        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/60 text-[9px] font-mono text-emerald-300 border border-white/10">
-          Δ {delta.toFixed(3)}
-        </span>
-        <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/55 text-[9px] text-slate-200 border border-white/10">
-          {cid.label} · {cid.en}
-        </span>
-      </div>
-      <div className="p-3 space-y-1.5 flex-1 flex flex-col">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-slate-100 truncate">{fabric.name}</p>
-          <span className="flex-shrink-0 text-[9px] font-mono text-slate-500">{fabric.id}</span>
-        </div>
-        <p className="text-[11px] text-slate-400 truncate flex items-center gap-1">
-          <Tag className="w-3 h-3 flex-shrink-0" />
-          {fabric.vendor} · {fabric.skuId}
-        </p>
-        <p className="text-[11px] text-slate-400 flex items-center gap-1">
-          <Ruler className="w-3 h-3 flex-shrink-0" />
-          {fabricPhText(fabric.ph)} · {fabric.fabricKind}
-        </p>
-        <p className="text-[10px] font-mono text-slate-500">
-          {hex} · rgb({r},{g},{b})
-        </p>
-        <p className="text-[10px] font-mono text-slate-500">
-          OKLab L {fabric.oklab[0].toFixed(3)} a {fabric.oklab[1].toFixed(3)} b {fabric.oklab[2].toFixed(3)}
-        </p>
-        {fabric.pantone && <p className="text-[10px] text-blue-300/80 truncate">Pantone ≈ {fabric.pantone}</p>}
-        {fabric.tips && (
-          <p className="text-[9px] text-amber-300/70 leading-relaxed mt-auto pt-1">{fabric.tips}</p>
-        )}
-      </div>
+      <span className="flex-shrink-0 text-[8px] font-mono text-emerald-600">Δ {delta.toFixed(3)}</span>
     </div>
   );
 }
