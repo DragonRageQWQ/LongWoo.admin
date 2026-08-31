@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import {
   Mail,
@@ -32,6 +32,7 @@ import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { formatDate, statusLabels } from "@/lib/utils";
 import type { Profile, Order } from "@/types/database";
 import PasswordResetModal from "@/components/auth/PasswordResetModal";
+import AvatarCropModal from "@/components/avatar/AvatarCropModal";
 import ProfileSkeleton from "./ProfileSkeleton";
 import "./profile.css";
 
@@ -106,7 +107,12 @@ export default function ProfileShell({
   // 头像上传状态
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  // 头像裁切：选图后先进入裁切弹窗（null=未在裁切）
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 头像裁切输出上限（与服务端一致：2MB）
+  const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 
   // 密码管理状态
   const [editingPassword, setEditingPassword] = useState(false);
@@ -189,25 +195,55 @@ export default function ProfileShell({
 
     if (!file) return;
 
-    setAvatarLoading(true);
-    setAvatarError(null);
-    try {
-      const result = await updateAvatar(file);
-      if (result.success && result.avatarUrl) {
-        // 服务端已更新，本地乐观刷新 profile（服务端已 revalidatePath）
-        setProfile((prev) => {
-          if (!prev || !result.avatarUrl) return prev;
-          return { ...prev, avatar_url: result.avatarUrl };
-        });
-      } else {
-        setAvatarError(result.error ?? t("profile.err.avatarUploadFailed"));
-      }
-    } catch {
-      setAvatarError(t("profile.err.operationUnknown"));
-    } finally {
-      setAvatarLoading(false);
+    // 客户端预校验：与服务端一致的大小/格式限制，选图阶段即提示
+    if (file.size > AVATAR_MAX_BYTES) {
+      setAvatarError(t("profile.err.avatarTooLarge"));
+      return;
     }
+    if (!["image/jpeg", "image/png", "image/gif", "image/webp"].includes(file.type)) {
+      setAvatarError(t("profile.err.avatarFormat"));
+      return;
+    }
+
+    // 先进入裁切弹窗（自由选区 + 缩放），确认后再上传
+    setAvatarError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropSrc(typeof reader.result === "string" ? reader.result : null);
+    };
+    reader.onerror = () => {
+      setAvatarError(t("profile.err.operationUnknown"));
+    };
+    reader.readAsDataURL(file);
   };
+
+  // 裁切确认：上传裁切后的头像并刷新本地展示
+  const handleCropConfirm = useCallback(
+    async (blob: Blob) => {
+      setAvatarLoading(true);
+      setAvatarError(null);
+      try {
+        // canvas 产出的是 Blob，包装成 File 以匹配上传接口签名
+        const file = new File([blob], "avatar.jpg", {
+          type: blob.type || "image/jpeg",
+        });
+        const result = await updateAvatar(file);
+        if (!result.success || !result.avatarUrl) {
+          throw new Error(result.error ?? t("profile.err.avatarUploadFailed"));
+        }
+        // 服务端已更新，本地乐观刷新 profile（服务端已 revalidatePath）
+        setProfile((prev) =>
+          prev ? { ...prev, avatar_url: result.avatarUrl! } : prev
+        );
+        setCropSrc(null);
+      } catch (err) {
+        throw err instanceof Error ? err : new Error(t("profile.err.operationUnknown"));
+      } finally {
+        setAvatarLoading(false);
+      }
+    },
+    [t]
+  );
 
   // ==================== 修改密码 ====================
   const handleStartEditPassword = () => {
@@ -796,6 +832,14 @@ export default function ProfileShell({
         open={resetOpen}
         onClose={() => setResetOpen(false)}
         fixedEmail={profile?.email}
+      />
+
+      {/* 头像裁切弹窗：选图后自由选区 + 缩放，确认后上传 */}
+      <AvatarCropModal
+        open={Boolean(cropSrc)}
+        imageSrc={cropSrc}
+        onCancel={() => setCropSrc(null)}
+        onConfirm={handleCropConfirm}
       />
     </div>
   );

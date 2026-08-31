@@ -1,0 +1,61 @@
+/* 头像裁切弹窗：裁切区 + 缩放滑块 */
+
+.avc-stage {
+  position: relative;
+  width: 100%;
+  height: min(46vh, 360px);
+  background: #0c0c0c;
+  border-radius: 16px;
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* 圆形裁切框描边微调（默认由 react-easy-crop 注入） */
+.avc-stage .reactEasyCrop_CropArea {
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+}
+
+.avc-zoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.avc-zoom-icon {
+  color: #a3a3a3;
+  flex-shrink: 0;
+}
+
+.avc-zoom-range {
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: #e5e5e5;
+  outline: none;
+  cursor: pointer;
+}
+
+.avc-zoom-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0a0a0a;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+}
+
+.avc-zoom-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0a0a0a;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+}
