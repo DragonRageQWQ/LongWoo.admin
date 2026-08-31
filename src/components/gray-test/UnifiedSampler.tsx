@@ -583,13 +583,22 @@ export default function UnifiedSampler() {
             </button>
           ) : (
             <>
+              {/* 源图：纯展示层，pointer-events 关闭 —— 浏览器无法对图片本体
+                  触发长按「保存图片/查看图片」等系统菜单；坐标换算仍以 img 定位 */}
               {/* eslint-disable-next-line @next/next/no-img-element -- 本地 dataURL 需精确像素渲染与坐标换算 */}
               <img
                 ref={imgRef}
                 src={imageUrl}
                 alt="取样源图"
                 draggable={false}
-                className="absolute inset-0 w-full h-full object-contain"
+                className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+                style={{ userSelect: "none", WebkitTouchCallout: "none" }}
+              />
+              {/* 交互层：承载全部取色事件（点击/长按/触屏），
+                  长按发生在普通 div 上而非图片上，配合 contextmenu 拦截不再弹出系统菜单 */}
+              <div
+                className="absolute inset-0 z-[5] select-none"
+                style={{ cursor: "crosshair", touchAction: "none", userSelect: "none", WebkitTouchCallout: "none" }}
                 onClick={handleImageClick}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
@@ -598,7 +607,7 @@ export default function UnifiedSampler() {
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                style={{ cursor: "crosshair", touchAction: "none", WebkitTouchCallout: "none" }}
+                onContextMenu={(e) => e.preventDefault()}
               />
               {/* 选点标记（纸墨风格：墨色描边 + 白底编号） */}
               {points.map((p, idx) => (
