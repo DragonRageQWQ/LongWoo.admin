@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { srgbToOklab, matchPantone, rgbToHex } from "./color-math";
+import { srgbToOklab, matchPantone, matchPantones, rgbToHex } from "./color-math";
 import { PANTONE_DATA } from "./pantone-data";
 
 const close = (a: number, b: number, eps = 0.001) => expect(Math.abs(a - b)).toBeLessThan(eps);
@@ -59,6 +59,24 @@ describe("潘通参考色库", () => {
     }
     const elapsed = performance.now() - start;
     expect(elapsed).toBeLessThan(500);
+  });
+  it("matchPantones 返回 Top N（默认 3，按 Δ 升序）", () => {
+    const list = matchPantones(15, 76, 129, 3);
+    expect(list.length).toBe(3);
+    expect(list[0].code).toBe("19-4052"); // 最近的仍为 Classic Blue
+    for (let i = 1; i < list.length; i++) {
+      expect(list[i].delta).toBeGreaterThanOrEqual(list[i - 1].delta);
+    }
+    expect(new Set(list.map((c) => c.code)).size).toBe(3); // 无重复
+  });
+  it("matchPantone 与 matchPantones 首位结果一致", () => {
+    const single = matchPantone(200, 60, 90);
+    const top3 = matchPantones(200, 60, 90, 3);
+    expect(top3[0].code).toBe(single?.code);
+  });
+  it("topN 超过库容量时返回全部", () => {
+    const all = matchPantones(120, 120, 120, PANTONE_DATA.length + 10);
+    expect(all.length).toBe(PANTONE_DATA.length);
   });
 });
 

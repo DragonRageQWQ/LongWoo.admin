@@ -5,12 +5,13 @@
  *
  * 布局：
  * - 左侧 ~60%：图片工作区（自适应图片大小，点击像素选点 ≤10 点，
- *   悬停像素放大镜辅助，点击已选点可删除）
+ *   长按/按住弹出像素放大镜精确取色；移动端长按、桌面端按住拖动；
+ *   点击已选点可删除；窗口过窄时保持图片长宽比的最小高度不被挤压）
  * - 右侧 ~40%：参数区（可滚动），每个选点一张参数卡
  *
  * 参数卡排版（从左到右）：
  * - 左端：匹配色块（带坐标与数字编号，可删除）
- * - 中段：sRGB(hex) / OKLab / 潘通参考色（三项）
+ * - 中段：sRGB(hex) / OKLab / 潘通参考色（Top 3，带色差 Δ）
  * - 右端：参考毛布 Top 3（图片缩略图按需加载，失败回退色块）
  *
  * 匹配全部在客户端（OKLab 欧氏距离），服务器零计算；
@@ -28,7 +29,7 @@ import {
   matchFabrics,
 } from "@/lib/fabric-types";
 import { loadFabricData } from "@/lib/fabric-data";
-import { rgbToHex, matchPantone } from "@/lib/color-math";
+import { rgbToHex, matchPantones } from "@/lib/color-math";
 
 interface PickPoint {
   id: number
@@ -43,6 +44,8 @@ interface PickPoint {
 
 const MAX_POINTS = 10
 const PREVIEW_N = 3 // 参数卡内毛布预览条数
+const PANTONE_N = 3 // 参数卡内潘通参考色条数
+const LONG_PRESS_MS = 380 // 长按判定阈值（毫秒）
 const LOUPE_SIZE = 7
 const LOUPE_CELL = 12
 const LOUPE_PX = LOUPE_SIZE * LOUPE_CELL
@@ -56,6 +59,10 @@ export default function UnifiedSampler() {
 
   // ===== 选点 =====
   const [points, setPoints] = useState<PickPoint[]>([])
+
+  // ===== 长按精确取色状态 =====
+  const [pressing, setPressing] = useState(false)
+  const [longPressActive, setLongPressActive] = useState(false)
 
   // ===== 毛布数据 =====
   const [fabrics, setFabrics] = useState<NormalizedFabric[]>([])
@@ -73,6 +80,20 @@ export default function UnifiedSampler() {
   const nextIdRef = useRef(1)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // 长按按压状态（避免频繁 setState）
+  const pressRef = useRef<{
+    timer: ReturnType<typeof setTimeout> | null
+    active: boolean
+    fired: boolean
+    source: "mouse" | "touch" | null
+    px: number
+    py: number
+  }>({ timer: null, active: false, fired: false, source: null, px: 0, py: 0 })
+  // 长按松手后吞掉紧随的 click（触屏合成事件 / 桌面松手触发）
+  const suppressClickRef = useRef(false)
+  // 触屏结束时间戳：用于屏蔽触屏后 700ms 内浏览器派发的合成鼠标事件
+  const lastTouchEndRef = useRef(0)
+
   // object-contain 渲染矩形
   const fitRect = useMemo(() => {
     if (!containerSize || !imageSize) return null
@@ -82,17 +103,29 @@ export default function UnifiedSampler() {
     return { x: (containerSize.w - w) / 2, y: (containerSize.h - h) / 2, w, h }
   }, [containerSize, imageSize])
 
-  // 每点派生数据：OKLab / Pantone / 毛布 Top3
+  // 图片栏最小高度：按图片长宽比计算（宽度铺满时的高度），
+  // 窗口过窄/选点过多挤压图片栏时也不低于该值，避免图片被压成异常尺寸
+  const aspectMinH = useMemo(() => {
+    if (!imageSize || !containerSize) return undefined
+    const ratio = imageSize.w / imageSize.h
+    if (!Number.isFinite(ratio) || ratio <= 0) return undefined
+    const fittedH = containerSize.w / ratio
+    if (!Number.isFinite(fittedH)) return undefined
+    const viewportCap = typeof window !== "undefined" ? Math.round(window.innerHeight * 0.72) : 560
+    return Math.round(Math.min(Math.max(fittedH, 260), Math.min(560, viewportCap)))
+  }, [imageSize, containerSize])
+
+  // 每点派生数据：OKLab / Pantone Top3 / 毛布 Top3
   const pointDerived = useMemo(() => {
     const map = new Map<
       number,
-      { oklab: [number, number, number]; pantone: ReturnType<typeof matchPantone>; previews: FabricMatch[] }
+      { oklab: [number, number, number]; pantones: ReturnType<typeof matchPantones>; previews: FabricMatch[] }
     >()
     for (const p of points) {
       const oklab = fabricOklab(p.r, p.g, p.b)
       map.set(p.id, {
         oklab,
-        pantone: matchPantone(p.r, p.g, p.b),
+        pantones: matchPantones(p.r, p.g, p.b, PANTONE_N),
         previews: matchFabrics(oklab, fabrics, PREVIEW_N),
       })
     }
@@ -118,8 +151,10 @@ export default function UnifiedSampler() {
   }, [])
 
   useEffect(() => {
+    const press = pressRef.current
     return () => {
       if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
+      if (press.timer) clearTimeout(press.timer)
     }
   }, [])
 
@@ -131,7 +166,7 @@ export default function UnifiedSampler() {
       setFabrics(result.fabrics)
       setDataSource(result.external ? "external" : "sample")
       showStatus(
-        `毛布库已就绪（${result.fabrics.length} 条${result.external ? "，真实数据" : "，示例数据"}）· 上传图片后点击取色`
+        `毛布库已就绪（${result.fabrics.length} 条${result.external ? "，真实数据" : "，示例数据"}）· 上传图片后点击/长按取色`
       )
     })
     return () => {
@@ -164,7 +199,9 @@ export default function UnifiedSampler() {
           }
           setPoints([])
           nextIdRef.current = 1
-          showStatus(`已载入 ${img.naturalWidth} × ${img.naturalHeight}px · 点击图片选点（最多 ${MAX_POINTS} 点）`)
+          showStatus(
+            `已载入 ${img.naturalWidth} × ${img.naturalHeight}px · 点击选点 / 长按放大镜精确取色（最多 ${MAX_POINTS} 点）`
+          )
         }
         img.src = url
       }
@@ -201,13 +238,11 @@ export default function UnifiedSampler() {
     [fitRect, imageSize]
   )
 
-  // ===== 点击选点 / 删除 =====
-  const handleImageClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (!srcCanvasRef.current || !fitRect || !imageSize) return
-      const pos = toPixel(e.clientX, e.clientY)
-      if (!pos) return
-      const { px, py } = pos
+  // ===== 选点（点击 / 长按松手共用）=====
+  const selectPixel = useCallback(
+    (px: number, py: number) => {
+      const src = srcCanvasRef.current
+      if (!src || !fitRect || !imageSize) return
       const dispX = fitRect.x + (px / imageSize.w) * fitRect.w
       const dispY = fitRect.y + (py / imageSize.h) * fitRect.h
 
@@ -229,7 +264,7 @@ export default function UnifiedSampler() {
         return
       }
 
-      const ctx = srcCanvasRef.current.getContext("2d", { willReadFrequently: true })
+      const ctx = src.getContext("2d", { willReadFrequently: true })
       if (!ctx) return
       const d = ctx.getImageData(px, py, 1, 1).data
       const id = nextIdRef.current++
@@ -239,10 +274,10 @@ export default function UnifiedSampler() {
       ])
       showStatus(`已选点 ${id} · 像素（${px}, ${py}）· #${rgbToHex(d[0], d[1], d[2])}`)
     },
-    [points, fitRect, imageSize, toPixel, showStatus]
+    [points, fitRect, imageSize, showStatus]
   )
 
-  // ===== 悬停放大镜（DOM 直改）=====
+  // ===== 放大镜：绘制 / 定位 / 信息 =====
   const drawLoupe = useCallback(
     (px: number, py: number) => {
       const src = srcCanvasRef.current
@@ -278,43 +313,203 @@ export default function UnifiedSampler() {
     [imageSize]
   )
 
+  const positionLoupe = useCallback((clientX: number, clientY: number) => {
+    const wrap = loupeWrapRef.current
+    const container = containerRef.current
+    if (!wrap || !container) return
+    const rect = container.getBoundingClientRect()
+    const relX = clientX - rect.left
+    const relY = clientY - rect.top
+    const GAP = 14
+    let left = relX + GAP
+    let top = relY + GAP
+    if (left + LOUPE_PX > rect.width) left = relX - LOUPE_PX - GAP
+    if (top + LOUPE_PX + 24 > rect.height) top = relY - LOUPE_PX - 24 - GAP
+    wrap.style.display = "block"
+    wrap.style.left = `${Math.max(4, left)}px`
+    wrap.style.top = `${Math.max(4, top)}px`
+  }, [])
+
+  const updateLoupeInfo = useCallback((px: number, py: number) => {
+    const wrap = loupeWrapRef.current
+    const info = wrap?.querySelector<HTMLElement>("[data-loupe-info]")
+    if (info && srcCanvasRef.current) {
+      const ctx = srcCanvasRef.current.getContext("2d", { willReadFrequently: true })
+      if (ctx) {
+        const d = ctx.getImageData(px, py, 1, 1).data
+        info.textContent = `${px}, ${py} · #${rgbToHex(d[0], d[1], d[2])}`
+      }
+    }
+  }, [])
+
+  // ===== 长按精确取色：按住 → 放大镜跟随 → 松手取色 =====
+  const startPress = useCallback(
+    (clientX: number, clientY: number, source: "mouse" | "touch") => {
+      if (!srcCanvasRef.current || !fitRect || !imageSize) return
+      const pos = toPixel(clientX, clientY)
+      if (!pos) return
+      const pr = pressRef.current
+      if (pr.timer) clearTimeout(pr.timer)
+      pr.active = true
+      pr.fired = false
+      pr.source = source
+      pr.px = pos.px
+      pr.py = pos.py
+      drawLoupe(pos.px, pos.py)
+      updateLoupeInfo(pos.px, pos.py)
+      positionLoupe(clientX, clientY)
+      setPressing(true)
+      pr.timer = setTimeout(() => {
+        if (pressRef.current.active) {
+          pressRef.current.fired = true
+          setLongPressActive(true)
+        }
+      }, LONG_PRESS_MS)
+    },
+    [fitRect, imageSize, toPixel, drawLoupe, updateLoupeInfo, positionLoupe]
+  )
+
+  const movePress = useCallback(
+    (clientX: number, clientY: number) => {
+      const pr = pressRef.current
+      if (!pr.active) return
+      const pos = toPixel(clientX, clientY)
+      if (!pos) return
+      pr.px = pos.px
+      pr.py = pos.py
+      drawLoupe(pos.px, pos.py)
+      updateLoupeInfo(pos.px, pos.py)
+      positionLoupe(clientX, clientY)
+    },
+    [toPixel, drawLoupe, updateLoupeInfo, positionLoupe]
+  )
+
+  const finalizePress = useCallback(() => {
+    const pr = pressRef.current
+    if (pr.timer) {
+      clearTimeout(pr.timer)
+      pr.timer = null
+    }
+    if (!pr.active) return
+    pr.active = false
+    const { fired, source, px, py } = pr
+    pr.source = null
+    setPressing(false)
+    setLongPressActive(false)
+    if (source === "touch" || fired) {
+      // 触屏：松手即取色（长按精确 / 轻点快速）；鼠标：仅长按后松手取色（轻点交给 click）
+      suppressClickRef.current = true
+      // 400ms 后自动复位，避免「松手位置不在图片上 → click 未触发」时残留吞点
+      setTimeout(() => {
+        suppressClickRef.current = false
+      }, 400)
+      selectPixel(px, py)
+    }
+  }, [selectPixel])
+
+  // 窗口级松手兜底（鼠标在图片外松开 / 手指滑出图片）
+  useEffect(() => {
+    const onUp = () => finalizePress()
+    window.addEventListener("mouseup", onUp)
+    window.addEventListener("touchend", onUp)
+    return () => {
+      window.removeEventListener("mouseup", onUp)
+      window.removeEventListener("touchend", onUp)
+    }
+  }, [finalizePress])
+
+  const isPostTouch = useCallback(() => Date.now() - lastTouchEndRef.current < 700, [])
+
+  // ===== 鼠标事件 =====
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return
+      if (isPostTouch()) return
+      startPress(e.clientX, e.clientY, "mouse")
+    },
+    [isPostTouch, startPress]
+  )
+
+  const handleMouseUp = useCallback(() => {
+    if (isPostTouch()) return
+    finalizePress()
+  }, [isPostTouch, finalizePress])
+
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      if (isPostTouch()) return
+      const pr = pressRef.current
+      if (pr.active) {
+        movePress(e.clientX, e.clientY)
+        return
+      }
       const wrap = loupeWrapRef.current
-      const container = containerRef.current
-      if (!wrap || !container) return
+      if (!wrap) return
       const pos = toPixel(e.clientX, e.clientY)
       if (!pos) {
         wrap.style.display = "none"
         return
       }
       drawLoupe(pos.px, pos.py)
-      const rect = container.getBoundingClientRect()
-      const relX = e.clientX - rect.left
-      const relY = e.clientY - rect.top
-      const GAP = 14
-      let left = relX + GAP
-      let top = relY + GAP
-      if (left + LOUPE_PX > rect.width) left = relX - LOUPE_PX - GAP
-      if (top + LOUPE_PX + 24 > rect.height) top = relY - LOUPE_PX - 24 - GAP
-      wrap.style.display = "block"
-      wrap.style.left = `${Math.max(4, left)}px`
-      wrap.style.top = `${Math.max(4, top)}px`
-      const info = wrap.querySelector<HTMLElement>("[data-loupe-info]")
-      if (info && srcCanvasRef.current) {
-        const ctx = srcCanvasRef.current.getContext("2d", { willReadFrequently: true })
-        if (ctx) {
-          const d = ctx.getImageData(pos.px, pos.py, 1, 1).data
-          info.textContent = `${pos.px}, ${pos.py} · #${rgbToHex(d[0], d[1], d[2])}`
-        }
-      }
+      updateLoupeInfo(pos.px, pos.py)
+      positionLoupe(e.clientX, e.clientY)
     },
-    [toPixel, drawLoupe]
+    [isPostTouch, movePress, toPixel, drawLoupe, updateLoupeInfo, positionLoupe]
   )
 
   const handleMouseLeave = useCallback(() => {
+    if (isPostTouch()) return
+    const pr = pressRef.current
+    if (pr.active) {
+      // 按住时移出图片 → 取消本次按压（不取色）
+      if (pr.timer) clearTimeout(pr.timer)
+      pr.timer = null
+      pr.active = false
+      pr.source = null
+      pr.fired = false
+      setPressing(false)
+      setLongPressActive(false)
+      return
+    }
     if (loupeWrapRef.current) loupeWrapRef.current.style.display = "none"
-  }, [])
+  }, [isPostTouch])
+
+  // ===== 触屏事件（长按放大镜精确取色；轻点走 click）=====
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      const t = e.touches[0]
+      if (!t) return
+      startPress(t.clientX, t.clientY, "touch")
+    },
+    [startPress]
+  )
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      const t = e.touches[0]
+      if (!t) return
+      movePress(t.clientX, t.clientY)
+    },
+    [movePress]
+  )
+
+  const handleTouchEnd = useCallback(() => {
+    lastTouchEndRef.current = Date.now()
+    finalizePress()
+  }, [finalizePress])
+
+  const handleImageClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false
+        return
+      }
+      const pos = toPixel(e.clientX, e.clientY)
+      if (!pos) return
+      selectPixel(pos.px, pos.py)
+    },
+    [toPixel, selectPixel]
+  )
 
   // ===== 渲染 =====
   const hasImage = imageUrl && imageSize && fitRect
@@ -326,11 +521,13 @@ export default function UnifiedSampler() {
       {/* ===== 左侧：图片工作区（约 60%，自适应图片大小）===== */}
       <div className="w-full lg:w-[60%] flex flex-col min-h-0">
         <div className="flex items-center justify-between gap-3 pb-3 flex-wrap">
-          <p className="flex items-center gap-1.5 text-xs text-neutral-500">
-            <MousePointerClick className="w-3.5 h-3.5" />
-            点击图片选点（最多 {MAX_POINTS} 点）· 点击已选点可删除
+          <p className="flex items-center gap-1.5 text-xs text-neutral-500 min-w-0">
+            <MousePointerClick className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">
+              点击选点（≤{MAX_POINTS}）· 长按放大镜精确取色 · 点已选点删除
+            </span>
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-medium border ${
                 dataSource === "external"
@@ -354,18 +551,20 @@ export default function UnifiedSampler() {
           </div>
         </div>
 
-        {/* 图片容器：桌面撑满剩余高度（自适应图片大小），移动端固定高度 */}
+        {/* 图片容器：桌面撑满剩余高度，移动端/窄窗口按图片长宽比保持最小高度 */}
         <div
           ref={containerRef}
           className={`relative rounded-2xl border border-neutral-200 overflow-hidden select-none ${
-            hasImage ? "lg:flex-1 lg:min-h-0 h-[320px]" : "h-[320px] lg:h-auto lg:flex-1"
+            hasImage ? "lg:flex-1 lg:min-h-0 min-h-[280px]" : "h-[320px] lg:h-auto lg:flex-1"
           } bg-neutral-50`}
+          style={hasImage && aspectMinH ? { minHeight: aspectMinH } : undefined}
           onDragOver={(e) => {
             e.preventDefault()
             setDragOver(true)
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
+          onContextMenu={(e) => e.preventDefault()}
         >
           {!hasImage ? (
             <button
@@ -394,7 +593,12 @@ export default function UnifiedSampler() {
                 onClick={handleImageClick}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                style={{ cursor: "crosshair" }}
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                style={{ cursor: "crosshair", touchAction: "none", WebkitTouchCallout: "none" }}
               />
               {/* 选点标记（纸墨风格：墨色描边 + 白底编号） */}
               {points.map((p, idx) => (
@@ -418,7 +622,7 @@ export default function UnifiedSampler() {
                   </span>
                 </div>
               ))}
-              {/* 像素放大镜（浅色） */}
+              {/* 像素放大镜（浅色；长按/按住时显示取色提示） */}
               <div ref={loupeWrapRef} className="absolute z-20 hidden" style={{ display: "none" }}>
                 <canvas
                   ref={loupeCanvasRef}
@@ -430,6 +634,11 @@ export default function UnifiedSampler() {
                   data-loupe-info
                   className="mt-1 px-2 py-1 rounded-md bg-white border border-neutral-200 text-[10px] font-mono text-neutral-700 text-center shadow"
                 />
+                {pressing && (
+                  <div className="mt-1 px-2 py-1 rounded-md bg-neutral-900 text-white text-[10px] font-medium text-center shadow">
+                    {longPressActive ? "松手取色" : "长按取色…"}
+                  </div>
+                )}
               </div>
               {imageSize && (
                 <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-white/85 border border-neutral-200 text-[10px] font-mono text-neutral-500">
@@ -442,7 +651,12 @@ export default function UnifiedSampler() {
 
         {/* 状态条 */}
         <div className="mt-2 flex items-center gap-3 min-h-5 text-xs">
-          {status ? (
+          {pressing ? (
+            <span className="inline-flex items-center gap-1.5 text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 animate-pulse" />
+              {longPressActive ? "已锁定像素，移动放大镜定位，松手取色" : "按住移动放大镜，长按锁定后松手取色…"}
+            </span>
+          ) : status ? (
             <span className="inline-flex items-center gap-1.5 text-neutral-600">
               <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 animate-pulse" />
               {status}
@@ -475,12 +689,12 @@ export default function UnifiedSampler() {
           {!hasImage ? (
             <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-2xl border border-dashed border-neutral-300 text-xs text-neutral-400">
               <MousePointerClick className="w-5 h-5" />
-              上传图片并点击选点后，参数显示在这里
+              上传图片并点击/长按取色后，参数显示在这里
             </div>
           ) : points.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-2xl border border-dashed border-neutral-300 text-xs text-neutral-400">
               <MousePointerClick className="w-5 h-5" />
-              在上方图片中点击像素选点（最多 {MAX_POINTS} 点）
+              在上方图片中点击或长按取色（最多 {MAX_POINTS} 点）
             </div>
           ) : (
             points.map((p, idx) => (
@@ -506,11 +720,11 @@ export default function UnifiedSampler() {
   );
 }
 
-// ==================== 参数卡（三栏：色块 | sRGB/OKLab/Pantone | 参考毛布 Top3）====================
+// ==================== 参数卡（三栏：色块 | sRGB/OKLab/Pantone×3 | 参考毛布 Top3）====================
 
 interface Derived {
   oklab: [number, number, number]
-  pantone: ReturnType<typeof matchPantone>
+  pantones: ReturnType<typeof matchPantones>
   previews: FabricMatch[]
 }
 
@@ -528,7 +742,7 @@ function PointCard({
   const p = point
   const hex = rgbToHex(p.r, p.g, p.b)
   const oklab = derived?.oklab
-  const pantone = derived?.pantone
+  const pantones = derived?.pantones ?? []
   const previews = derived?.previews ?? []
 
   return (
@@ -550,7 +764,7 @@ function PointCard({
         </button>
       </div>
 
-      {/* 中段：sRGB / OKLab / 潘通参考色 */}
+      {/* 中段：sRGB / OKLab / 潘通参考色 ×3 */}
       <div className="flex-1 min-w-0 space-y-1.5">
         <div>
           <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">sRGB</p>
@@ -566,14 +780,24 @@ function PointCard({
             </p>
           </div>
         )}
-        {pantone && (
+        {pantones.length > 0 && (
           <div>
-            <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">Pantone 参考</p>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3.5 h-3.5 rounded border border-neutral-200 flex-shrink-0" style={{ backgroundColor: pantone.hex }} />
-              <span className="text-[11px] text-neutral-700 truncate">
-                {pantone.name === pantone.code ? pantone.code : `${pantone.code} ${pantone.name}`}
-              </span>
+            <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">
+              Pantone 参考 ×{pantones.length}
+            </p>
+            <div className="space-y-0.5">
+              {pantones.map((pt) => (
+                <div key={pt.code} className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    className="w-3.5 h-3.5 rounded border border-neutral-200 flex-shrink-0"
+                    style={{ backgroundColor: pt.hex }}
+                  />
+                  <span className="text-[11px] text-neutral-700 truncate">
+                    {pt.name === pt.code ? pt.code : `${pt.code} ${pt.name}`}
+                  </span>
+                  <span className="flex-shrink-0 text-[8px] font-mono text-neutral-400">Δ {pt.delta.toFixed(3)}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}

@@ -98,20 +98,44 @@ const PANTONE_LAB_CACHE = PANTONE_REFERENCE.map((c) => {
  * @returns 最接近的参考色；库为空时返回 null
  */
 export function matchPantone(r8: number, g8: number, b8: number): PantoneRef | null {
-  if (PANTONE_LAB_CACHE.length === 0) return null
+  return matchPantones(r8, g8, b8, 1)[0] ?? null
+}
+
+/**
+ * 在潘通参考色库中寻找最接近的若干个颜色（按色差升序）
+ * 性能：比较阶段使用平方距离（免 sqrt），仅对最终结果开方；
+ * 1391 色线性扫描单次 < 1ms，选点即时返回。
+ * @param topN 返回数量（默认 3）
+ * @returns 按色差升序的参考色数组；库为空时返回空数组
+ */
+export function matchPantones(r8: number, g8: number, b8: number, topN = 3): PantoneRef[] {
+  if (PANTONE_LAB_CACHE.length === 0) return []
   const lab = srgbToOklab(r8, g8, b8)
-  let best: { ref: (typeof PANTONE_LAB_CACHE)[number]["ref"]; d2: number } | null = null
+  // 平方距离最小堆式插入：线性扫描同时维护 topN 最小值
+  const best: { ref: (typeof PANTONE_LAB_CACHE)[number]["ref"]; d2: number }[] = []
+  let worstD2 = Infinity
   for (const item of PANTONE_LAB_CACHE) {
     const dL = lab.L - item.lab.L
     const da = lab.a - item.lab.a
     const db = lab.b - item.lab.b
     const d2 = dL * dL + da * da + db * db
-    if (!best || d2 < best.d2) {
-      best = { ref: item.ref, d2 }
+    if (best.length < topN) {
+      best.push({ ref: item.ref, d2 })
+      // 数组首次填满时，以实际最大色差作为「最差」阈值（避免 Infinity 残留顶替首个最小值）
+      if (best.length === topN) worstD2 = Math.max(...best.map((b) => b.d2))
+    } else if (d2 < worstD2) {
+      // 找到比当前最差更近的 → 替换并重新计算最差
+      let replaceIdx = 0
+      for (let i = 1; i < best.length; i++) {
+        if (best[i].d2 > best[replaceIdx].d2) replaceIdx = i
+      }
+      best[replaceIdx] = { ref: item.ref, d2 }
+      worstD2 = Math.max(...best.map((b) => b.d2))
     }
   }
-  if (!best) return null
-  return { ...best.ref, delta: Math.sqrt(best.d2) }
+  return best
+    .sort((a, b) => a.d2 - b.d2)
+    .map((item) => ({ ...item.ref, delta: Math.sqrt(item.d2) }))
 }
 
 /** 格式化 OKLab 为可读字符串（L / a / b 三位小数） */

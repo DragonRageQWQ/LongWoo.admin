@@ -31,7 +31,7 @@ export default async function FabricSamplerPage() {
   }
 
   return (
-    <main className="w-screen h-screen overflow-hidden bg-white text-neutral-900 flex flex-col relative">
+    <main className="w-screen h-screen overflow-y-auto lg:overflow-hidden bg-white text-neutral-900 flex flex-col relative">
       {/* 微弱纸纹氛围层（与首页一致） */}
       <div
         className="pointer-events-none fixed inset-0"
