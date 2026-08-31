@@ -526,7 +526,9 @@ export default function ColorPicker() {
                             />
                             <div className="min-w-0">
                               <p className="text-[11px] font-semibold text-slate-200 truncate">
-                                {pantone.code} {pantone.name}
+                                {pantone.name === pantone.code
+                                  ? pantone.code
+                                  : `${pantone.code} ${pantone.name}`}
                               </p>
                               <p className="text-[9px] text-slate-500 font-mono">
                                 ≈ {pantone.hex} · Δ {pantone.delta.toFixed(3)}
@@ -544,7 +546,7 @@ export default function ColorPicker() {
             </div>
           )}
           <p className="text-[9px] text-slate-600 mt-1">
-            潘通参考色为内置色库近似匹配（OKLab 色差 Δ 越小越接近），正式交付请以官方潘通色卡为准
+            潘通参考色为 1391 色近似匹配（C 系列全集 + 年度色补充，社区整理非官方数据；OKLab 色差 Δ 越小越接近），正式交付请以官方潘通色卡为准
           </p>
         </div>
       )}
