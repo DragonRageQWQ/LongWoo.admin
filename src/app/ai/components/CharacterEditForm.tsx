@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Camera, Loader2, Trash2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { useLanguage } from '@/components/i18n/LanguageProvider'
+import AvatarCropModal from '@/components/avatar/AvatarCropModal'
 import type { AiCharacter } from '@/types/database'
 
 const MAX_LENGTHS = {
@@ -55,6 +56,8 @@ export default function CharacterEditForm({
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 头像裁切：选图后先进入裁切弹窗（null=未在裁切）
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
 
   // ===== 头像上传 =====
   const handleAvatarClick = () => {
@@ -62,7 +65,7 @@ export default function CharacterEditForm({
     fileInputRef.current?.click()
   }
 
-  const handleAvatarChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
@@ -77,18 +80,31 @@ export default function CharacterEditForm({
       return
     }
 
+    // 先进入裁切弹窗（自由选区 + 缩放），确认后再保存/上传
+    setError(null)
+    const reader = new FileReader()
+    reader.onload = () => {
+      setCropSrc(typeof reader.result === 'string' ? reader.result : null)
+    }
+    reader.onerror = () => setError(t('ai.form.err.avatarUploadRetry'))
+    reader.readAsDataURL(file)
+  }, [t])
+
+  // 裁切确认：创建模式保存本地预览（随创建一并上传），编辑模式立即上传
+  const handleCropConfirm = useCallback(async (blob: Blob) => {
+    const file = new File([blob], 'avatar.jpg', { type: blob.type || 'image/jpeg' })
+
+    if (mode === 'create') {
+      pendingAvatarFileRef.current = file
+      const localUrl = URL.createObjectURL(file)
+      setAvatarUrl(localUrl)
+      setCropSrc(null)
+      return
+    }
+
     setUploadingAvatar(true)
     setError(null)
     try {
-      // 创建模式：头像上传需要角色 ID，所以先跳过后台上传
-      if (mode === 'create') {
-        // 保存文件引用 + 本地预览（最终保存时先创建角色，再用该文件上传头像）
-        pendingAvatarFileRef.current = file
-        const localUrl = URL.createObjectURL(file)
-        setAvatarUrl(localUrl)
-        return
-      }
-
       const formData = new FormData()
       formData.append('file', file)
       const res = await fetch(`/api/ai/characters/${characterId}/avatar`, {
@@ -97,13 +113,13 @@ export default function CharacterEditForm({
         credentials: 'include',
       })
       const data = await res.json()
-      if (data.success) {
-        setAvatarUrl(data.avatar_url)
-      } else {
-        setError(data.error || t('ai.form.err.avatarUploadFailed'))
+      if (!data.success) {
+        throw new Error(data.error || t('ai.form.err.avatarUploadFailed'))
       }
-    } catch {
-      setError(t('ai.form.err.avatarUploadRetry'))
+      setAvatarUrl(data.avatar_url)
+      setCropSrc(null)
+    } catch (err) {
+      throw err instanceof Error ? err : new Error(t('ai.form.err.avatarUploadRetry'))
     } finally {
       setUploadingAvatar(false)
     }
@@ -445,6 +461,14 @@ export default function CharacterEditForm({
           </>
         )}
       </div>
+
+      {/* 头像裁切弹窗：选图后自由选区 + 缩放 */}
+      <AvatarCropModal
+        open={Boolean(cropSrc)}
+        imageSrc={cropSrc}
+        onCancel={() => setCropSrc(null)}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   )
 }

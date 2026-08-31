@@ -9,6 +9,7 @@ import {
   loadAiCharacterDraft,
   saveAiCharacterDraft,
 } from "@/lib/ai-character-draft";
+import AvatarCropModal from "@/components/avatar/AvatarCropModal";
 import AgentChatView from "./AgentChatView";
 
 const MAX_LENGTHS = {
@@ -39,6 +40,8 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
   const [loginPrompt, setLoginPrompt] = useState(false);
   // 已恢复草稿且等待登录态解析，用于登录后自动回到表单视图
   const [draftPending, setDraftPending] = useState(false);
+  // 头像裁切：选图后先进入裁切弹窗（null=未在裁切）
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingAvatarRef = useRef<File | null>(null);
@@ -77,7 +80,7 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
   }, []);
 
   const handleAvatarChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       e.target.value = "";
       if (!file) return;
@@ -91,12 +94,27 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
         return;
       }
 
+      // 先进入裁切弹窗（自由选区 + 缩放），确认后再保存预览
       setError(null);
-      pendingAvatarRef.current = file;
-      setAvatarUrl(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCropSrc(typeof reader.result === "string" ? reader.result : null);
+      };
+      reader.onerror = () => setError(c.errNetwork);
+      reader.readAsDataURL(file);
     },
     [c]
   );
+
+  // 裁切确认：保存裁切后的图片作为待上传头像（角色创建成功后上传）
+  const handleCropConfirm = useCallback(async (blob: Blob) => {
+    const file = new File([blob], "avatar.jpg", {
+      type: blob.type || "image/jpeg",
+    });
+    pendingAvatarRef.current = file;
+    setAvatarUrl(URL.createObjectURL(file));
+    setCropSrc(null);
+  }, []);
 
   const handleCreate = useCallback(async () => {
     const trimmedName = name.trim();
@@ -386,6 +404,14 @@ export default function AgentPanel({ lang }: { lang: Gt2Lang }) {
       <div className="gt2-agent-view gt2-agent-view--chat" data-current={view === "chat"} data-dir={view === "form" ? "chat" : undefined} inert={view !== "chat" ? true : undefined}>
         <AgentChatView lang={lang} onNew={() => setView("form")} onBack={() => setView("hero")} targetId={createdId} />
       </div>
+
+      {/* 头像裁切弹窗：选图后自由选区 + 缩放 */}
+      <AvatarCropModal
+        open={Boolean(cropSrc)}
+        imageSrc={cropSrc}
+        onCancel={() => setCropSrc(null)}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   );
 }

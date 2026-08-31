@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import { Loader2, ZoomIn, ZoomOut } from "lucide-react";
@@ -112,7 +113,7 @@ export default function AvatarCropModal({
       setError(
         err instanceof Error && err.message
           ? err.message
-          : t("profile.crop.err")
+          : t("avatarCrop.err")
       );
     } finally {
       setBusy(false);
@@ -121,12 +122,12 @@ export default function AvatarCropModal({
 
   if (!open || !imageSrc) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={t("profile.crop.title")}
+      aria-label={t("avatarCrop.title")}
       onClick={onCancel}
     >
       <div
@@ -136,13 +137,13 @@ export default function AvatarCropModal({
         {/* 标题 + 关闭 */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-bold text-neutral-900">
-            {t("profile.crop.title")}
+            {t("avatarCrop.title")}
           </h3>
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            aria-label={t("profile.crop.cancel")}
+            aria-label={t("avatarCrop.cancel")}
             className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer disabled:opacity-40"
           >
             <svg
@@ -190,11 +191,11 @@ export default function AvatarCropModal({
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
             className="avc-zoom-range"
-            aria-label={t("profile.crop.zoom")}
+            aria-label={t("avatarCrop.zoom")}
           />
           <ZoomIn className="avc-zoom-icon" size={16} />
         </div>
-        <p className="mt-1.5 text-xs text-neutral-400">{t("profile.crop.hint")}</p>
+        <p className="mt-1.5 text-xs text-neutral-400">{t("avatarCrop.hint")}</p>
 
         {error && (
           <p className="mt-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600">
@@ -210,7 +211,7 @@ export default function AvatarCropModal({
             disabled={busy}
             className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer disabled:opacity-40"
           >
-            {t("profile.crop.cancel")}
+            {t("avatarCrop.cancel")}
           </button>
           <button
             type="button"
@@ -219,10 +220,12 @@ export default function AvatarCropModal({
             className="flex-1 py-2.5 rounded-xl bg-neutral-900 text-sm font-semibold text-white hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-40 inline-flex items-center justify-center gap-1.5"
           >
             {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-            {busy ? t("profile.crop.saving") : t("profile.crop.confirm")}
+            {busy ? t("avatarCrop.saving") : t("avatarCrop.confirm")}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
+
