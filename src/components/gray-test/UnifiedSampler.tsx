@@ -11,14 +11,14 @@
  *
  * 参数卡排版（从左到右）：
  * - 左端：匹配色块（带坐标与数字编号，可删除）
- * - 中段：sRGB(hex) / OKLab / 潘通参考色（Top 3，带色差 Δ）
+ * - 中段：sRGB(hex) / 潘通参考色（Top 3，带色差 Δ）/ 折叠「详细参数」（内含 OKLab，默认收起）
  * - 右端：参考毛布 Top 3（图片缩略图按需加载，失败回退色块）
  *
  * 匹配全部在客户端（OKLab 欧氏距离），服务器零计算；
  * 毛布数据：真实 fabric-data.json 优先，缺失回退内置示例数据。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Upload, ImagePlus, MousePointerClick, X, Loader2 } from "lucide-react";
+import { Upload, ImagePlus, MousePointerClick, X, Loader2, ChevronDown } from "lucide-react";
 import {
   type FabricMatch,
   type NormalizedFabric,
@@ -729,7 +729,7 @@ export default function UnifiedSampler() {
   );
 }
 
-// ==================== 参数卡（三栏：色块 | sRGB/OKLab/Pantone×3 | 参考毛布 Top3）====================
+// ==================== 参数卡（三栏：色块 | sRGB/Pantone×3/折叠OKLab | 参考毛布 Top3）====================
 
 interface Derived {
   oklab: [number, number, number]
@@ -753,6 +753,7 @@ function PointCard({
   const oklab = derived?.oklab
   const pantones = derived?.pantones ?? []
   const previews = derived?.previews ?? []
+  const [expanded, setExpanded] = useState(false)
 
   return (
     <div className="flex gap-4 rounded-2xl border border-neutral-200 bg-white p-3.5 shadow-sm">
@@ -773,22 +774,13 @@ function PointCard({
         </button>
       </div>
 
-      {/* 中段：sRGB / OKLab / 潘通参考色 ×3 */}
+      {/* 中段：sRGB / 潘通参考色 ×3 / 折叠详细参数（OKLab） */}
       <div className="flex-1 min-w-0 space-y-1.5">
         <div>
           <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">sRGB</p>
           <p className="text-xs font-semibold font-mono text-neutral-900">{hex}</p>
           <p className="text-[10px] font-mono text-neutral-500">rgb({p.r}, {p.g}, {p.b})</p>
         </div>
-        {oklab && (
-          <div>
-            <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">OKLab</p>
-            <p className="text-[10px] font-mono text-neutral-600">
-              L {oklab[0].toFixed(3)} · a {(oklab[1] >= 0 ? "+" : "") + oklab[1].toFixed(3)} · b{" "}
-              {(oklab[2] >= 0 ? "+" : "") + oklab[2].toFixed(3)}
-            </p>
-          </div>
-        )}
         {pantones.length > 0 && (
           <div>
             <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">
@@ -808,6 +800,24 @@ function PointCard({
                 </div>
               ))}
             </div>
+          </div>
+        )}
+        {/* 折叠详情：OKLab（默认收起，供内部校验/排障） */}
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="inline-flex items-center gap-1 text-[10px] text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
+        >
+          <ChevronDown className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
+          {expanded ? "收起详细参数" : "详细参数"}
+        </button>
+        {expanded && oklab && (
+          <div className="rounded-lg bg-neutral-50 border border-neutral-100 px-2 py-1.5">
+            <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">OKLab</p>
+            <p className="text-[10px] font-mono text-neutral-600">
+              L {oklab[0].toFixed(3)} · a {(oklab[1] >= 0 ? "+" : "") + oklab[1].toFixed(3)} · b{" "}
+              {(oklab[2] >= 0 ? "+" : "") + oklab[2].toFixed(3)}
+            </p>
           </div>
         )}
       </div>
