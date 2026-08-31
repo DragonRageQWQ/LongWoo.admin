@@ -39,6 +39,7 @@ export const EN_ADMIN: Record<string, string> = {
   'admin.order.status.all': 'All Statuses',
   'admin.order.status.pending': 'Pending Estimate',
   'admin.order.status.estimated': 'Estimated',
+  'admin.order.status.agreed': 'Estimate Accepted',
   'admin.order.status.accepted': 'Accepted',
   'admin.order.status.processing': 'In Progress',
   'admin.order.status.delivered': 'Delivered',

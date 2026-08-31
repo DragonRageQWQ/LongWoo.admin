@@ -93,6 +93,7 @@ const QUICK_REPLY_TEMPLATES = [
 const actionLabels: Record<string, string> = {
   create_order: "创建委托单",
   submit_estimate: "提交估价",
+  agree_estimate: "客户同意估价",
   accept_order: "接单",
   reject_order: "拒单",
   update_status: "更新状态",
@@ -798,15 +799,28 @@ export default function OrderDetailModal({
                     </div>
                   )}
 
-                  {/* 接单按钮 */}
+                  {/* 等待客户确认估价 */}
                   {order.status === "estimated" && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h3 className="text-sm font-semibold text-lw-black mb-3 flex items-center gap-2">
+                        <CircleCheck className="w-4 h-4 text-blue-600" />
+                        等待客户确认
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        该委托已估价，等待客户确认估价金额，客户确认后才能接单开始处理。
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 接单按钮（客户已同意估价后可接单） */}
+                  {order.status === "agreed" && (
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                       <h3 className="text-sm font-semibold text-lw-black mb-3 flex items-center gap-2">
                         <CircleCheck className="w-4 h-4 text-green-600" />
                         接单操作
                       </h3>
                       <p className="text-sm text-gray-500 mb-3">
-                        该委托已估价，可接单开始处理
+                        客户已同意估价，可接单开始处理
                       </p>
                       <button
                         onClick={handleAcceptOrder}
@@ -830,7 +844,8 @@ export default function OrderDetailModal({
 
                   {/* 拒单操作 */}
                   {(order.status === "pending" ||
-                    order.status === "estimated") && (
+                    order.status === "estimated" ||
+                    order.status === "agreed") && (
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                       <h3 className="text-sm font-semibold text-lw-black mb-3 flex items-center gap-2">
                         <CircleX className="w-4 h-4 text-red-600" />

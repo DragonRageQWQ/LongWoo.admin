@@ -27,7 +27,7 @@ export type ServiceType = {
   created_at: string
 }
 
-export type OrderStatus = 'pending' | 'estimated' | 'accepted' | 'rejected' | 'processing' | 'delivered' | 'completed'
+export type OrderStatus = 'pending' | 'estimated' | 'agreed' | 'accepted' | 'rejected' | 'processing' | 'delivered' | 'completed'
 
 export type Order = {
   id: string

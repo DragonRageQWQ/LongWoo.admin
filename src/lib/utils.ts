@@ -29,6 +29,7 @@ export function formatDate(date: string): string {
 export const statusLabels: Record<string, string> = {
   pending: '待估价',
   estimated: '已估价',
+  agreed: '已同意估价',
   accepted: '已接单',
   rejected: '已拒单',
   processing: '处理中',
@@ -39,6 +40,7 @@ export const statusLabels: Record<string, string> = {
 export const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   estimated: 'bg-blue-100 text-blue-800',
+  agreed: 'bg-teal-100 text-teal-800',
   accepted: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
   processing: 'bg-purple-100 text-purple-800',

@@ -21,6 +21,7 @@ import {
   Ban,
   Home,
   LayoutDashboard,
+  ThumbsUp,
 } from "lucide-react";
 import { logoutUser } from "@/actions/auth-actions";
 import {
@@ -36,11 +37,12 @@ const StudioOrderDetailModal = dynamic(
   { ssr: false }
 );
 
-type TabKey = "pending" | "estimated" | "accepted" | "processing" | "delivered" | "completed" | "rejected";
+type TabKey = "pending" | "estimated" | "agreed" | "accepted" | "processing" | "delivered" | "completed" | "rejected";
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "pending", label: "待估价", icon: Clock },
   { key: "estimated", label: "已估价", icon: Package },
+  { key: "agreed", label: "待接单", icon: ThumbsUp },
   { key: "accepted", label: "已接委托", icon: Eye },
   { key: "processing", label: "处理中", icon: Settings },
   { key: "delivered", label: "已交付", icon: CheckCircle },
@@ -60,6 +62,7 @@ export default function StudioDashboardPage() {
   const [counts, setCounts] = useState<Record<TabKey, number>>({
     pending: 0,
     estimated: 0,
+    agreed: 0,
     accepted: 0,
     processing: 0,
     delivered: 0,
@@ -142,6 +145,7 @@ export default function StudioDashboardPage() {
         setCounts({
           pending: countsResult.counts.pending,
           estimated: countsResult.counts.estimated,
+          agreed: countsResult.counts.agreed,
           accepted: countsResult.counts.accepted,
           processing: countsResult.counts.processing,
           delivered: countsResult.counts.delivered,

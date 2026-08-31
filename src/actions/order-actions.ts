@@ -154,9 +154,9 @@ function buildOrderQuery(
 
   // 非 admin 用户只能看到：
   // 1. 分配给自己的订单（studio_user_id = 当前用户）
-  // 2. 尚未分配的订单（pending/estimated 状态，studio_user_id 为 null）
+  // 2. 尚未分配的订单（pending/estimated/agreed 状态，studio_user_id 为 null）
   if (!params.isAdmin && params.userId) {
-    query = query.or(`studio_user_id.eq.${params.userId},and(studio_user_id.is.null,status.in.(pending,estimated))`)
+    query = query.or(`studio_user_id.eq.${params.userId},and(studio_user_id.is.null,status.in.(pending,estimated,agreed))`)
   }
 
   // 关键词搜索：订单号、客户名、需求描述
@@ -477,7 +477,8 @@ export async function acceptOrder(
     // 使用当前登录用户 ID（防止伪造）
     const userId = currentUser.userId
 
-    // 条件更新：仅当订单仍处于 pending/estimated 状态且尚未被接单时才更新
+    // 条件更新：仅当订单处于 agreed（客户已同意估价）状态且尚未被接单时才更新
+    // 新流程：pending → estimated（管理员估价）→ agreed（客户同意估价）→ accepted（接单）
     // 防止并发接单竞态条件（两个用户同时接同一个单）
     const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
@@ -486,13 +487,13 @@ export async function acceptOrder(
         studio_user_id: userId,
       })
       .eq('id', orderId)
-      .in('status', ['pending', 'estimated'])
+      .eq('status', 'agreed')
       .is('studio_user_id', null)
       .select()
       .single()
 
     if (updateError || !updatedOrder) {
-      return { success: false, error: '该委托单已被接单或状态已变更，请刷新后重试' }
+      return { success: false, error: '该委托单尚未获得客户确认或状态已变更，请刷新后重试' }
     }
 
     // 记录 operation_logs（使用统一的日志记录函数）
@@ -567,7 +568,7 @@ export async function rejectOrder(
         reject_reason: trimmedReason,
       })
       .eq('id', orderId)
-      .in('status', ['pending', 'estimated'])
+      .in('status', ['pending', 'estimated', 'agreed'])
       .select()
       .single()
 
@@ -1011,6 +1012,95 @@ export async function queryOrderByNo(
   }
 }
 
+// ==================== 客户同意估价 ====================
+//
+// 流程：管理员提交估价（pending → estimated）后，客户需在委托查询页
+// 输入「委托单号 + 邮箱」确认同意估价（estimated → agreed），
+// 此后管理员/工作室方可接单（agreed → accepted，见 acceptOrder）。
+//
+// 与 queryOrderByNo 相同的鉴权模型：以「委托单号 + 邮箱」双因子作为
+// 身份凭证（游客可操作），并做邮箱维度限流防止枚举与滥用。
+
+export async function agreeEstimate(
+  orderNo: string,
+  email: string
+): Promise<{ success: boolean; error?: string }> {
+  // CSRF 保护（H3）
+  const csrfError = await validateCsrf()
+  if (csrfError) {
+    return { success: false, error: csrfError }
+  }
+
+  // 输入验证（与 queryOrderByNo 保持一致）
+  if (!orderNo || !orderNo.trim()) {
+    return { success: false, error: '请输入委托单号' }
+  }
+  if (!email || !email.trim()) {
+    return { success: false, error: '请输入邮箱' }
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return { success: false, error: '请输入有效的邮箱地址' }
+  }
+  const trimmedOrderNo = orderNo.trim()
+  if (trimmedOrderNo.length > 50) {
+    return { success: false, error: '委托单号格式不正确' }
+  }
+
+  // 速率限制：与查询一致的邮箱 + IP 双键限流
+  const trimmedEmail = email.trim().toLowerCase()
+  const ip = await getClientIp()
+  const [emailLimitResult, ipLimitResult] = await Promise.all([
+    checkRateLimit(`agree:email:${trimmedEmail}`, 5, RATE_LIMIT_ORDER_WINDOW),
+    checkRateLimit(`agree:ip:${ip}`, 20, RATE_LIMIT_ORDER_WINDOW),
+  ])
+  if (!emailLimitResult.allowed || !ipLimitResult.allowed) {
+    return { success: false, error: '操作过于频繁，请稍后再试' }
+  }
+
+  // 与 queryOrderByNo 一致：使用 admin client（service_role）读取订单，
+  // 认证凭据为「委托单号 + 邮箱」双因子同时匹配（服务端校验）
+  const admin = createAdminClient()
+
+  try {
+    const { data: order, error: orderError } = await admin
+      .from('orders')
+      .select('id, order_no, status, customer_email, user_id')
+      .eq('order_no', trimmedOrderNo)
+      .eq('customer_email', trimmedEmail)
+      .single()
+
+    if (orderError || !order) {
+      return { success: false, error: '未找到匹配的委托单，请确认单号和邮箱' }
+    }
+
+    // 条件更新：仅当订单仍处于 estimated（已估价）状态时生效，防止重复确认/并发
+    const { data: updatedOrder, error: updateError } = await admin
+      .from('orders')
+      .update({ status: 'agreed' })
+      .eq('id', order.id)
+      .eq('status', 'estimated')
+      .select('id, order_no, status')
+      .single()
+
+    if (updateError || !updatedOrder) {
+      return { success: false, error: '该委托单状态已变更，请刷新后重试' }
+    }
+
+    // 记录操作日志（订单关联了注册用户时记录其 id，游客订单跳过）
+    if (order.user_id) {
+      await logOperation(order.user_id, 'agree_estimate', 'order', order.id)
+    }
+
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/studio/dashboard')
+
+    return { success: true }
+  } catch (error) {
+    console.error('客户同意估价异常:', error)
+    return { success: false, error: '操作时发生未知错误' }
+  }
+}
+
 // ==================== 删除委托单（仅超级管理员 uid=10001） ====================
 //
 // 用于清除测试产生的多余订单。删除时同步清理关联数据：
@@ -1157,6 +1247,7 @@ export async function getOrderStatusCounts(): Promise<{
   counts?: {
     pending: number
     estimated: number
+    agreed: number
     accepted: number
     processing: number
     delivered: number
@@ -1175,9 +1266,9 @@ export async function getOrderStatusCounts(): Promise<{
   const supabase = await createClient()
 
   try {
-    const statuses = ['pending', 'estimated', 'accepted', 'processing', 'delivered', 'completed', 'rejected'] as const
+    const statuses = ['pending', 'estimated', 'agreed', 'accepted', 'processing', 'delivered', 'completed', 'rejected'] as const
 
-    // 构建 base filter：非 admin 用户只能看到分配给自己的订单 + 尚未分配的订单（pending/estimated）
+    // 构建 base filter：非 admin 用户只能看到分配给自己的订单 + 尚未分配的订单（pending/estimated/agreed）
     const buildQuery = (status: string) => {
       let q = supabase
         .from('orders')
@@ -1185,8 +1276,8 @@ export async function getOrderStatusCounts(): Promise<{
         .eq('status', status)
 
       if (currentUser.role !== 'admin') {
-        // 分配给自己的，或尚未分配的（pending/estimated 且 studio_user_id 为 null）
-        q = q.or(`studio_user_id.eq.${currentUser.userId},and(studio_user_id.is.null,status.in.(pending,estimated))`)
+        // 分配给自己的，或尚未分配的（pending/estimated/agreed 且 studio_user_id 为 null）
+        q = q.or(`studio_user_id.eq.${currentUser.userId},and(studio_user_id.is.null,status.in.(pending,estimated,agreed))`)
       }
 
       return q
@@ -1200,6 +1291,7 @@ export async function getOrderStatusCounts(): Promise<{
     const counts = {
       pending: 0,
       estimated: 0,
+      agreed: 0,
       accepted: 0,
       processing: 0,
       delivered: 0,

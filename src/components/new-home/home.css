@@ -3155,6 +3155,7 @@ textarea.gt2-input {
 
 .gt2-check-status[data-status="pending"]::before { background: #d97706; }
 .gt2-check-status[data-status="estimated"]::before { background: #2563eb; }
+.gt2-check-status[data-status="agreed"]::before { background: #0d9488; }
 .gt2-check-status[data-status="accepted"]::before { background: #15803d; }
 .gt2-check-status[data-status="rejected"]::before { background: #dc2626; }
 .gt2-check-status[data-status="processing"]::before { background: #7c3aed; }
@@ -3295,6 +3296,79 @@ textarea.gt2-input {
   font-size: 22px;
   letter-spacing: 0.02em;
   color: var(--gt2-ink);
+}
+
+/* 同意估价（客户确认估价 → 等待工作室接单） */
+.gt2-check-agree {
+  padding: 20px clamp(20px, 3.5vw, 36px);
+  border-bottom: 1px solid var(--gt2-line);
+  background: linear-gradient(180deg, rgba(13, 59, 59, 0.04), rgba(13, 59, 59, 0));
+}
+
+.gt2-check-agree-desc {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #737373;
+  margin-bottom: 14px;
+}
+
+.gt2-check-agree-btn {
+  width: 100%;
+  padding: 13px 20px;
+  border-radius: 999px;
+  border: 1.5px solid var(--gt2-ink);
+  background: var(--gt2-ink);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: opacity 0.3s var(--gt2-ease), transform 0.3s var(--gt2-ease);
+}
+
+.gt2-check-agree-btn:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.gt2-check-agree-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gt2-check-agree-success {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.gt2-check-agree-waiting {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(13, 59, 59, 0.06);
+  border: 1px solid rgba(13, 59, 59, 0.16);
+  font-size: 13px;
+  line-height: 1.7;
+  color: #155e5e;
+}
+
+.gt2-check-agree-waiting::before {
+  content: "";
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: #0d9488;
 }
 
 /* 交付链接 */

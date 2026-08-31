@@ -599,6 +599,7 @@ export default function ProfileShell({
                         {
                           pending: "bg-amber-50 text-amber-700",
                           estimated: "bg-blue-50 text-blue-700",
+                          agreed: "bg-teal-50 text-teal-700",
                           accepted: "bg-green-50 text-green-700",
                           rejected: "bg-red-50 text-red-700",
                           processing: "bg-purple-50 text-purple-700",

@@ -39,6 +39,7 @@ export const ZH_ADMIN: Record<string, string> = {
   'admin.order.status.all': '全部状态',
   'admin.order.status.pending': '待估价',
   'admin.order.status.estimated': '已估价',
+  'admin.order.status.agreed': '已同意估价',
   'admin.order.status.accepted': '已接单',
   'admin.order.status.processing': '处理中',
   'admin.order.status.delivered': '已交付',

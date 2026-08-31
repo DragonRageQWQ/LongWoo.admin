@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { queryOrderByNo } from "@/actions/order-actions";
+import { queryOrderByNo, agreeEstimate } from "@/actions/order-actions";
 import { formatDate } from "@/lib/utils";
 import type { Order, OrderAttachment, OrderReply } from "@/types/database";
 import { COPY, type Gt2Lang } from "../copy";
@@ -35,6 +35,10 @@ export default function CheckPanel({ lang }: { lang: Gt2Lang }) {
   const [result, setResult] = useState<QueryResult | null>(null);
   // 设定图放大查看
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+  // 同意估价
+  const [agreeing, setAgreeing] = useState(false);
+  const [agreeError, setAgreeError] = useState<string | null>(null);
+  const [agreeSuccess, setAgreeSuccess] = useState(false);
 
   const designRefName = result ? extractDesignRefName(result.requirements) : null;
 
@@ -58,6 +62,8 @@ export default function CheckPanel({ lang }: { lang: Gt2Lang }) {
 
       setError(null);
       setResult(null);
+      setAgreeError(null);
+      setAgreeSuccess(false);
       setLoading(true);
       try {
         const res = await queryOrderByNo(no.trim(), emailAddr.trim());
@@ -85,6 +91,30 @@ export default function CheckPanel({ lang }: { lang: Gt2Lang }) {
     if (emailAddr) setEmail(emailAddr);
     if (no && emailAddr) handleQuery(no, emailAddr);
   }, [handleQuery]);
+
+  // 同意估价：客户确认管理员给出的估价金额（estimated → agreed，等待工作室接单）
+  const handleAgreeEstimate = useCallback(async () => {
+    if (!result || agreeing) return;
+    if (!window.confirm(c.agreeEstimateConfirm)) return;
+
+    setAgreeing(true);
+    setAgreeError(null);
+    setAgreeSuccess(false);
+    try {
+      const res = await agreeEstimate(orderNo.trim(), email.trim());
+      if (!res.success) {
+        setAgreeError(res.error || c.agreeFailed);
+        return;
+      }
+      // 本地更新状态为「已同意估价」
+      setResult((prev) => (prev ? { ...prev, status: "agreed" } : prev));
+      setAgreeSuccess(true);
+    } catch {
+      setAgreeError(c.agreeFailed);
+    } finally {
+      setAgreeing(false);
+    }
+  }, [result, agreeing, orderNo, email, c]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,6 +304,32 @@ export default function CheckPanel({ lang }: { lang: Gt2Lang }) {
                   {result.estimate_notes}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* 同意估价：已估价状态可确认，确认后等待工作室接单 */}
+          {result.status === "estimated" && (
+            <div className="gt2-check-section gt2-check-agree">
+              <p className="gt2-check-agree-desc">{c.agreeEstimateDesc}</p>
+              {agreeSuccess && (
+                <div className="gt2-check-agree-success">{c.agreeSuccess}</div>
+              )}
+              {agreeError && <div className="gt2-check-error">{agreeError}</div>}
+              <button
+                type="button"
+                className="gt2-check-agree-btn"
+                disabled={agreeing}
+                onClick={handleAgreeEstimate}
+              >
+                {agreeing ? c.loading : c.agreeEstimate}
+              </button>
+            </div>
+          )}
+
+          {/* 已同意估价：等待工作室接单 */}
+          {result.status === "agreed" && (
+            <div className="gt2-check-section gt2-check-agree">
+              <p className="gt2-check-agree-waiting">{c.agreeWaiting}</p>
             </div>
           )}
 

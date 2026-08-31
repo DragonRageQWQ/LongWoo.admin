@@ -27,6 +27,7 @@ const statusOptions: Array<{ value: string; label: string; i18nKey: string }> = 
   { value: "", label: "全部状态", i18nKey: "admin.order.status.all" },
   { value: "pending", label: "待估价", i18nKey: "admin.order.status.pending" },
   { value: "estimated", label: "已估价", i18nKey: "admin.order.status.estimated" },
+  { value: "agreed", label: "已同意估价", i18nKey: "admin.order.status.agreed" },
   { value: "accepted", label: "已接单", i18nKey: "admin.order.status.accepted" },
   { value: "processing", label: "处理中", i18nKey: "admin.order.status.processing" },
   { value: "delivered", label: "已交付", i18nKey: "admin.order.status.delivered" },

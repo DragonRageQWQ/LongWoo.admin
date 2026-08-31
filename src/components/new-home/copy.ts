@@ -159,6 +159,13 @@ export interface Gt2Copy {
     deliveryLink: string;
     replies: string;
     createdAt: string;
+    /** 同意估价（客户确认估价后进入等待工作室接单） */
+    agreeEstimate: string;
+    agreeEstimateDesc: string;
+    agreeEstimateConfirm: string;
+    agreeSuccess: string;
+    agreeFailed: string;
+    agreeWaiting: string;
     status: Record<string, string>;
   };
   shopPanel: {
@@ -421,9 +428,16 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       deliveryLink: "交付链接",
       replies: "回复记录",
       createdAt: "创建时间",
+      agreeEstimate: "同意估价",
+      agreeEstimateDesc: "请确认估价金额，同意后工作室将开始处理您的委托。",
+      agreeEstimateConfirm: "确认同意该估价？同意后工作室将尽快接单开始制作。",
+      agreeSuccess: "已确认估价，工作室将尽快接单开始制作",
+      agreeFailed: "确认失败，请稍后重试",
+      agreeWaiting: "您已确认估价，工作室接单后将开始制作，请留意进度更新。",
       status: {
         pending: "待估价",
         estimated: "已估价",
+        agreed: "已同意估价",
         accepted: "已接单",
         rejected: "已拒单",
         processing: "处理中",
@@ -717,9 +731,16 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       deliveryLink: "Delivery Link",
       replies: "Replies",
       createdAt: "Created",
+      agreeEstimate: "Accept Estimate",
+      agreeEstimateDesc: "Please confirm the estimated amount. The studio will start your order once you accept.",
+      agreeEstimateConfirm: "Accept this estimate? The studio will start working on your order shortly after.",
+      agreeSuccess: "Estimate accepted. The studio will start working on your order soon",
+      agreeFailed: "Failed to confirm. Please try again",
+      agreeWaiting: "You have accepted the estimate. The studio will start working after accepting the order. Stay tuned for updates.",
       status: {
         pending: "Pending",
         estimated: "Estimated",
+        agreed: "Estimate Accepted",
         accepted: "Accepted",
         rejected: "Rejected",
         processing: "In Progress",
