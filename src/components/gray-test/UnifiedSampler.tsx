@@ -514,8 +514,6 @@ export default function UnifiedSampler() {
 
   // ===== 渲染 =====
   const hasImage = imageUrl && imageSize && fitRect
-  const sourceLabel =
-    dataSource === "external" ? "真实数据库" : dataSource === "loading" ? "加载中…" : "示例数据"
   const databaseLabel = `数据库：潘通色库：${PANTONE_DATA.length}条 | 咩咩毛：${fabrics.length}色`
 
   return (
@@ -540,7 +538,7 @@ export default function UnifiedSampler() {
               }`}
             >
               {dataSource === "loading" && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
-              {sourceLabel} · {databaseLabel}
+              {dataSource === "loading" ? "数据库加载中…" : databaseLabel}
             </span>
             <button
               onClick={() => fileInputRef.current?.click()}
