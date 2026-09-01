@@ -22,6 +22,7 @@ import { Upload, ImagePlus, MousePointerClick, X, Loader2, ChevronDown } from "l
 import {
   type FabricMatch,
   type NormalizedFabric,
+  cidInfo,
   fabricHex,
   fabricImagePath,
   fabricOklab,
@@ -31,6 +32,18 @@ import {
 import { loadFabricData } from "@/lib/fabric-data";
 import { rgbToHex, matchPantones } from "@/lib/color-math";
 import { PANTONE_DATA } from "@/lib/pantone-data";
+import {
+  IDENTITY_VIEW,
+  PAN_THRESHOLD,
+  ZOOM_STEP,
+  clientToPixel,
+  clampPan,
+  panBy,
+  pinchZoom,
+  pixelToClient,
+  zoomAt,
+  type ViewState,
+} from "@/lib/view-transform";
 
 interface PickPoint {
   id: number
@@ -57,6 +70,8 @@ export default function UnifiedSampler() {
   const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null)
   const [containerSize, setContainerSize] = useState<{ w: number; h: number } | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  // 图片视图变换：缩放 + 平移（滚轮 / 双指捏合，放大后可拖动平移）
+  const [view, setView] = useState<ViewState>(IDENTITY_VIEW)
 
   // ===== 选点 =====
   const [points, setPoints] = useState<PickPoint[]>([])
@@ -89,7 +104,14 @@ export default function UnifiedSampler() {
     source: "mouse" | "touch" | null
     px: number
     py: number
-  }>({ timer: null, active: false, fired: false, source: null, px: 0, py: 0 })
+    panMode: boolean // 放大后拖动平移模式
+    downX: number
+    downY: number
+    lastX: number
+    lastY: number
+  }>({ timer: null, active: false, fired: false, source: null, px: 0, py: 0, panMode: false, downX: 0, downY: 0, lastX: 0, lastY: 0 })
+  // 双指捏合状态
+  const pinchRef = useRef<{ active: boolean; init: boolean; lastDist: number }>({ active: false, init: false, lastDist: 0 })
   // 长按松手后吞掉紧随的 click（触屏合成事件 / 桌面松手触发）
   const suppressClickRef = useRef(false)
   // 触屏结束时间戳：用于屏蔽触屏后 700ms 内浏览器派发的合成鼠标事件
@@ -151,6 +173,25 @@ export default function UnifiedSampler() {
     return () => ro.disconnect()
   }, [])
 
+  // 桌面滚轮缩放：以光标为锚点（非 passive，阻止页面滚动）；
+  // 滚轮向下缩小至 100% 时平移自动归零
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || !fitRect || !containerSize) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const crect = el.getBoundingClientRect()
+      const rx = e.clientX - crect.left
+      const ry = e.clientY - crect.top
+      const factor = e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP
+      setView((v) =>
+        clampPan(zoomAt(v, rx, ry, factor, containerSize.w, containerSize.h), fitRect.w, fitRect.h, containerSize.w, containerSize.h),
+      )
+    }
+    el.addEventListener("wheel", onWheel, { passive: false })
+    return () => el.removeEventListener("wheel", onWheel)
+  }, [fitRect, containerSize])
+
   useEffect(() => {
     const press = pressRef.current
     return () => {
@@ -201,8 +242,9 @@ export default function UnifiedSampler() {
           }
           setPoints([])
           nextIdRef.current = 1
+          setView(IDENTITY_VIEW)
           showStatus(
-            `已载入 ${img.naturalWidth} × ${img.naturalHeight}px · 点击选点 / 长按放大镜精确取色（最多 ${MAX_POINTS} 点）`
+            `已载入 ${img.naturalWidth} × ${img.naturalHeight}px · 滚轮/双指缩放 · 点击/长按取色（最多 ${MAX_POINTS} 点）`
           )
         }
         img.src = url
@@ -225,28 +267,44 @@ export default function UnifiedSampler() {
     if (file) handleFile(file)
   }
 
-  // ===== 坐标换算 =====
+  // ===== 坐标换算（缩放模型：client 为容器相对坐标）=====
   const toPixel = useCallback(
     (clientX: number, clientY: number): { px: number; py: number } | null => {
-      if (!fitRect || !imageSize || !imgRef.current) return null
-      const rect = imgRef.current.getBoundingClientRect()
-      const ox = clientX - rect.left - fitRect.x
-      const oy = clientY - rect.top - fitRect.y
-      if (ox < 0 || oy < 0 || ox > fitRect.w || oy > fitRect.h) return null
-      const px = Math.min(imageSize.w - 1, Math.max(0, Math.round((ox / fitRect.w) * imageSize.w)))
-      const py = Math.min(imageSize.h - 1, Math.max(0, Math.round((oy / fitRect.h) * imageSize.h)))
-      return { px, py }
+      if (!fitRect || !imageSize || !containerSize || !containerRef.current) return null
+      const crect = containerRef.current.getBoundingClientRect()
+      return clientToPixel(
+        clientX - crect.left,
+        clientY - crect.top,
+        view,
+        fitRect.w,
+        fitRect.h,
+        imageSize.w,
+        imageSize.h,
+        containerSize.w,
+        containerSize.h,
+      )
     },
-    [fitRect, imageSize]
+    [fitRect, imageSize, containerSize, view]
   )
 
   // ===== 选点（点击 / 长按松手共用）=====
   const selectPixel = useCallback(
     (px: number, py: number) => {
       const src = srcCanvasRef.current
-      if (!src || !fitRect || !imageSize) return
-      const dispX = fitRect.x + (px / imageSize.w) * fitRect.w
-      const dispY = fitRect.y + (py / imageSize.h) * fitRect.h
+      if (!src || !fitRect || !imageSize || !containerSize) return
+      const disp = pixelToClient(
+        px,
+        py,
+        view,
+        fitRect.w,
+        fitRect.h,
+        imageSize.w,
+        imageSize.h,
+        containerSize.w,
+        containerSize.h,
+      )
+      const dispX = disp.x
+      const dispY = disp.y
 
       // 命中已选点 → 删除
       const hitIdx = points.findIndex((p) => Math.hypot(p.dispX - dispX, p.dispY - dispY) < 14)
@@ -276,7 +334,7 @@ export default function UnifiedSampler() {
       ])
       showStatus(`已选点 ${id} · 像素（${px}, ${py}）· #${rgbToHex(d[0], d[1], d[2])}`)
     },
-    [points, fitRect, imageSize, showStatus]
+    [points, fitRect, imageSize, containerSize, view, showStatus]
   )
 
   // ===== 放大镜：绘制 / 定位 / 信息 =====
@@ -394,6 +452,18 @@ export default function UnifiedSampler() {
     }
     if (!pr.active) return
     pr.active = false
+    // 平移模式结束：不取色，吞掉紧随的合成 click
+    if (pr.panMode) {
+      pr.panMode = false
+      pr.source = null
+      setPressing(false)
+      setLongPressActive(false)
+      suppressClickRef.current = true
+      setTimeout(() => {
+        suppressClickRef.current = false
+      }, 400)
+      return
+    }
     const { fired, source, px, py } = pr
     pr.source = null
     setPressing(false)
@@ -427,6 +497,10 @@ export default function UnifiedSampler() {
     (e: React.MouseEvent) => {
       if (e.button !== 0) return
       if (isPostTouch()) return
+      const pr = pressRef.current
+      pr.downX = e.clientX
+      pr.downY = e.clientY
+      pr.panMode = false
       startPress(e.clientX, e.clientY, "mouse")
     },
     [isPostTouch, startPress]
@@ -442,6 +516,30 @@ export default function UnifiedSampler() {
       if (isPostTouch()) return
       const pr = pressRef.current
       if (pr.active) {
+        // 放大（zoom > 1）后按住拖动 → 平移；位移超过阈值才进入平移模式，
+        // 未移动的按住保持放大镜取色
+        if (!pr.panMode && view.zoom > 1 && Math.hypot(e.clientX - pr.downX, e.clientY - pr.downY) > PAN_THRESHOLD) {
+          pr.panMode = true
+          pr.lastX = e.clientX
+          pr.lastY = e.clientY
+          if (pr.timer) {
+            clearTimeout(pr.timer)
+            pr.timer = null
+          }
+          setPressing(false)
+          setLongPressActive(false)
+          if (loupeWrapRef.current) loupeWrapRef.current.style.display = "none"
+        }
+        if (pr.panMode) {
+          const dx = e.clientX - pr.lastX
+          const dy = e.clientY - pr.lastY
+          pr.lastX = e.clientX
+          pr.lastY = e.clientY
+          if (fitRect && containerSize) {
+            setView((v) => panBy(v, dx, dy, fitRect.w, fitRect.h, containerSize.w, containerSize.h))
+          }
+          return
+        }
         movePress(e.clientX, e.clientY)
         return
       }
@@ -456,17 +554,18 @@ export default function UnifiedSampler() {
       updateLoupeInfo(pos.px, pos.py)
       positionLoupe(e.clientX, e.clientY)
     },
-    [isPostTouch, movePress, toPixel, drawLoupe, updateLoupeInfo, positionLoupe]
+    [isPostTouch, movePress, toPixel, drawLoupe, updateLoupeInfo, positionLoupe, view.zoom, fitRect, containerSize]
   )
 
   const handleMouseLeave = useCallback(() => {
     if (isPostTouch()) return
     const pr = pressRef.current
     if (pr.active) {
-      // 按住时移出图片 → 取消本次按压（不取色）
+      // 按住时移出图片 → 取消本次按压（平移 / 放大镜均不取色）
       if (pr.timer) clearTimeout(pr.timer)
       pr.timer = null
       pr.active = false
+      pr.panMode = false
       pr.source = null
       pr.fired = false
       setPressing(false)
@@ -476,11 +575,35 @@ export default function UnifiedSampler() {
     if (loupeWrapRef.current) loupeWrapRef.current.style.display = "none"
   }, [isPostTouch])
 
-  // ===== 触屏事件（长按放大镜精确取色；轻点走 click）=====
+  // ===== 触屏事件（双指捏合缩放；放大后单指拖动平移；单指长按放大镜取色）=====
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
+      const pr = pressRef.current
+      if (e.touches.length >= 2) {
+        // 两指 → 进入捏合模式，取消单指按压
+        const [t1, t2] = [e.touches[0], e.touches[1]]
+        const crect = containerRef.current?.getBoundingClientRect()
+        if (!crect) return
+        pinchRef.current = {
+          active: true,
+          init: false,
+          lastDist: Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY),
+        }
+        if (pr.timer) {
+          clearTimeout(pr.timer)
+          pr.timer = null
+        }
+        pr.active = false
+        pr.panMode = false
+        setPressing(false)
+        setLongPressActive(false)
+        return
+      }
       const t = e.touches[0]
       if (!t) return
+      pr.downX = t.clientX
+      pr.downY = t.clientY
+      pr.panMode = false
       startPress(t.clientX, t.clientY, "touch")
     },
     [startPress]
@@ -488,17 +611,96 @@ export default function UnifiedSampler() {
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
+      const crect = containerRef.current?.getBoundingClientRect()
+      if (!crect) return
+      const pin = pinchRef.current
+      const pr = pressRef.current
+      if (e.touches.length >= 2) {
+        const [t1, t2] = [e.touches[0], e.touches[1]]
+        const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
+        const cx = (t1.clientX + t2.clientX) / 2 - crect.left
+        const cy = (t1.clientY + t2.clientY) / 2 - crect.top
+        if (pin.active) {
+          // 首次 move 只记录基准距离，之后按距离增量缩放（避免锚点漂移）
+          if (!pin.init) {
+            pin.init = true
+            pin.lastDist = dist
+            return
+          }
+          const ratio = dist / pin.lastDist
+          if (ratio > 0 && fitRect && containerSize) {
+            setView((v) =>
+              clampPan(zoomAt(v, cx, cy, ratio, containerSize.w, containerSize.h), fitRect.w, fitRect.h, containerSize.w, containerSize.h),
+            )
+          }
+          pin.lastDist = dist
+        }
+        return
+      }
+      if (pin.active) {
+        // 两指抬至一指：结束捏合，残余单指 move 不处理（防误平移）
+        return
+      }
       const t = e.touches[0]
       if (!t) return
-      movePress(t.clientX, t.clientY)
+      if (pr.active) {
+        if (!pr.panMode && view.zoom > 1 && Math.hypot(t.clientX - pr.downX, t.clientY - pr.downY) > PAN_THRESHOLD) {
+          pr.panMode = true
+          pr.lastX = t.clientX
+          pr.lastY = t.clientY
+          if (pr.timer) {
+            clearTimeout(pr.timer)
+            pr.timer = null
+          }
+          setPressing(false)
+          setLongPressActive(false)
+          if (loupeWrapRef.current) loupeWrapRef.current.style.display = "none"
+        }
+        if (pr.panMode) {
+          const dx = t.clientX - pr.lastX
+          const dy = t.clientY - pr.lastY
+          pr.lastX = t.clientX
+          pr.lastY = t.clientY
+          if (fitRect && containerSize) {
+            setView((v) => panBy(v, dx, dy, fitRect.w, fitRect.h, containerSize.w, containerSize.h))
+          }
+          return
+        }
+        movePress(t.clientX, t.clientY)
+      }
     },
-    [movePress]
+    [view.zoom, fitRect, containerSize, movePress]
   )
 
-  const handleTouchEnd = useCallback(() => {
-    lastTouchEndRef.current = Date.now()
-    finalizePress()
-  }, [finalizePress])
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      lastTouchEndRef.current = Date.now()
+      const pin = pinchRef.current
+      const pr = pressRef.current
+      if (pin.active) {
+        // 捏合结束：吞掉浏览器随后的合成 click，防止误取色
+        pin.active = false
+        pr.active = false
+        pr.panMode = false
+        suppressClickRef.current = true
+        setTimeout(() => {
+          suppressClickRef.current = false
+        }, 400)
+        return
+      }
+      if (pr.panMode) {
+        pr.active = false
+        pr.panMode = false
+        suppressClickRef.current = true
+        setTimeout(() => {
+          suppressClickRef.current = false
+        }, 400)
+        return
+      }
+      finalizePress()
+    },
+    [finalizePress]
+  )
 
   const handleImageClick = useCallback(
     (e: React.MouseEvent) => {
@@ -594,15 +796,26 @@ export default function UnifiedSampler() {
           ) : (
             <>
               {/* 源图：纯展示层，pointer-events 关闭 —— 浏览器无法对图片本体
-                  触发长按「保存图片/查看图片」等系统菜单；坐标换算仍以 img 定位 */}
+                  触发长按「保存图片/查看图片」等系统菜单；坐标换算仍以 img 定位。
+                  缩放模型：以 fitRect 中心为原点 scale(zoom) + translate(pan) */}
               {/* eslint-disable-next-line @next/next/no-img-element -- 本地 dataURL 需精确像素渲染与坐标换算 */}
               <img
                 ref={imgRef}
                 src={imageUrl}
                 alt="取样源图"
                 draggable={false}
-                className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
-                style={{ userSelect: "none", WebkitTouchCallout: "none" }}
+                className="absolute pointer-events-none select-none"
+                style={{
+                  left: fitRect.x,
+                  top: fitRect.y,
+                  width: fitRect.w,
+                  height: fitRect.h,
+                  transform: `translate(${view.panX}px, ${view.panY}px) scale(${view.zoom})`,
+                  transformOrigin: "center",
+                  willChange: "transform",
+                  userSelect: "none",
+                  WebkitTouchCallout: "none",
+                }}
               />
               {/* 交互层：承载全部取色事件（点击/长按/触屏），
                   长按发生在普通 div 上而非图片上，配合 contextmenu 拦截不再弹出系统菜单 */}
@@ -660,8 +873,20 @@ export default function UnifiedSampler() {
                 )}
               </div>
               {imageSize && (
-                <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-white/85 border border-neutral-200 text-[10px] font-mono text-neutral-500">
-                  {imageSize.w} × {imageSize.h}px
+                <span className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/85 border border-neutral-200 text-[10px] font-mono text-neutral-500">
+                  <span>{imageSize.w} × {imageSize.h}px</span>
+                  {view.zoom > 1 ? (
+                    <button
+                      onClick={() => setView(IDENTITY_VIEW)}
+                      title="点击恢复 100%"
+                      className="inline-flex items-center gap-0.5 text-neutral-700 hover:text-neutral-900 cursor-pointer"
+                    >
+                      <span>{Math.round(view.zoom * 100)}%</span>
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  ) : (
+                    <span>100%</span>
+                  )}
                 </span>
               )}
             </>
@@ -793,9 +1018,12 @@ function PointCard({
   const pantones = derived?.pantones ?? []
   const previews = derived?.previews ?? []
   const [expanded, setExpanded] = useState(false)
+  // 展开查看的毛布详情（点击参考毛布图标触发）
+  const [detail, setDetail] = useState<NormalizedFabric | null>(null)
 
   return (
-    <div className="flex gap-4 rounded-2xl border border-neutral-200 bg-white p-3.5 shadow-sm">
+    <div className="rounded-2xl border border-neutral-200 bg-white p-3.5 shadow-sm">
+      <div className="flex gap-4">
       {/* 左端：匹配色块（70×140 竖长方形，带坐标与数字编号） */}
       <div className="relative w-[70px] h-[140px] rounded-xl flex-shrink-0 overflow-hidden" style={{ backgroundColor: hex }}>
         <span className="absolute top-1 left-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-900/70 text-[10px] font-bold text-white">
@@ -865,18 +1093,21 @@ function PointCard({
       <div className="w-[36%] flex-shrink-0 space-y-1">
         <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">参考毛布 Top 3</p>
         {previews.length > 0 ? (
-          previews.map((m) => <FabricRow key={m.fabric.id} match={m} />)
+          previews.map((m) => <FabricRow key={m.fabric.id} match={m} onOpen={setDetail} />)
         ) : (
           <p className="text-[10px] text-neutral-400">毛布库加载中…</p>
         )}
       </div>
+      </div>
+      {/* 毛布详情：点击参考毛布图标展开（全卡宽度） */}
+      {detail && <FabricDetail fabric={detail} onClose={() => setDetail(null)} />}
     </div>
   );
 }
 
-// ==================== 毛布紧凑行（参数卡内预览） ====================
+// ==================== 毛布紧凑行（参数卡内预览，点击展开详情） ====================
 
-function FabricRow({ match }: { match: FabricMatch }) {
+function FabricRow({ match, onOpen }: { match: FabricMatch; onOpen?: (f: NormalizedFabric) => void }) {
   const { fabric, delta } = match
   const [imgFailed, setImgFailed] = useState(false)
   const [r, g, b] = fabric.sRGB
@@ -884,7 +1115,12 @@ function FabricRow({ match }: { match: FabricMatch }) {
   const imgPath = fabricImagePath(fabric.source)
 
   return (
-    <div className="flex items-center gap-1.5 rounded-lg bg-neutral-50 border border-neutral-100 px-1.5 py-1">
+    <button
+      type="button"
+      onClick={() => onOpen?.(fabric)}
+      title={`点击查看毛布详情：${fabric.name}（${fabric.vendor}）`}
+      className="w-full text-left flex items-center gap-1.5 rounded-lg bg-neutral-50 border border-neutral-100 px-1.5 py-1 hover:border-neutral-300 hover:bg-neutral-100 transition-colors cursor-pointer"
+    >
       <span className="relative w-6 h-6 rounded flex-shrink-0 overflow-hidden" style={{ backgroundColor: hex }}>
         {!imgFailed && (
           // eslint-disable-next-line @next/next/no-img-element -- 静态缩略图按需懒加载
@@ -898,14 +1134,86 @@ function FabricRow({ match }: { match: FabricMatch }) {
           />
         )}
       </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-medium text-neutral-800 truncate">
+      <span className="min-w-0 flex-1">
+        <span className="block text-[10px] font-medium text-neutral-800 truncate">
           {fabric.name}
           <span className="text-neutral-400 font-normal"> · {fabric.vendor}</span>
-        </p>
-        <p className="text-[8px] font-mono text-neutral-400 truncate">{fabricPhText(fabric.ph)} · {fabric.skuId}</p>
-      </div>
+        </span>
+        <span className="block text-[8px] font-mono text-neutral-400 truncate">{fabricPhText(fabric.ph)} · {fabric.skuId}</span>
+      </span>
       <span className={`flex-shrink-0 text-[8px] font-mono ${deltaTone(delta)}`}>Δ {delta.toFixed(3)}</span>
+    </button>
+  );
+}
+
+// ==================== 毛布详情面板（点击参考毛布图标展开） ====================
+
+function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-baseline gap-1.5 min-w-0">
+      <span className="shrink-0 text-neutral-400">{label}</span>
+      <span className={`truncate text-neutral-700 ${mono ? "font-mono" : ""}`}>{value}</span>
+    </div>
+  );
+}
+
+function FabricDetail({ fabric, onClose }: { fabric: NormalizedFabric; onClose: () => void }) {
+  const [imgFailed, setImgFailed] = useState(false)
+  const [r, g, b] = fabric.sRGB
+  const hex = fabric.hex ?? fabricHex(r, g, b)
+  const imgPath = fabricImagePath(fabric.source)
+  const cid = cidInfo(fabric.cid)
+  const lab = fabric.oklab ?? fabricOklab(r, g, b)
+
+  return (
+    <div className="mt-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+      <div className="flex gap-3">
+        {/* 毛布大图（缩略图 + 底色） */}
+        <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 border border-neutral-200" style={{ backgroundColor: hex }}>
+          {!imgFailed && (
+            // eslint-disable-next-line @next/next/no-img-element -- 详情缩略图
+            <img
+              src={imgPath}
+              alt={fabric.name}
+              loading="lazy"
+              decoding="async"
+              onError={() => setImgFailed(true)}
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-neutral-900 truncate">
+                {fabric.name}
+                <span className="text-neutral-400 font-normal text-xs"> · {fabric.vendor}</span>
+              </p>
+              <p className="text-[10px] font-mono text-neutral-400 truncate">{fabric.skuId} · #{fabric.id}</p>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="关闭毛布详情"
+              className="shrink-0 w-6 h-6 rounded-full bg-white border border-neutral-200 text-neutral-400 hover:text-neutral-900 hover:border-neutral-400 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+            <DetailRow label="色系" value={`${cid.label}（${fabric.cid}）`} />
+            <DetailRow label="毛长" value={fabricPhText(fabric.ph)} />
+            <DetailRow label="毛布种类" value={fabric.fabricKind} />
+            <DetailRow label="sRGB" value={hex} mono />
+            <DetailRow
+              label="OKLab"
+              value={`L ${lab[0].toFixed(3)} a ${(lab[1] >= 0 ? "+" : "") + lab[1].toFixed(3)} b ${(lab[2] >= 0 ? "+" : "") + lab[2].toFixed(3)}`}
+              mono
+            />
+            {fabric.pantone && <DetailRow label="潘通" value={fabric.pantone} mono />}
+          </div>
+          {fabric.tips && <p className="mt-2 text-[9px] text-neutral-400 leading-relaxed">{fabric.tips}</p>}
+        </div>
+      </div>
     </div>
   );
 }
