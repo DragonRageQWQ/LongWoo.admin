@@ -30,6 +30,7 @@ import {
 } from "@/lib/fabric-types";
 import { loadFabricData } from "@/lib/fabric-data";
 import { rgbToHex, matchPantones } from "@/lib/color-math";
+import { PANTONE_DATA } from "@/lib/pantone-data";
 
 interface PickPoint {
   id: number
@@ -166,7 +167,7 @@ export default function UnifiedSampler() {
       setFabrics(result.fabrics)
       setDataSource(result.external ? "external" : "sample")
       showStatus(
-        `毛布库已就绪（${result.fabrics.length} 条${result.external ? "，真实数据" : "，示例数据"}）· 上传图片后点击/长按取色`
+        `数据库已就绪：潘通色库 ${PANTONE_DATA.length} 条 · 咩咩毛 ${result.fabrics.length} 色${result.external ? "（真实数据）" : "（示例数据）"}· 上传图片后点击/长按取色`
       )
     })
     return () => {
@@ -515,6 +516,7 @@ export default function UnifiedSampler() {
   const hasImage = imageUrl && imageSize && fitRect
   const sourceLabel =
     dataSource === "external" ? "真实数据库" : dataSource === "loading" ? "加载中…" : "示例数据"
+  const databaseLabel = `数据库：潘通色库：${PANTONE_DATA.length}条 | 咩咩毛：${fabrics.length}色`
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-0 lg:h-full">
@@ -538,7 +540,7 @@ export default function UnifiedSampler() {
               }`}
             >
               {dataSource === "loading" && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
-              {sourceLabel} · {fabrics.length} 条
+              {sourceLabel} · {databaseLabel}
             </span>
             <button
               onClick={() => fileInputRef.current?.click()}
