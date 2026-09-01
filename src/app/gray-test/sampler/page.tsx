@@ -67,8 +67,8 @@ export default async function FabricSamplerPage() {
         </div>
       </header>
 
-      {/* 主体 */}
-      <div className="relative z-10 flex-1 min-h-0 max-w-7xl w-full mx-auto px-5 py-4">
+      {/* 主体：移动端随内容自然延伸（整页滚动），桌面端撑满高度内部滚动 */}
+      <div className="relative z-10 lg:flex-1 lg:min-h-0 max-w-7xl w-full mx-auto px-5 py-4">
         <UnifiedSampler />
       </div>
     </main>

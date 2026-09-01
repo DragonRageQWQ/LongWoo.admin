@@ -517,7 +517,7 @@ export default function UnifiedSampler() {
     dataSource === "external" ? "真实数据库" : dataSource === "loading" ? "加载中…" : "示例数据"
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-full min-h-0">
+    <div className="flex flex-col lg:flex-row gap-6 min-h-0 lg:h-full">
       {/* ===== 左侧：图片工作区（约 60%，自适应图片大小）===== */}
       <div className="w-full lg:w-[60%] flex flex-col min-h-0">
         <div className="flex items-center justify-between gap-3 pb-3 flex-wrap">
@@ -694,7 +694,8 @@ export default function UnifiedSampler() {
           )}
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
+        {/* 参数列表：移动端自然向下延伸（随整页滚动），桌面端固定高度内部滚动 */}
+        <div className="space-y-3 pr-1 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
           {!hasImage ? (
             <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-2xl border border-dashed border-neutral-300 text-xs text-neutral-400">
               <MousePointerClick className="w-5 h-5" />
