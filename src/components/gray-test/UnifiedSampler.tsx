@@ -721,6 +721,22 @@ export default function UnifiedSampler() {
             ))
           )}
 
+          {/* Δ 色差分级图例 */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] font-mono text-neutral-400">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
+              Δ≤0.030 直接使用
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-neutral-500 inline-block" />
+              0.030&lt;Δ≤0.090 参考使用
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-red-800 inline-block" />
+              Δ&gt;0.090 无参考价值
+            </span>
+          </div>
+
           <p className="text-[10px] text-neutral-300 leading-relaxed">
             毛布色值来自商家色卡（社区/示例数据，非分光仪实测）；潘通为近似匹配，正式交付请以官方色卡为准
           </p>
@@ -736,6 +752,18 @@ interface Derived {
   oklab: [number, number, number]
   pantones: ReturnType<typeof matchPantones>
   previews: FabricMatch[]
+}
+
+/**
+ * 色差 Δ 分级配色（潘通 / 毛布匹配共用）：
+ * - ≤0.030 绿色：可直接使用（色差肉眼几乎看不出）
+ * - ≤0.090 灰色：可参考使用（存在肉眼可辨色差）
+ * - >0.090 暗红：无色彩参考价值
+ */
+function deltaTone(delta: number): string {
+  if (delta <= 0.03) return "text-emerald-600"
+  if (delta <= 0.09) return "text-neutral-500"
+  return "text-red-800"
 }
 
 function PointCard({
@@ -758,8 +786,8 @@ function PointCard({
 
   return (
     <div className="flex gap-4 rounded-2xl border border-neutral-200 bg-white p-3.5 shadow-sm">
-      {/* 左端：匹配色块（带坐标与数字编号） */}
-      <div className="relative w-[76px] h-[76px] rounded-xl flex-shrink-0 overflow-hidden" style={{ backgroundColor: hex }}>
+      {/* 左端：匹配色块（70×140 竖长方形，带坐标与数字编号） */}
+      <div className="relative w-[70px] h-[140px] rounded-xl flex-shrink-0 overflow-hidden" style={{ backgroundColor: hex }}>
         <span className="absolute top-1 left-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-900/70 text-[10px] font-bold text-white">
           {index + 1}
         </span>
@@ -797,7 +825,7 @@ function PointCard({
                   <span className="text-[11px] text-neutral-700 truncate">
                     {pt.name === pt.code ? pt.code : `${pt.code} ${pt.name}`}
                   </span>
-                  <span className="flex-shrink-0 text-[8px] font-mono text-neutral-400">Δ {pt.delta.toFixed(3)}</span>
+                  <span className={`flex-shrink-0 text-[8px] font-mono ${deltaTone(pt.delta)}`}>Δ {pt.delta.toFixed(3)}</span>
                 </div>
               ))}
             </div>
@@ -867,7 +895,7 @@ function FabricRow({ match }: { match: FabricMatch }) {
         </p>
         <p className="text-[8px] font-mono text-neutral-400 truncate">{fabricPhText(fabric.ph)} · {fabric.skuId}</p>
       </div>
-      <span className="flex-shrink-0 text-[8px] font-mono text-emerald-600">Δ {delta.toFixed(3)}</span>
+      <span className={`flex-shrink-0 text-[8px] font-mono ${deltaTone(delta)}`}>Δ {delta.toFixed(3)}</span>
     </div>
   );
 }
