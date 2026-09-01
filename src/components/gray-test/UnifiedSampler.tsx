@@ -166,8 +166,9 @@ export default function UnifiedSampler() {
       if (cancelled) return
       setFabrics(result.fabrics)
       setDataSource(result.external ? "external" : "sample")
+      const vendorCount = new Set(result.fabrics.map((f) => f.vendor)).size
       showStatus(
-        `数据库已就绪：潘通色库 ${PANTONE_DATA.length} 条 · 咩咩毛 ${result.fabrics.length} 色${result.external ? "（真实数据）" : "（示例数据）"}· 上传图片后点击/长按取色`
+        `数据库已就绪：潘通色库 ${PANTONE_DATA.length} 条 · 毛布 ${result.fabrics.length} 色 / ${vendorCount} 家商家${result.external ? "（真实数据）" : "（示例数据）"}· 上传图片后点击/长按取色`
       )
     })
     return () => {
@@ -514,7 +515,13 @@ export default function UnifiedSampler() {
 
   // ===== 渲染 =====
   const hasImage = imageUrl && imageSize && fitRect
-  const databaseLabel = `数据库：潘通色库：${PANTONE_DATA.length}条 | 咩咩毛：${fabrics.length}色`
+  // 各商家色数（保持数据中的首次出现顺序）
+  const vendorParts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const f of fabrics) counts.set(f.vendor, (counts.get(f.vendor) ?? 0) + 1)
+    return [...counts].map(([v, n]) => `${v}：${n}色`)
+  }, [fabrics])
+  const databaseLabel = `数据库：潘通色库：${PANTONE_DATA.length}条${vendorParts.length ? ` | ${vendorParts.join(" | ")}` : ""}`
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-0 lg:h-full">
@@ -527,9 +534,10 @@ export default function UnifiedSampler() {
               点击选点（≤{MAX_POINTS}）· 长按放大镜精确取色 · 点已选点删除
             </span>
           </p>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
             <span
-              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-medium border ${
+              title={databaseLabel}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium border min-w-0 ${
                 dataSource === "external"
                   ? "bg-emerald-50 border-emerald-200 text-emerald-700"
                   : dataSource === "loading"
@@ -537,8 +545,10 @@ export default function UnifiedSampler() {
                     : "bg-amber-50 border-amber-200 text-amber-700"
               }`}
             >
-              {dataSource === "loading" && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
-              {dataSource === "loading" ? "数据库加载中…" : databaseLabel}
+              {dataSource === "loading" && <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />}
+              <span className="truncate">
+                {dataSource === "loading" ? "数据库加载中…" : databaseLabel}
+              </span>
             </span>
             <button
               onClick={() => fileInputRef.current?.click()}
