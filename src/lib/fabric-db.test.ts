@@ -25,7 +25,10 @@ describe("毛布数据库（public/fabric/fabric-data.json）", () => {
     expect(counts.get("犬物语")).toBe(71);
     expect(counts.get("月亮毛")).toBe(102);
     expect(counts.get("海鲜毛")).toBe(68);
-    expect(raw).toHaveLength(355);
+    expect(counts.get("柔光狐")).toBe(50);
+    expect(counts.get("瑶光狐")).toBe(54);
+    expect(counts.get("似水毛")).toBe(93);
+    expect(raw).toHaveLength(552);
   });
 
   it("id 唯一且 cid 合法", () => {
@@ -58,7 +61,7 @@ describe("毛布数据库（public/fabric/fabric-data.json）", () => {
 
   it("以自身颜色匹配，Top1 应命中自身", () => {
     const byId = new Map(fabrics.map((f) => [f.id, f]));
-    for (const id of ["0072", "0115", "0186", "0231", "0288"]) {
+    for (const id of ["0072", "0115", "0186", "0231", "0288", "0356", "0406", "0460"]) {
       const target = byId.get(id)!;
       const top = matchFabrics(target.oklab, fabrics, 1);
       expect(top[0].fabric.id).toBe(id);
