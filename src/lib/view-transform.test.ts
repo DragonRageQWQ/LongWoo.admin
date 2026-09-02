@@ -99,3 +99,38 @@ describe("clampPan / panBy / pinchZoom", () => {
     expect(v2.zoom).toBeCloseTo(1, 6)
   });
 });
+
+// 回归：取色点标记必须始终锚定同一图像像素。
+// 组件渲染不再缓存选点时的显示坐标，而是用「像素坐标 + 当前 view」实时换算
+// pixelToClient —— 本测试保证该换算在任意缩放/平移序列下都指向原像素。
+describe("选点锚定不变性（取样器缩放/平移后标记贴住像素）", () => {
+  const sampledPixel = { px: 137, py: 268 } // 用户选中的图像像素
+
+  it("任意视图下 pixelToClient 显示位置都能反解回原像素", () => {
+    const views: ViewState[] = [
+      base,
+      zoomAt(base, CW / 2, CH / 2, 4, CW, CH),
+      zoomAt(base, 150, 500, 2.5, CW, CH),
+      clampPan({ zoom: 8, panX: 123, panY: -77 }, FIT_W, FIT_H, CW, CH),
+      { zoom: 3.2, panX: -90, panY: 45 },
+    ]
+    for (const v of views) {
+      const disp = pixelToClient(sampledPixel.px, sampledPixel.py, v, FIT_W, FIT_H, IMG_W, IMG_H, CW, CH)
+      const back = clientToPixel(disp.x, disp.y, v, FIT_W, FIT_H, IMG_W, IMG_H, CW, CH)
+      expect(back, `view=${JSON.stringify(v)}`).toEqual(sampledPixel)
+    }
+  });
+
+  it("放大后再缩小回 100%：显示位置回到初始坐标（不残留错位）", () => {
+    const at100 = pixelToClient(sampledPixel.px, sampledPixel.py, base, FIT_W, FIT_H, IMG_W, IMG_H, CW, CH)
+    const zoomed = zoomAt(base, 300, 200, 3, CW, CH)
+    const atZoom = pixelToClient(sampledPixel.px, sampledPixel.py, zoomed, FIT_W, FIT_H, IMG_W, IMG_H, CW, CH)
+    // 放大后标记确实随图片位移（覆盖原 bug：缓存静态坐标不跟随）
+    expect(atZoom).not.toEqual(at100)
+    // 缩小回 100%（clampPan 归零）后标记回到与图片一致的初始位置
+    const back = clampPan({ zoom: 0.5, panX: 0, panY: 0 }, FIT_W, FIT_H, CW, CH)
+    expect(back).toEqual(base)
+    const atBack = pixelToClient(sampledPixel.px, sampledPixel.py, back, FIT_W, FIT_H, IMG_W, IMG_H, CW, CH)
+    expect(atBack).toEqual(at100)
+  });
+});

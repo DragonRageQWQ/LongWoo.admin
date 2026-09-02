@@ -47,13 +47,11 @@ import {
 
 interface PickPoint {
   id: number
-  x: number // 原始像素坐标
+  x: number // 原始像素坐标（锚点，永不随视图变化）
   y: number
   r: number
   g: number
   b: number
-  dispX: number // 显示坐标
-  dispY: number
 }
 
 const MAX_POINTS = 10
@@ -292,7 +290,8 @@ export default function UnifiedSampler() {
     (px: number, py: number) => {
       const src = srcCanvasRef.current
       if (!src || !fitRect || !imageSize || !containerSize) return
-      const disp = pixelToClient(
+      // 点击位置在容器中的显示坐标（用于命中已选点）
+      const clickDisp = pixelToClient(
         px,
         py,
         view,
@@ -303,11 +302,22 @@ export default function UnifiedSampler() {
         containerSize.w,
         containerSize.h,
       )
-      const dispX = disp.x
-      const dispY = disp.y
 
-      // 命中已选点 → 删除
-      const hitIdx = points.findIndex((p) => Math.hypot(p.dispX - dispX, p.dispY - dispY) < 14)
+      // 命中已选点 → 删除（以像素坐标 + 当前视图实时换算显示位置，避免缩放/平移后错位）
+      const hitIdx = points.findIndex((p) => {
+        const d = pixelToClient(
+          p.x,
+          p.y,
+          view,
+          fitRect.w,
+          fitRect.h,
+          imageSize.w,
+          imageSize.h,
+          containerSize.w,
+          containerSize.h,
+        )
+        return Math.hypot(d.x - clickDisp.x, d.y - clickDisp.y) < 14
+      })
       if (hitIdx >= 0) {
         const removed = points[hitIdx]
         setPoints((prev) => prev.filter((_, i) => i !== hitIdx))
@@ -328,10 +338,7 @@ export default function UnifiedSampler() {
       if (!ctx) return
       const d = ctx.getImageData(px, py, 1, 1).data
       const id = nextIdRef.current++
-      setPoints((prev) => [
-        ...prev,
-        { id, x: px, y: py, r: d[0], g: d[1], b: d[2], dispX, dispY },
-      ])
+      setPoints((prev) => [...prev, { id, x: px, y: py, r: d[0], g: d[1], b: d[2] }])
       showStatus(`已选点 ${id} · 像素（${px}, ${py}）· #${rgbToHex(d[0], d[1], d[2])}`)
     },
     [points, fitRect, imageSize, containerSize, view, showStatus]
@@ -832,28 +839,43 @@ export default function UnifiedSampler() {
                 onTouchEnd={handleTouchEnd}
                 onContextMenu={(e) => e.preventDefault()}
               />
-              {/* 选点标记（纸墨风格：墨色描边 + 白底编号） */}
-              {points.map((p, idx) => (
-                <div
-                  key={p.id}
-                  className="absolute z-10 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ left: p.dispX, top: p.dispY }}
-                >
-                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block w-5 h-px bg-neutral-900/80" />
-                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block w-px h-5 bg-neutral-900/80" />
-                  <span
-                    className="relative flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold shadow border"
-                    style={{
-                      borderColor: `rgb(${p.r},${p.g},${p.b})`,
-                      color: "#0a0a0a",
-                      backgroundColor: "rgba(255,255,255,0.92)",
-                      animation: "colorPickPop 0.22s ease-out",
-                    }}
+              {/* 选点标记（纸墨风格：墨色描边 + 白底编号）。
+                  位置由原始像素坐标 + 当前视图实时换算，缩放/平移后标记始终贴住对应像素 */}
+              {points.map((p, idx) => {
+                // hasImage 分支内 fitRect/containerSize 均已非空（fitRect 依赖 containerSize）
+                const disp = pixelToClient(
+                  p.x,
+                  p.y,
+                  view,
+                  fitRect.w,
+                  fitRect.h,
+                  imageSize.w,
+                  imageSize.h,
+                  containerSize!.w,
+                  containerSize!.h,
+                )
+                return (
+                  <div
+                    key={p.id}
+                    className="absolute z-10 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ left: disp.x, top: disp.y }}
                   >
-                    {idx + 1}
-                  </span>
-                </div>
-              ))}
+                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block w-5 h-px bg-neutral-900/80" />
+                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 block w-px h-5 bg-neutral-900/80" />
+                    <span
+                      className="relative flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold shadow border"
+                      style={{
+                        borderColor: `rgb(${p.r},${p.g},${p.b})`,
+                        color: "#0a0a0a",
+                        backgroundColor: "rgba(255,255,255,0.92)",
+                        animation: "colorPickPop 0.22s ease-out",
+                      }}
+                    >
+                      {idx + 1}
+                    </span>
+                  </div>
+                )
+              })}
               {/* 像素放大镜（浅色；长按/按住时显示取色提示） */}
               <div ref={loupeWrapRef} className="absolute z-20 hidden" style={{ display: "none" }}>
                 <canvas
