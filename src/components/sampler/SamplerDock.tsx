@@ -203,7 +203,8 @@ export default function SamplerDock() {
   const ready = exportState.phase === "ready";
 
   return (
-    <div className="sd gt2-dock" ref={wrapRef}>
+    <div className="sd" ref={wrapRef}>
+      <div className="gt2-dock">
       {/* 1. 语言切换圆（与首页一致：中 / En） */}
       <button
         type="button"
@@ -398,6 +399,7 @@ export default function SamplerDock() {
             </span>
           </Link>
         )}
+      </div>
       </div>
     </div>
   );

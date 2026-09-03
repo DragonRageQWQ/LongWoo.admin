@@ -300,11 +300,21 @@
     width: min(320px, calc(100vw - 28px));
   }
 
+  /* 未登录胶囊：只保留实心圆图标 */
   .sd .gt2-dock-pill--signup {
     padding: 0 6px 0 5px;
   }
 
   .sd .gt2-dock-pill--signup .gt2-dock-pill-text {
+    display: none;
+  }
+
+  /* 登录态胶囊：收窄为纯头像圆形，给标题留空间 */
+  .sd .gt2-dock-pill {
+    padding: 0 5px;
+  }
+
+  .sd .gt2-dock-username {
     display: none;
   }
 }

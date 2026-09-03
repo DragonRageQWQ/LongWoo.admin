@@ -51,7 +51,7 @@ export default function SamplerPage() {
             <span className="hidden sm:block w-px h-5 bg-neutral-200 flex-shrink-0" aria-hidden="true" />
             <div className="min-w-0">
               <h1 className="text-base font-bold tracking-tight truncate">图片与毛布取样器</h1>
-              <p className="text-[10px] text-neutral-400 mt-0.5 font-mono tracking-wider truncate">
+              <p className="hidden sm:block text-[10px] text-neutral-400 mt-0.5 font-mono tracking-wider truncate">
                 PIXEL &amp; FABRIC SAMPLER · sRGB / OKLAB / PANTONE / FABRIC MATCH
               </p>
             </div>
