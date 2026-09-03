@@ -1,0 +1,150 @@
+/* ============================================================
+   全站统一语言切换（GlobeLangMenu）· 纸墨极简视觉
+   自包含样式，不依赖宿主 CSS 变量；.lm- 前缀避免与站点样式冲突。
+   ============================================================ */
+.lm-root {
+  --lm-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --lm-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --lm-ink: #0a0a0a;
+  --lm-soft: #737373;
+  --lm-mute: #9ca3af;
+  --lm-line: #ececec;
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  color: var(--lm-ink);
+}
+
+/* ---------- 地球圆形按钮（与首页 dock 圆形气泡同款） ---------- */
+.lm-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid var(--lm-ink);
+  background: transparent;
+  color: var(--lm-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  transition: background 0.32s var(--lm-ease), color 0.32s var(--lm-ease),
+    transform 0.4s var(--lm-spring), box-shadow 0.35s var(--lm-ease);
+}
+
+.lm-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.lm-btn:hover,
+.lm-btn[data-open="true"] {
+  background: var(--lm-ink);
+  color: #fff;
+  transform: scale(1.06);
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.35);
+}
+
+.lm-btn:active {
+  transform: scale(0.96);
+}
+
+/* ---------- hover 气泡提示「语言切换」（打开菜单时隐藏避免重叠） ---------- */
+.lm-tip {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-2px);
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(10, 10, 10, 0.88);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s var(--lm-ease), transform 0.25s var(--lm-ease);
+  z-index: 70;
+}
+
+.lm-btn:hover .lm-tip,
+.lm-btn:focus-visible .lm-tip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.lm-btn[data-open="true"] .lm-tip {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+/* ---------- 下拉语言列表面板 ---------- */
+@keyframes lm-pop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -12px, 0) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lm-panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: 0;
+  min-width: 186px;
+  padding: 7px;
+  background: #fff;
+  border: 1px solid var(--lm-line);
+  border-radius: 18px;
+  box-shadow: 0 30px 70px -22px rgba(0, 0, 0, 0.3), 0 4px 14px -6px rgba(0, 0, 0, 0.08);
+  transform-origin: 100% 0%;
+  animation: lm-pop 0.45s var(--lm-spring) both;
+  z-index: 80;
+}
+
+.lm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lm-ink);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.22s var(--lm-ease);
+}
+
+.lm-item:hover {
+  background: #f6f6f6;
+}
+
+.lm-item[data-active="true"] {
+  font-weight: 700;
+}
+
+.lm-item-check {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--lm-ink);
+}
+
+@media (max-width: 640px) {
+  .lm-panel {
+    min-width: min(186px, calc(100vw - 28px));
+  }
+}

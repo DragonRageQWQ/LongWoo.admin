@@ -14,7 +14,11 @@ import {
 } from '@/lib/attachment-utils'
 import { verifyUploadToken } from '@/lib/attachment-token'
 import { extractClientIpFromRequest } from '@/lib/server-utils'
-import { RATE_LIMIT_ORDER_MAX, RATE_LIMIT_ORDER_WINDOW } from '@/lib/constants'
+import {
+  ATTACHMENT_MAX_PER_ORDER,
+  RATE_LIMIT_ORDER_MAX,
+  RATE_LIMIT_ORDER_WINDOW,
+} from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -78,6 +82,22 @@ export async function POST(request: NextRequest) {
   if (!verifyUploadToken(orderId, uploadToken, tokenSecret)) {
     return NextResponse.json(
       { success: false, error: '无权上传该订单的附件' },
+      { status: 403 }
+    )
+  }
+
+  // 4b) 会话关联 + 软封禁检查（R4-F2 修复：前移至任何 Storage 写入之前，
+  //     使 403 拒绝不产生孤儿文件）。匿名游客（无会话）不受影响。
+  let uploadedBy: string | null = null
+  try {
+    const user = await getSessionUser()
+    uploadedBy = user?.id ?? null
+  } catch {
+    uploadedBy = null
+  }
+  if (uploadedBy && (await isSessionUserSoftBanned())) {
+    return NextResponse.json(
+      { success: false, error: '账户已被限制使用，请联系管理员' },
       { status: 403 }
     )
   }
@@ -166,6 +186,29 @@ export async function POST(request: NextRequest) {
       await admin.storage.createBucket(ATTACHMENT_BUCKET, { public: true })
     }
 
+    // 9b) 订单级附件数量上限（R4-F1 修复）：在 Storage 写入前检查，
+    //     防止对同一订单无上限上传导致存储成本滥用（含匿名下单场景）
+    const { count: attachmentCount, error: countError } = await admin
+      .from('order_attachments')
+      .select('id', { count: 'exact', head: true })
+      .eq('order_id', orderId)
+    if (countError) {
+      console.error('查询附件数量失败:', countError.message)
+      return NextResponse.json(
+        { success: false, error: '图片保存失败' },
+        { status: 500 }
+      )
+    }
+    if ((attachmentCount ?? 0) >= ATTACHMENT_MAX_PER_ORDER) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `该订单附件数量已达上限（${ATTACHMENT_MAX_PER_ORDER} 张）`,
+        },
+        { status: 403 }
+      )
+    }
+
     // 10) 上传：路径 {orderId}/{uuid}.{ext}（随机 UUID 防枚举）
     const uploadPath = buildAttachmentUploadPath(
       orderId,
@@ -191,24 +234,8 @@ export async function POST(request: NextRequest) {
       .from(ATTACHMENT_BUCKET)
       .getPublicUrl(uploadPath)
 
-    // 11) 关联上传者（匿名订单为 null）
-    let uploadedBy: string | null = null
-    try {
-      const user = await getSessionUser()
-      uploadedBy = user?.id ?? null
-    } catch {
-      uploadedBy = null
-    }
-
-    // 软封禁（blacklist）：已登录的拉黑用户禁止上传附件（匿名游客不受影响）
-    if (uploadedBy && (await isSessionUserSoftBanned())) {
-      return NextResponse.json(
-        { success: false, error: '账户已被限制使用，请联系管理员' },
-        { status: 403 }
-      )
-    }
-
-    // 12) 写入 order_attachments（service_role 绕过 RLS）
+    // 11) 写入 order_attachments（service_role 绕过 RLS；
+    //     uploadedBy 已在 4b 步会话关联时取得，匿名订单为 null）
     const { data: attachment, error: insertError } = await admin
       .from('order_attachments')
       .insert({

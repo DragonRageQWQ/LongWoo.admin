@@ -32,7 +32,7 @@ export default function SamplerPage() {
       />
 
       {/* 页头（与 /profile 顶部一致的品牌角标） */}
-      <header className="relative z-10 border-b border-neutral-200 bg-white/80 backdrop-blur">
+      <header className="relative z-30 border-b border-neutral-200 bg-white/80 backdrop-blur">
         <div className="max-w-7xl mx-auto w-full px-5 py-3.5 flex items-center justify-between gap-4">
           <Link
             href="/"

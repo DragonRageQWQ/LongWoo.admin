@@ -33,6 +33,8 @@ export const MAX_PAGE_LIMIT = 100 // 分页查询每页最大记录数
 // ===== 文件上传 =====
 export const AVATAR_MAX_SIZE = 2 * 1024 * 1024 // 2MB
 export const AVATAR_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const
+// 每订单附件数量上限（R4-F1）：防止匿名/已登录用户对同一订单无上限上传，造成存储成本滥用
+export const ATTACHMENT_MAX_PER_ORDER = 10
 
 // ===== 估价价格范围 =====
 export const ESTIMATE_PRICE_MIN = 100       // 最低 100 RMB

@@ -99,11 +99,16 @@ export async function POST(request: Request) {
         )
       }
 
-      const [ipLimit, emailLimit] = await Promise.all([
-        checkRateLimit(`passwordlogin:ip:${ip}`, 10, RATE_LIMIT_OTP_WINDOW),
-        checkRateLimit(`passwordlogin:email:${normalizedEmail}`, 5, RATE_LIMIT_OTP_WINDOW),
-      ])
-      if (!ipLimit.allowed || !emailLimit.allowed) {
+      // 修复（R4-B1）：仅保留 IP 前置限额（限制单源暴力，且只消耗攻击者自身配额）。
+      // 邮箱维度不再预消耗：避免攻击者在凭据校验前打满邮箱配额导致
+      // 正确密码也被 429 误伤（账号级登录 DoS）。失败次数统一由下方
+      // lockKey（15 分钟 5 次失败锁定）在凭据验证失败后计数。
+      const ipLimit = await checkRateLimit(
+        `passwordlogin:ip:${ip}`,
+        10,
+        RATE_LIMIT_OTP_WINDOW
+      )
+      if (!ipLimit.allowed) {
         return NextResponse.json(
           buildLoginError(LOGIN_ERROR_CODES.RATE_LIMITED, '登录尝试过于频繁，请稍后再试'),
           { status: 429 }
@@ -181,6 +186,9 @@ export async function POST(request: Request) {
     }
 
     // ===== 速率限制：基于 IP（每分钟最多10次登录尝试） =====
+    // 修复（R4-B1）：邮箱维度不再于验证码校验前预消耗配额，
+    // 改为验证码校验失败后计数（见下方 OTP_INVALID 分支），
+    // 使正确验证码的登录请求不被失败配额误伤。
     const ipRateLimit = await checkRateLimit(
       `login:${ip}`,
       10,
@@ -189,19 +197,6 @@ export async function POST(request: Request) {
     if (!ipRateLimit.allowed) {
       return NextResponse.json(
         buildLoginError(LOGIN_ERROR_CODES.RATE_LIMITED, '尝试过于频繁，请1分钟后再试'),
-        { status: 429 }
-      )
-    }
-
-    // ===== 速率限制：基于邮箱（每分钟最多5次登录尝试） =====
-    const emailRateLimit = await checkRateLimit(
-      `login:${normalizedEmail}`,
-      5,
-      RATE_LIMIT_OTP_WINDOW
-    )
-    if (!emailRateLimit.allowed) {
-      return NextResponse.json(
-        buildLoginError(LOGIN_ERROR_CODES.RATE_LIMITED, '该邮箱尝试过于频繁，请稍后再试'),
         { status: 429 }
       )
     }
@@ -227,6 +222,21 @@ export async function POST(request: Request) {
         return NextResponse.json(
           buildLoginError(LOGIN_ERROR_CODES.OTP_SYSTEM_ERROR, '系统繁忙，请重试'),
           { status: 500 }
+        )
+      }
+
+      // 修复（R4-B1）：验证码错误后才计数邮箱失败（1 分钟最多 5 次失败）。
+      // 正确验证码走 valid=true 分支，不再被失败配额误伤；
+      // 暴力枚举防护由 verifyOtp 内置 attempts（每验证码最多 5 次尝试即失效）兜底。
+      const emailFailLimit = await checkRateLimit(
+        `login:emailfail:${normalizedEmail}`,
+        RATE_LIMIT_LOGIN_MAX_FAILS,
+        RATE_LIMIT_OTP_WINDOW
+      )
+      if (!emailFailLimit.allowed) {
+        return NextResponse.json(
+          buildLoginError(LOGIN_ERROR_CODES.RATE_LIMITED, '该邮箱尝试过于频繁，请稍后再试'),
+          { status: 429 }
         )
       }
       return NextResponse.json(

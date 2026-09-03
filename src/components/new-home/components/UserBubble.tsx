@@ -9,6 +9,7 @@ import { useSession, clearSessionCache } from "@/components/providers/SessionPro
 import { logoutUser } from "@/actions/auth-actions";
 import { formatDate } from "@/lib/utils";
 import { COPY, type Gt2Lang } from "../copy";
+import GlobeLangMenu from "@/components/i18n/GlobeLangMenu";
 
 interface NotificationItem {
   id: string;
@@ -178,18 +179,12 @@ export default function UserBubble({
 
   return (
     <div className="gt2-dock" ref={wrapRef}>
-      {/* 1. 语言切换圆：中 / En 点击直接切换 */}
-      <button
-        type="button"
-        className="gt2-dock-circle gt2-dock-lang"
-        onClick={() => onLangChange(lang === "zh" ? "en" : "zh")}
-        aria-label={c.langLabel}
-        title={c.langLabel}
-      >
-        <span data-on={lang === "zh"}>中</span>
-        <i aria-hidden="true">/</i>
-        <span data-on={lang === "en"}>En</span>
-      </button>
+      {/* 1. 语言切换：地球 icon（hover 提示 / 点击下拉列表） */}
+      <GlobeLangMenu
+        value={lang}
+        onSelect={(next) => onLangChange(next)}
+        tip={lang === "en" ? "Switch language" : "语言切换"}
+      />
 
       {/* 2. 站内信铃铛圆：点击向上弹出通知面板 */}
       <div className="gt2-dock-pop">

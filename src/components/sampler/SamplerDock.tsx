@@ -16,6 +16,7 @@ import {
 import { useSession, clearSessionCache } from "@/components/providers/SessionProvider";
 import { logoutUser } from "@/actions/auth-actions";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
+import GlobeLangMenu from "@/components/i18n/GlobeLangMenu";
 import type { SamplerSnapshot } from "@/components/gray-test/UnifiedSampler";
 import "./sampler-dock.css";
 
@@ -96,11 +97,10 @@ export default function SamplerDock() {
 
   /**
    * 语言切换（取色器内部保留现场，不做整页跳转）：
-   * 与首页一致即时切换字形高亮；语言持久化到 cookie/localStorage，
+   * 与首页一致即时切换；语言持久化到 cookie/localStorage，
    * 后续普通导航（个人中心等）按新语言渲染。
    */
-  const handleLangToggle = useCallback(() => {
-    const next: "zh" | "en" = uiLang === "zh" ? "en" : "zh";
+  const handleLangSelect = useCallback((next: "zh" | "en") => {
     setUiLang(next);
     try {
       localStorage.setItem(LANG_KEY, next);
@@ -109,7 +109,7 @@ export default function SamplerDock() {
     }
     document.cookie = `${LANG_KEY}=${next}; path=/; max-age=31536000; SameSite=Lax`;
     document.documentElement.lang = next === "en" ? "en" : "zh-CN";
-  }, [uiLang]);
+  }, []);
 
   const openExport = useCallback(() => {
     setPanel((p) => (p === "export" ? "none" : "export"));
@@ -205,18 +205,12 @@ export default function SamplerDock() {
   return (
     <div className="sd" ref={wrapRef}>
       <div className="gt2-dock">
-      {/* 1. 语言切换圆（与首页一致：中 / En） */}
-      <button
-        type="button"
-        className="gt2-dock-circle gt2-dock-lang"
-        onClick={handleLangToggle}
-        aria-label="切换语言 / Switch language"
-        title="切换语言"
-      >
-        <span data-on={uiLang === "zh"}>中</span>
-        <i aria-hidden="true">/</i>
-        <span data-on={uiLang === "en"}>En</span>
-      </button>
+      {/* 1. 语言切换：地球 icon（hover 提示 / 点击下拉列表，与首页一致） */}
+      <GlobeLangMenu
+        value={uiLang}
+        onSelect={handleLangSelect}
+        tip={uiLang === "en" ? "Switch language" : "语言切换"}
+      />
 
       {/* 2. 数据导出圆（需登录 + 管理员 + 测试B 授权） */}
       <div className="gt2-dock-pop">

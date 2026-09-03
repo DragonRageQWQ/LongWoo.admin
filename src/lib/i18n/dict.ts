@@ -10,6 +10,21 @@ import { EN_ADMIN } from './en-admin'
 
 export type Lang = 'zh' | 'en'
 
+/**
+ * 全站受支持语言列表（语言菜单 / 地球下拉展示用）
+ * 新增全站语言时：1) 扩展 Lang 联合类型  2) 在 I18N_DICTS 补充字典
+ * 3) 在此追加一条 meta（label 为该语言的本地化名称）即可，菜单自动展示。
+ */
+export const LANG_META: { code: Lang; label: string }[] = [
+  { code: 'zh', label: '简体中文' },
+  { code: 'en', label: 'English' },
+]
+
+/** 由语言代码取展示名（兜底返回代码本身） */
+export function langLabel(code: Lang): string {
+  return LANG_META.find((m) => m.code === code)?.label ?? code
+}
+
 export const I18N_DICTS: Record<Lang, Record<string, string>> = {
   zh: {
     // 通用
@@ -22,6 +37,7 @@ export const I18N_DICTS: Record<Lang, Record<string, string>> = {
     'nav.home': '首页',
     'nav.services': '服务项目',
     'nav.about': '工作室介绍',
+    'lang.switchHint': '切换语言',
 
     // 顶部导航
     'header.submitOrder': '提交委托',
@@ -84,6 +100,7 @@ export const I18N_DICTS: Record<Lang, Record<string, string>> = {
     'nav.home': 'Home',
     'nav.services': 'Services',
     'nav.about': 'About the Studio',
+    'lang.switchHint': 'Switch language',
 
     // 顶部导航
     'header.submitOrder': 'Submit Commission',
