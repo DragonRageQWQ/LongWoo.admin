@@ -7,18 +7,50 @@ import { ZH_EXTRA } from './zh-extra'
 import { EN_EXTRA } from './en-extra'
 import { ZH_ADMIN } from './zh-admin'
 import { EN_ADMIN } from './en-admin'
+import { ZH_HANT_PAGES } from './zh-hant-pages'
+import { ZH_HANT_ADMIN } from './zh-hant-admin'
+import { JA_PAGES } from './ja-pages'
+import { JA_ADMIN } from './ja-admin'
+import { KO_PAGES } from './ko-pages'
+import { KO_ADMIN } from './ko-admin'
+import { RU_PAGES } from './ru-pages'
+import { RU_ADMIN } from './ru-admin'
+import { FR_PAGES } from './fr-pages'
+import { FR_ADMIN } from './fr-admin'
 
-export type Lang = 'zh' | 'en'
+export type Lang = 'zh' | 'en' | 'zh-Hant' | 'ja' | 'ko' | 'ru' | 'fr'
 
 /**
  * 全站受支持语言列表（语言菜单 / 地球下拉展示用）
- * 新增全站语言时：1) 扩展 Lang 联合类型  2) 在 I18N_DICTS 补充字典
+ * 新增全站语言时：1) 扩展 Lang 联合类型  2) 补充对应字典文件
  * 3) 在此追加一条 meta（label 为该语言的本地化名称）即可，菜单自动展示。
  */
 export const LANG_META: { code: Lang; label: string }[] = [
   { code: 'zh', label: '简体中文' },
   { code: 'en', label: 'English' },
+  { code: 'zh-Hant', label: '繁體中文' },
+  { code: 'ja', label: '日本語' },
+  { code: 'ko', label: '한국어' },
+  { code: 'ru', label: 'Русский' },
+  { code: 'fr', label: 'Français' },
 ]
+
+const SUPPORTED = new Set<string>(LANG_META.map((m) => m.code))
+
+/** 宽松解析语言代码（非法值返回 null，便于调用方回退） */
+export function tryLang(v: unknown): Lang | null {
+  return typeof v === 'string' && SUPPORTED.has(v) ? (v as Lang) : null
+}
+
+/** 严格解析：非法值一律回退简体中文 */
+export function parseLang(v: unknown): Lang {
+  return tryLang(v) ?? 'zh'
+}
+
+/** 语言代码 → html lang 属性（BCP47） */
+export function htmlLang(code: Lang): string {
+  return code === 'zh' ? 'zh-CN' : code
+}
 
 /** 由语言代码取展示名（兜底返回代码本身） */
 export function langLabel(code: Lang): string {
@@ -152,13 +184,33 @@ export const I18N_DICTS: Record<Lang, Record<string, string>> = {
     'login.brand.title2': 'Every piece, crafted with care',
     'login.brand.desc': 'Focused on high-quality custom service, from design to delivery, every detail carries our passion and expertise.',
   },
+  'zh-Hant': ZH_HANT_PAGES,
+  ja: JA_PAGES,
+  ko: KO_PAGES,
+  ru: RU_PAGES,
+  fr: FR_PAGES,
 }
 
 // 合并补充字典（profile / ai / admin 页面）
 const MERGED_ZH = { ...I18N_DICTS.zh, ...ZH_EXTRA, ...ZH_ADMIN }
 const MERGED_EN = { ...I18N_DICTS.en, ...EN_EXTRA, ...EN_ADMIN }
+const MERGED_ZH_HANT = { ...I18N_DICTS['zh-Hant'], ...ZH_HANT_ADMIN }
+const MERGED_JA = { ...I18N_DICTS.ja, ...JA_ADMIN }
+const MERGED_KO = { ...I18N_DICTS.ko, ...KO_ADMIN }
+const MERGED_RU = { ...I18N_DICTS.ru, ...RU_ADMIN }
+const MERGED_FR = { ...I18N_DICTS.fr, ...FR_ADMIN }
+
+const MERGED_DICTS: Record<Lang, Record<string, string>> = {
+  zh: MERGED_ZH,
+  en: MERGED_EN,
+  'zh-Hant': MERGED_ZH_HANT,
+  ja: MERGED_JA,
+  ko: MERGED_KO,
+  ru: MERGED_RU,
+  fr: MERGED_FR,
+}
 
 export function translate(lang: Lang, key: string): string {
-  const dict = (lang === 'en' ? MERGED_EN : MERGED_ZH)
+  const dict = MERGED_DICTS[lang]
   return dict[key] !== undefined ? dict[key] : key
 }

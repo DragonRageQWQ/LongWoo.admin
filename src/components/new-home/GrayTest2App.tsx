@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { COPY, GT2_TABS, GT2_TAB_STORAGE_KEY, type Gt2Lang, type Gt2TabId } from "./copy";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
+import { COPY, GT2_TABS, GT2_TAB_STORAGE_KEY, type Gt2TabId } from "./copy";
 import AgentPanel from "./components/AgentPanel";
 import FursuitPanel from "./components/FursuitPanel";
 import EntryPanel from "./components/EntryPanel";
@@ -24,8 +25,10 @@ function NavLabel({ text }: { text: string }) {
 
 export default function GrayTest2App() {
   const [active, setActive] = useState<Gt2TabId>("agent");
-  const [lang, setLang] = useState<Gt2Lang>("zh");
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // 语言源：全局 LanguageProvider（cookie/localStorage/?lang=），切换走整页跳转
+  const { lang, setLang } = useLanguage();
 
   const activeIdx = GT2_TABS.findIndex((t) => t.id === active);
   const navRef = useRef<HTMLElement>(null);
@@ -196,6 +199,18 @@ export default function GrayTest2App() {
 
   const isActive = useCallback((id: Gt2TabId) => active === id, [active]);
 
+  /**
+   * 导航主词：en 模式下沿用 zh 词作副标签（保持原英中双语文案）；其它语言用该语言主词，
+   * 英文微标签固定由 GT2_TABS.en 提供（品牌双语文案风格）。
+   */
+  const navWord = useCallback(
+    (id: Gt2TabId) => {
+      if (lang === "en") return GT2_TABS.find((t) => t.id === id)?.zh ?? "";
+      return copy.tabs[id];
+    },
+    [lang, copy]
+  );
+
   return (
     <div className="gt2-root">
       <button
@@ -257,7 +272,7 @@ export default function GrayTest2App() {
                   <NavLabel text={tab.en} />
                 </span>
                 <span className="gt2-nav-zh">
-                  <NavLabel text={tab.zh} />
+                  <NavLabel text={navWord(tab.id)} />
                 </span>
               </button>
             </div>

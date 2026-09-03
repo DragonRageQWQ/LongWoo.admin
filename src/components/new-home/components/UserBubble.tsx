@@ -182,8 +182,8 @@ export default function UserBubble({
       {/* 1. 语言切换：地球 icon（hover 提示 / 点击下拉列表） */}
       <GlobeLangMenu
         value={lang}
-        onSelect={(next) => onLangChange(next)}
-        tip={lang === "en" ? "Switch language" : "语言切换"}
+        onSelect={(next) => onLangChange(next as Gt2Lang)}
+        tip={c.langTip}
       />
 
       {/* 2. 站内信铃铛圆：点击向上弹出通知面板 */}

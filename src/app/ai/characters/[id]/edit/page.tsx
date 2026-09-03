@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { cookies } from 'next/headers'
-import { translate, type Lang } from '@/lib/i18n/dict'
+import { translate, parseLang, type Lang } from '@/lib/i18n/dict'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSessionUser } from '@/lib/supabase/server'
 import { isValidUUID } from '@/lib/order-utils'
@@ -30,7 +30,7 @@ export default async function EditCharacterPage({ params }: { params: Promise<{ 
   const { id } = await params
 
   // 服务端读取语言 cookie（与根布局注入 LanguageProvider 的方式一致，避免 hydration mismatch）
-  const lang: Lang = (await cookies()).get('lw_lang')?.value === 'en' ? 'en' : 'zh'
+  const lang: Lang = parseLang((await cookies()).get('lw_lang')?.value)
   const t = (key: string) => translate(lang, key)
 
   // ID 校验

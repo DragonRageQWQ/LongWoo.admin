@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic'
 import { cookies } from 'next/headers'
-import { translate, type Lang } from '@/lib/i18n/dict'
+import { translate, parseLang, type Lang } from '@/lib/i18n/dict'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
@@ -23,7 +23,7 @@ const CharacterEditForm = dynamic(() => import('../../components/CharacterEditFo
  */
 export default async function NewCharacterPage() {
   // 服务端读取语言 cookie（与根布局注入 LanguageProvider 的方式一致，避免 hydration mismatch）
-  const lang: Lang = (await cookies()).get('lw_lang')?.value === 'en' ? 'en' : 'zh'
+  const lang: Lang = parseLang((await cookies()).get('lw_lang')?.value)
   const t = (key: string) => translate(lang, key)
 
   return (

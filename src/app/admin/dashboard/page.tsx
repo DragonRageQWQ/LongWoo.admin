@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import AdminSidebar, { type AdminTab } from "./_components/AdminSidebar";
 import StatsOverview from "./_components/StatsOverview";
 import { getCurrentUser, ZERO_USER_UID } from "@/lib/auth";
-import { translate, type Lang } from "@/lib/i18n/dict";
+import { translate, parseLang, type Lang } from "@/lib/i18n/dict";
 
 // 支持的有效标签页
 const validTabs: AdminTab[] = ["all-orders", "overview", "users", "notifications", "feedback", "settings", "works", "drops"];
@@ -122,7 +122,7 @@ export default async function AdminDashboardPage({
   // 本文件为服务端组件（async + cookies 鉴权），无法使用客户端 hook useLanguage，
   // 故采用同字典的服务端等价实现，保证 SSR 与客户端首次渲染一致。
   const cookieStore = await cookies();
-  const lang: Lang = cookieStore.get("lw_lang")?.value === "en" ? "en" : "zh";
+  const lang: Lang = parseLang(cookieStore.get("lw_lang")?.value);
   const t = (key: string) => translate(lang, key);
 
   return (

@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
-import { translate, type Lang } from "@/lib/i18n/dict";
+import { translate, parseLang, type Lang } from "@/lib/i18n/dict";
 import {
   ClipboardPlus,
   Clock,
@@ -189,7 +189,7 @@ export default async function StatsOverview() {
   // 通过 getCurrentUser 真实网络验证 access token + 校验 admin 角色。
   // 服务端组件 i18n：cookies 读取语言 + translate()（与根布局一致，避免 hydration mismatch）
   const cookieStore = await cookies();
-  const lang: Lang = cookieStore.get("lw_lang")?.value === "en" ? "en" : "zh";
+  const lang: Lang = parseLang(cookieStore.get("lw_lang")?.value);
   const t = (key: string) => translate(lang, key);
 
   const currentUser = await getCurrentUser();

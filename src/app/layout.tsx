@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { LanguageProvider } from "@/components/i18n/LanguageProvider";
-import type { Lang } from "@/lib/i18n/dict";
+import { htmlLang, parseLang, type Lang } from "@/lib/i18n/dict";
 import ImageProtection from "@/components/ImageProtection";
 
 /**
@@ -47,10 +47,10 @@ export default async function RootLayout({
 }>) {
   // 服务端读取语言 cookie，注入 Provider 保证 SSR 与客户端首次渲染一致（避免 hydration mismatch）
   const cookieStore = await cookies();
-  const lang: Lang = cookieStore.get("lw_lang")?.value === "en" ? "en" : "zh";
+  const lang: Lang = parseLang(cookieStore.get("lw_lang")?.value);
 
   return (
-    <html lang={lang === "en" ? "en" : "zh-CN"} className="h-full antialiased" suppressHydrationWarning>
+    <html lang={htmlLang(lang)} className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full">
         <link rel="preconnect" href="https://cdn-font.hyperos.mi.com" />
         <link rel="preconnect" href="https://cdn-file.hyperos.mi.com" crossOrigin="anonymous" />

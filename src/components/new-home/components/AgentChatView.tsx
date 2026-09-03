@@ -393,7 +393,7 @@ export default function AgentChatView({
               </h2>
               <p className="gt2-chat-header-sub">
                 {character?.user_nickname
-                  ? `${COPY[lang].agent.chatHello} · 叫你「${character.user_nickname}」`
+                  ? c.chatHelloWithName.replace("{name}", character.user_nickname)
                   : c.chatHello}
               </p>
             </div>

@@ -1,4 +1,12 @@
-export type Gt2Lang = "zh" | "en";
+import type { Lang } from "@/lib/i18n/dict";
+import { JA_COPY } from "./copy-ja";
+import { KO_COPY } from "./copy-ko";
+import { RU_COPY } from "./copy-ru";
+import { FR_COPY } from "./copy-fr";
+import { ZH_HANT_COPY } from "./copy-zhhant";
+
+/** 首页语言与全站 Lang 对齐（zh / en / zh-Hant / ja / ko / ru / fr） */
+export type Gt2Lang = Lang;
 export type Gt2TabId = "agent" | "fursuit" | "shop" | "check" | "about";
 
 export const GT2_TABS: { id: Gt2TabId; en: string; zh: string }[] = [
@@ -26,6 +34,8 @@ export interface Gt2EntryCopy {
 }
 
 export interface Gt2Copy {
+  /** 导航/抽屉当前语言主词（随 lang 变化；en 语言时页面仍展示 GT2_TABS.zh 作副标签） */
+  tabs: Record<Gt2TabId, string>;
   agent: {
     kicker: string;
     heroTitle: string;
@@ -64,6 +74,8 @@ export interface Gt2Copy {
     chatEmpty: string;
     chatCreateFirst: string;
     chatHello: string;
+    /** 带昵称插值的问候头（{name} 为角色对你的称呼） */
+    chatHelloWithName: string;
     chatInputPh: string;
     chatClearTitle: string;
     chatClearConfirm: string;
@@ -258,6 +270,7 @@ export interface Gt2Copy {
     signupEn: string;
     signupZh: string;
     langLabel: string;
+    langTip: string;
     notifLabel: string;
     notifEmpty: string;
     notifLoginHint: string;
@@ -276,6 +289,7 @@ export interface Gt2Copy {
 
 export const COPY: Record<Gt2Lang, Gt2Copy> = {
   zh: {
+    tabs: { agent: "智能体", fursuit: "委托兽装", shop: "在线商店", check: "查询", about: "关于" },
     agent: {
       kicker: "LONGWOO · CHARACTER LAB",
       heroTitle: "创建你的角色",
@@ -318,6 +332,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       chatEmpty: "还没有角色，创建你的第一个角色吧",
       chatCreateFirst: "去创建",
       chatHello: "和 TA 打个招呼吧",
+      chatHelloWithName: "和 TA 打个招呼吧 · 叫你「{name}」",
       chatInputPh: "对 TA 说点什么…",
       chatClearTitle: "清空对话",
       chatClearConfirm: "确定要清空和这个角色的全部对话记录吗？",
@@ -565,6 +580,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       signupEn: "Sign up",
       signupZh: "登录/注册",
       langLabel: "语言",
+      langTip: "切换语言",
       notifLabel: "站内信",
       notifEmpty: "暂无通知",
       notifLoginHint: "登录后可查看站内信",
@@ -581,6 +597,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
     },
   },
   en: {
+    tabs: { agent: "Agent", fursuit: "Fursuit", shop: "Web Shop", check: "Check", about: "About" },
     agent: {
       kicker: "LONGWOO · CHARACTER LAB",
       heroTitle: "Create Your Character",
@@ -623,6 +640,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       chatEmpty: "No characters yet — create your first one",
       chatCreateFirst: "Create",
       chatHello: "Say hi to your character",
+      chatHelloWithName: "Say hi to your character · they call you “{name}”",
       chatInputPh: "Say something…",
       chatClearTitle: "Clear chat",
       chatClearConfirm: "Clear all chat history with this character?",
@@ -870,6 +888,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       signupEn: "Sign up",
       signupZh: "登录/注册",
       langLabel: "Language",
+      langTip: "Switch language",
       notifLabel: "Inbox",
       notifEmpty: "No notifications yet",
       notifLoginHint: "Sign in to view your inbox",
@@ -885,4 +904,9 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       profileBtn: "Profile",
     },
   },
+  "zh-Hant": ZH_HANT_COPY,
+  ja: JA_COPY,
+  ko: KO_COPY,
+  ru: RU_COPY,
+  fr: FR_COPY,
 };

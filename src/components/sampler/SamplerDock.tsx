@@ -67,7 +67,9 @@ function buildExportText(s: SamplerSnapshot): string {
 
 export default function SamplerDock() {
   const { profile } = useSession();
-  const { lang: initialLang } = useLanguage();
+  // 取色器文案仅提供 zh/en：全站语言收敛为二元（en → en，其它 → zh）
+  const { lang: providerLang } = useLanguage();
+  const initialLang = providerLang === "en" ? "en" : "zh";
   const [uiLang, setUiLang] = useState<"zh" | "en">(initialLang);
   const [panel, setPanel] = useState<PanelId>("none");
   const [exportState, setExportState] = useState<ExportPhase>({ phase: "idle" });
@@ -208,7 +210,7 @@ export default function SamplerDock() {
       {/* 1. 语言切换：地球 icon（hover 提示 / 点击下拉列表，与首页一致） */}
       <GlobeLangMenu
         value={uiLang}
-        onSelect={handleLangSelect}
+        onSelect={(next) => handleLangSelect(next === "en" ? "en" : "zh")}
         tip={uiLang === "en" ? "Switch language" : "语言切换"}
       />
 

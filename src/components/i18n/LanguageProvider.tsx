@@ -14,17 +14,19 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { translate, type Lang } from '@/lib/i18n/dict'
+import { htmlLang, translate, tryLang, type Lang } from '@/lib/i18n/dict'
 
 const STORAGE_KEY = 'lw_lang'
 
 export function detectLang(): Lang {
   if (typeof window === 'undefined') return 'zh'
   const urlLang = new URLSearchParams(window.location.search).get('lang')
-  if (urlLang === 'en' || urlLang === 'zh') return urlLang
+  const fromUrl = tryLang(urlLang)
+  if (fromUrl) return fromUrl
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'en' || stored === 'zh') return stored
+    const fromStorage = tryLang(stored)
+    if (fromStorage) return fromStorage
   } catch {
     /* ignore */
   }
@@ -33,7 +35,8 @@ export function detectLang(): Lang {
     .find((c) => c.startsWith(`${STORAGE_KEY}=`))
   if (cookie) {
     const v = cookie.split('=')[1]
-    if (v === 'en' || v === 'zh') return v
+    const fromCookie = tryLang(v)
+    if (fromCookie) return fromCookie
   }
   return 'zh'
 }
@@ -73,6 +76,11 @@ export function LanguageProvider({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (detected !== lang) setLangState(detected)
   }, [])
+
+  // 当前语言变化时同步 html lang（覆盖直接以 ?lang= 深链进入等 SSR 未感知的场景）
+  useEffect(() => {
+    document.documentElement.lang = htmlLang(lang)
+  }, [lang])
 
   const t = useCallback(
     (key: string) => translate(lang, key),
