@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import UnifiedSampler from "@/components/gray-test/UnifiedSampler";
 
 /**
@@ -31,18 +30,24 @@ export default function SamplerPage() {
         aria-hidden="true"
       />
 
-      {/* 页头 */}
+      {/* 页头（与 /profile 顶部一致的品牌角标） */}
       <header className="relative z-10 border-b border-neutral-200 bg-white/80 backdrop-blur">
-        <div className="max-w-7xl mx-auto w-full px-5 py-3.5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 rounded-full bg-white border border-neutral-200 text-neutral-600 text-xs px-3.5 py-1.5 hover:bg-neutral-100 hover:text-neutral-900 transition-colors flex-shrink-0 shadow-sm"
-              aria-label="返回首页"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              首页
-            </Link>
+        <div className="max-w-7xl mx-auto w-full px-5 py-3.5 flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            aria-label="LongWoo 龙坞 · 返回首页"
+            className="flex items-center gap-2.5 text-neutral-900 flex-shrink-0 no-underline hover:opacity-80 transition-opacity"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/longwoo-logo.svg" alt="LongWoo 龙坞" className="w-7 h-7 block" />
+            <span className="text-[15px] font-bold tracking-[0.02em] leading-none">龙坞</span>
+            <span className="hidden sm:inline text-[11px] text-neutral-400 font-mono tracking-[0.08em] leading-none">
+              LongWoo Studio
+            </span>
+          </Link>
+
+          <div className="min-w-0 flex-1 flex items-center gap-4">
+            <span className="hidden sm:block w-px h-5 bg-neutral-200 flex-shrink-0" aria-hidden="true" />
             <div className="min-w-0">
               <h1 className="text-base font-bold tracking-tight truncate">图片与毛布取样器</h1>
               <p className="text-[10px] text-neutral-400 mt-0.5 font-mono tracking-wider truncate">
@@ -50,6 +55,7 @@ export default function SamplerPage() {
               </p>
             </div>
           </div>
+
           <span className="hidden sm:inline-flex items-center rounded-full bg-neutral-900 border border-neutral-900 px-2.5 py-1 text-[10px] font-medium text-white flex-shrink-0">
             正式版
           </span>
