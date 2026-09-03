@@ -30,7 +30,7 @@ import {
   matchFabrics,
 } from "@/lib/fabric-types";
 import { loadFabricData } from "@/lib/fabric-data";
-import { rgbToHex, matchPantones } from "@/lib/color-math";
+import { rgbToHex, matchPantones, type PantoneRef } from "@/lib/color-math";
 import { PANTONE_DATA } from "@/lib/pantone-data";
 import {
   IDENTITY_VIEW,
@@ -54,6 +54,47 @@ interface PickPoint {
   b: number
 }
 
+/** 导出色卡快照（右上角「数据导出」面板读取） */
+export interface SamplerSnapshot {
+  app: "longwoo-fabric-sampler"
+  version: 1
+  exportedAt: string
+  source: { name: string | null; width: number | null; height: number | null }
+  database: {
+    pantoneCount: number
+    fabricCount: number
+    fabricSource: "loading" | "sample" | "external"
+    vendors: string[]
+    vendorsOn: string[]
+  }
+  points: Array<{
+    index: number
+    x: number
+    y: number
+    hex: string
+    rgb: { r: number; g: number; b: number }
+    oklab: [number, number, number]
+    pantones: PantoneRef[]
+    fabrics: Array<{
+      skuId: string
+      name: string
+      vendor: string
+      fabricKind: string
+      ph: number
+      hex: string
+      source: string
+      delta: number
+    }>
+  }>
+}
+
+declare global {
+  interface Window {
+    /** 取样器最新快照：每次取色点/毛布库变化时由 UnifiedSampler 维护 */
+    __longwooSamplerSnapshot?: SamplerSnapshot | null
+  }
+}
+
 const MAX_POINTS = 10
 const PREVIEW_N = 3 // 参数卡内毛布预览条数
 const PANTONE_N = 3 // 参数卡内潘通参考色条数
@@ -68,6 +109,7 @@ export default function UnifiedSampler() {
   // ===== 图片 =====
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null)
+  const [fileName, setFileName] = useState<string>("")
   const [containerSize, setContainerSize] = useState<{ w: number; h: number } | null>(null)
   const [dragOver, setDragOver] = useState(false)
   // 图片视图变换：缩放 + 平移（滚轮 / 双指捏合，放大后可拖动平移）
@@ -234,6 +276,50 @@ export default function UnifiedSampler() {
     return map
   }, [points, activeFabrics])
 
+  // 最新取色快照同步到 window（右上角「数据导出」面板读取）
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.__longwooSamplerSnapshot = {
+      app: "longwoo-fabric-sampler",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      source: {
+        name: fileName || null,
+        width: imageSize?.w ?? null,
+        height: imageSize?.h ?? null,
+      },
+      database: {
+        pantoneCount: PANTONE_DATA.length,
+        fabricCount: fabrics.length,
+        fabricSource: dataSource,
+        vendors: Object.keys(vendorOn),
+        vendorsOn: Object.keys(vendorOn).filter((v) => vendorOn[v]),
+      },
+      points: points.map((p, idx) => {
+        const d = pointDerived.get(p.id)
+        return {
+          index: idx + 1,
+          x: p.x,
+          y: p.y,
+          hex: rgbToHex(p.r, p.g, p.b),
+          rgb: { r: p.r, g: p.g, b: p.b },
+          oklab: d?.oklab ?? [0, 0, 0],
+          pantones: d?.pantones ?? [],
+          fabrics: (d?.previews ?? []).map((m) => ({
+            skuId: m.fabric.skuId,
+            name: m.fabric.name,
+            vendor: m.fabric.vendor,
+            fabricKind: m.fabric.fabricKind,
+            ph: m.fabric.ph,
+            hex: m.fabric.hex,
+            source: m.fabric.source,
+            delta: Number(m.delta.toFixed(3)),
+          })),
+        }
+      }),
+    }
+  }, [points, pointDerived, imageSize, fileName, fabrics, vendorOn, dataSource])
+
   // 容器尺寸监听
   useEffect(() => {
     const el = containerRef.current
@@ -308,6 +394,7 @@ export default function UnifiedSampler() {
         img.onload = () => {
           setImageUrl(url)
           setImageSize({ w: img.naturalWidth, h: img.naturalHeight })
+          setFileName(file.name)
           const c = document.createElement("canvas")
           c.width = img.naturalWidth
           c.height = img.naturalHeight

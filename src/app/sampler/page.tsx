@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import UnifiedSampler from "@/components/gray-test/UnifiedSampler";
+import SamplerDock from "@/components/sampler/SamplerDock";
 
 /**
  * 图片与毛布取样器（正式版 · 生产环境公开入口）
@@ -56,9 +57,9 @@ export default function SamplerPage() {
             </div>
           </div>
 
-          <span className="hidden sm:inline-flex items-center rounded-full bg-neutral-900 border border-neutral-900 px-2.5 py-1 text-[10px] font-medium text-white flex-shrink-0">
-            正式版
-          </span>
+          <div className="flex-shrink-0">
+            <SamplerDock />
+          </div>
         </div>
       </header>
 

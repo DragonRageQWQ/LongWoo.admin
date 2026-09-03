@@ -1,0 +1,310 @@
+/* ============================================================
+   取色器右上角 Dock（语言 / 数据导出 / 用户气泡）
+   视觉与官网首页右上角 dock 完全一致（纸墨极简 Ink on Paper）
+   样式作用域限定在 .sd 容器内，避免与首页同名类互相覆盖
+   ============================================================ */
+.sd {
+  --gt2-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --gt2-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --gt2-ink: #0a0a0a;
+  --gt2-mute: #9ca3af;
+  --gt2-soft: #737373;
+  --gt2-line: #e8e8e8;
+  --gt2-paper: #ffffff;
+  --gt2-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "Menlo", monospace;
+}
+
+.sd .gt2-dock {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* ---------- 圆形气泡（语言 / 导出） ---------- */
+.sd .gt2-dock-circle {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--gt2-ink);
+  background: transparent;
+  color: var(--gt2-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  transition: background 0.32s var(--gt2-ease), color 0.32s var(--gt2-ease),
+    transform 0.4s var(--gt2-spring), box-shadow 0.35s var(--gt2-ease);
+}
+
+.sd .gt2-dock-circle:hover {
+  background: var(--gt2-ink);
+  color: #fff;
+  transform: scale(1.06);
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.35);
+}
+
+.sd .gt2-dock-circle:active {
+  transform: scale(0.96);
+}
+
+.sd .gt2-dock-circle svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* 语言切换圆：中 / En，当前语言高亮 */
+.sd .gt2-dock-lang {
+  gap: 1px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sd .gt2-dock-lang span {
+  color: #c6c6c6;
+  transition: color 0.3s var(--gt2-ease);
+}
+
+.sd .gt2-dock-lang span[data-on="true"] {
+  color: var(--gt2-ink);
+}
+
+.sd .gt2-dock-lang i {
+  font-style: normal;
+  font-size: 9px;
+  color: #dcdcdc;
+  transform: translateY(-0.5px);
+}
+
+.sd .gt2-dock-lang:hover span[data-on="true"] {
+  color: #fff;
+}
+
+.sd .gt2-dock-lang:hover span:not([data-on="true"]) {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* ---------- 弹层容器与面板 ---------- */
+.sd .gt2-dock-pop {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+}
+
+@keyframes sd-pop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -12px, 0) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sd .gt2-dock-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 296px;
+  padding: 7px;
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 20px;
+  box-shadow: 0 30px 70px -22px rgba(0, 0, 0, 0.3), 0 4px 14px -6px rgba(0, 0, 0, 0.08);
+  transform-origin: 100% 0%;
+  animation: sd-pop 0.45s var(--gt2-spring) both;
+  z-index: 60;
+}
+
+.sd .gt2-dock-panel--account {
+  width: 186px;
+}
+
+.sd .gt2-dock-panel--export {
+  width: 320px;
+}
+
+.sd .gt2-dock-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 4px;
+}
+
+.sd .gt2-dock-panel-head > span:first-child {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--gt2-soft);
+}
+
+.sd .gt2-dock-panel-head .gt2-field-count {
+  margin-left: auto;
+}
+
+/* ---------- 登录 / 用户胶囊 ---------- */
+.sd .gt2-dock-pill {
+  min-width: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px 0 5px;
+  border-radius: 999px;
+  border: 1.5px solid var(--gt2-ink);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+  color: var(--gt2-ink);
+  transition: background 0.32s var(--gt2-ease), color 0.32s var(--gt2-ease),
+    transform 0.4s var(--gt2-spring), box-shadow 0.35s var(--gt2-ease);
+}
+
+.sd .gt2-dock-pill:hover {
+  background: var(--gt2-ink);
+  color: #fff;
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.35);
+}
+
+.sd .gt2-dock-pill:active {
+  transform: scale(0.97);
+}
+
+.sd .gt2-dock-pill-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--gt2-ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.32s var(--gt2-ease), color 0.32s var(--gt2-ease);
+}
+
+.sd .gt2-dock-pill-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.sd .gt2-dock-pill--signup:hover .gt2-dock-pill-icon {
+  background: #fff;
+  color: var(--gt2-ink);
+}
+
+.sd .gt2-dock-pill-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.sd .gt2-dock-pill-text b {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  opacity: 0.48;
+}
+
+.sd .gt2-dock-pill-text small {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sd .gt2-dock-avatar {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--gt2-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sd .gt2-dock-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sd .gt2-dock-initial {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.sd .gt2-dock-username {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- 账户菜单项 ---------- */
+.sd .gt2-dock-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 11px;
+  border-radius: 12px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--gt2-ink);
+  cursor: pointer;
+  text-decoration: none;
+  text-align: left;
+  transition: background 0.22s var(--gt2-ease);
+}
+
+.sd .gt2-dock-menu-item svg {
+  width: 14px;
+  height: 14px;
+  color: var(--gt2-soft);
+  flex-shrink: 0;
+}
+
+.sd .gt2-dock-menu-item:hover {
+  background: #f6f6f6;
+}
+
+.sd .gt2-dock-menu-item--danger {
+  color: #b91c1c;
+}
+
+.sd .gt2-dock-menu-item--danger svg {
+  color: #b91c1c;
+}
+
+.sd .gt2-dock-menu-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* 窄屏适配 */
+@media (max-width: 640px) {
+  .sd .gt2-dock-panel {
+    width: min(320px, calc(100vw - 28px));
+  }
+
+  .sd .gt2-dock-pill--signup {
+    padding: 0 6px 0 5px;
+  }
+
+  .sd .gt2-dock-pill--signup .gt2-dock-pill-text {
+    display: none;
+  }
+}
