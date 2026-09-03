@@ -18,7 +18,7 @@
  * 毛布数据：真实 fabric-data.json 优先，缺失回退内置示例数据。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Upload, ImagePlus, MousePointerClick, X, Loader2, ChevronDown } from "lucide-react";
+import { Upload, ImagePlus, MousePointerClick, X, Loader2, ChevronDown, Database } from "lucide-react";
 import {
   type FabricMatch,
   type NormalizedFabric,
@@ -61,6 +61,8 @@ const LONG_PRESS_MS = 380 // 长按判定阈值（毫秒）
 const LOUPE_SIZE = 7
 const LOUPE_CELL = 12
 const LOUPE_PX = LOUPE_SIZE * LOUPE_CELL
+/** 尚未导入数据库的毛布种类（折叠展示，仅提示不可选） */
+const PENDING_KINDS = ["弹力短毛", "兔毛", "银狐绒", "麂皮"]
 
 export default function UnifiedSampler() {
   // ===== 图片 =====
@@ -82,6 +84,11 @@ export default function UnifiedSampler() {
   const [fabrics, setFabrics] = useState<NormalizedFabric[]>([])
   const [dataSource, setDataSource] = useState<"loading" | "sample" | "external">("loading")
 
+  // ===== 数据库筛选：商家开关（默认全部开启，关闭后不出现在匹配结果）=====
+  const [vendorOn, setVendorOn] = useState<Record<string, boolean>>({})
+  const [dbOpen, setDbOpen] = useState(false)
+  const [moreKindsOpen, setMoreKindsOpen] = useState(false)
+
   // ===== 状态 =====
   const [status, setStatus] = useState("")
 
@@ -91,6 +98,7 @@ export default function UnifiedSampler() {
   const loupeWrapRef = useRef<HTMLDivElement>(null)
   const loupeCanvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const dbRef = useRef<HTMLDivElement>(null)
   const nextIdRef = useRef(1)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -136,7 +144,70 @@ export default function UnifiedSampler() {
     return Math.round(Math.min(Math.max(fittedH, 260), Math.min(560, viewportCap)))
   }, [imageSize, containerSize])
 
-  // 每点派生数据：OKLab / Pantone Top3 / 毛布 Top3
+  const showStatus = useCallback((msg: string) => {
+    setStatus(msg)
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
+    statusTimerRef.current = setTimeout(() => setStatus(""), 5000)
+  }, [])
+
+  // ===== 数据库筛选派生：商家清单 / 开启商家 / 种类分组 / 全量判断 =====
+  const vendorList = useMemo(() => [...new Set(fabrics.map((f) => f.vendor))], [fabrics])
+  // 关闭的商家完全不参与匹配（含预览 TopN 与计数）
+  const activeFabrics = useMemo(
+    () => fabrics.filter((f) => vendorOn[f.vendor] !== false),
+    [fabrics, vendorOn]
+  )
+  const allVendorsOn = useMemo(
+    () => vendorList.length > 0 && vendorList.every((v) => vendorOn[v] !== false),
+    [vendorList, vendorOn]
+  )
+  // 商家按 fabricKind 分组（真实库均为"长毛"；示例数据含多种类用于开发演示）
+  const kindGroups = useMemo(() => {
+    const byKind = new Map<string, { vendor: string; count: number }[]>()
+    for (const f of fabrics) {
+      const list = byKind.get(f.fabricKind) ?? []
+      const row = list.find((r) => r.vendor === f.vendor)
+      if (row) row.count++
+      else list.push({ vendor: f.vendor, count: 1 })
+      byKind.set(f.fabricKind, list)
+    }
+    return [...byKind.entries()].map(([kind, vendors]) => ({ kind, vendors }))
+  }, [fabrics])
+
+  const toggleVendor = useCallback(
+    (vendor: string) => {
+      setVendorOn((prev) => {
+        const currentlyOn = prev[vendor] !== false
+        // 关闭最后一个开启商家 → 拒绝（毛布色库不能为空）
+        if (currentlyOn) {
+          const onCount = Object.values(prev).filter((v) => v !== false).length
+          if (onCount <= 1) {
+            showStatus("毛布色库至少保留一个商家，不能全部关闭")
+            return prev
+          }
+          return { ...prev, [vendor]: false }
+        }
+        return { ...prev, [vendor]: true }
+      })
+    },
+    [showStatus]
+  )
+
+  // 点击面板外部 → 收起数据库面板
+  useEffect(() => {
+    if (!dbOpen) return
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (dbRef.current && !dbRef.current.contains(e.target as Node)) setDbOpen(false)
+    }
+    document.addEventListener("mousedown", onDown)
+    document.addEventListener("touchstart", onDown)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      document.removeEventListener("touchstart", onDown)
+    }
+  }, [dbOpen])
+
+  // 每点派生数据：OKLab / Pantone Top3 / 毛布 Top3（仅来自开启的商家）
   const pointDerived = useMemo(() => {
     const map = new Map<
       number,
@@ -147,17 +218,11 @@ export default function UnifiedSampler() {
       map.set(p.id, {
         oklab,
         pantones: matchPantones(p.r, p.g, p.b, PANTONE_N),
-        previews: matchFabrics(oklab, fabrics, PREVIEW_N),
+        previews: matchFabrics(oklab, activeFabrics, PREVIEW_N),
       })
     }
     return map
-  }, [points, fabrics])
-
-  const showStatus = useCallback((msg: string) => {
-    setStatus(msg)
-    if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
-    statusTimerRef.current = setTimeout(() => setStatus(""), 5000)
-  }, [])
+  }, [points, activeFabrics])
 
   // 容器尺寸监听
   useEffect(() => {
@@ -205,7 +270,10 @@ export default function UnifiedSampler() {
       if (cancelled) return
       setFabrics(result.fabrics)
       setDataSource(result.external ? "external" : "sample")
-      const vendorCount = new Set(result.fabrics.map((f) => f.vendor)).size
+      // 默认全部开启（数据库按钮 → 全量）
+      const vendors = [...new Set(result.fabrics.map((f) => f.vendor))]
+      setVendorOn(Object.fromEntries(vendors.map((v) => [v, true])))
+      const vendorCount = vendors.length
       showStatus(
         `数据库已就绪：潘通色库 ${PANTONE_DATA.length} 条 · 毛布 ${result.fabrics.length} 色 / ${vendorCount} 家商家${result.external ? "（真实数据）" : "（示例数据）"}· 上传图片后点击/长按取色`
       )
@@ -724,13 +792,18 @@ export default function UnifiedSampler() {
 
   // ===== 渲染 =====
   const hasImage = imageUrl && imageSize && fitRect
-  // 各商家色数（保持数据中的首次出现顺序）
-  const vendorParts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const f of fabrics) counts.set(f.vendor, (counts.get(f.vendor) ?? 0) + 1)
-    return [...counts].map(([v, n]) => `${v}：${n}色`)
-  }, [fabrics])
-  const databaseLabel = `数据库：潘通色库：${PANTONE_DATA.length}条${vendorParts.length ? ` | ${vendorParts.join(" | ")}` : ""}`
+  // 数据库按钮 hover 概要
+  const dbSummary = useMemo(() => {
+    if (dataSource === "loading") return "数据库加载中…"
+    const onCount = vendorList.filter((v) => vendorOn[v] !== false).length
+    const detail = kindGroups
+      .map((g) => {
+        const on = g.vendors.filter((v) => vendorOn[v.vendor] !== false).length
+        return `${g.kind} ${on}/${g.vendors.length}家开启`
+      })
+      .join("；")
+    return `数据库 · 潘通 ${PANTONE_DATA.length} 条 · ${vendorList.length} 家商家（开启 ${onCount} 家）：${detail}`
+  }, [dataSource, vendorList, vendorOn, kindGroups])
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-0 lg:h-full">
@@ -744,21 +817,130 @@ export default function UnifiedSampler() {
             </span>
           </p>
           <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <span
-              title={databaseLabel}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium border min-w-0 ${
-                dataSource === "external"
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  : dataSource === "loading"
+            {/* 数据库按钮：点击展开数据库分类选择面板（潘通必选 + 毛布商家开关） */}
+            <div ref={dbRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setDbOpen((o) => !o)}
+                disabled={dataSource === "loading"}
+                title={dbSummary}
+                aria-expanded={dbOpen}
+                className={`inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-full text-xs font-semibold border transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait ${
+                  dataSource === "loading"
                     ? "bg-neutral-50 border-neutral-200 text-neutral-400"
-                    : "bg-amber-50 border-amber-200 text-amber-700"
-              }`}
-            >
-              {dataSource === "loading" && <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />}
-              <span className="truncate">
-                {dataSource === "loading" ? "数据库加载中…" : databaseLabel}
-              </span>
-            </span>
+                    : allVendorsOn
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                      : "bg-blue-50 border-blue-300 text-blue-800 hover:bg-blue-100"
+                }`}
+              >
+                {dataSource === "loading" ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                ) : (
+                  <Database className="w-3.5 h-3.5 flex-shrink-0" />
+                )}
+                <span>数据库</span>
+                {/* 副标题：全量（绿）/ 自定义（蓝） */}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none ${
+                    dataSource === "loading"
+                      ? "bg-neutral-200 text-neutral-400"
+                      : allVendorsOn
+                        ? "bg-emerald-600 text-white"
+                        : "bg-blue-600 text-white"
+                  }`}
+                >
+                  {dataSource === "loading" ? "…" : allVendorsOn ? "全量" : "自定义"}
+                </span>
+                <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${dbOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {dbOpen && (
+                <div className="absolute right-0 top-full mt-1.5 z-40 w-[330px] max-h-[min(560px,72vh)] overflow-y-auto rounded-2xl border border-neutral-200 bg-white shadow-xl p-2.5">
+                  {/* 潘通色库（必选，不可关闭） */}
+                  <div className="rounded-xl px-2.5 py-2 bg-neutral-50 border border-neutral-100">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-neutral-800">潘通色库</p>
+                        <p className="text-[10px] text-neutral-400">官方常用色库 · {PANTONE_DATA.length} 条 · 必选</p>
+                      </div>
+                      <KindSwitch on disabled />
+                    </div>
+                  </div>
+
+                  <div className="my-2 h-px bg-neutral-100" />
+
+                  {/* 毛布色库：已导入种类（含商家开关） */}
+                  <div className="px-1">
+                    <p className="px-1.5 pb-1 text-[9px] font-mono tracking-[0.18em] uppercase text-neutral-400">
+                      毛布色库
+                    </p>
+                    {kindGroups.map((g) => (
+                      <div key={g.kind} className="mb-1">
+                        <p className="px-1.5 py-1 text-[10px] font-medium text-neutral-500">种类 · {g.kind}</p>
+                        <div className="rounded-xl border border-neutral-100 overflow-hidden">
+                          {g.vendors.map((v) => {
+                            const on = vendorOn[v.vendor] !== false
+                            return (
+                              <button
+                                key={v.vendor}
+                                type="button"
+                                role="switch"
+                                aria-checked={on}
+                                onClick={() => toggleVendor(v.vendor)}
+                                title={on ? "点击关闭该商家" : "点击开启该商家"}
+                                className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left transition-colors cursor-pointer ${
+                                  on ? "bg-white hover:bg-emerald-50/60" : "bg-neutral-50 hover:bg-neutral-100"
+                                }`}
+                              >
+                                <span className="min-w-0">
+                                  <span className={`block text-xs ${on ? "text-neutral-800" : "text-neutral-400 line-through decoration-neutral-300"}`}>
+                                    {v.vendor}
+                                  </span>
+                                  <span className="block text-[9px] font-mono text-neutral-400">{v.count} 色</span>
+                                </span>
+                                <KindSwitch on={on} />
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* 暂未开启的种类（默认折叠） */}
+                    <div className="mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setMoreKindsOpen((o) => !o)}
+                        aria-expanded={moreKindsOpen}
+                        className="w-full flex items-center justify-between gap-2 px-1.5 py-1.5 text-[10px] text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
+                      >
+                        <span>更多种类（暂未开启）</span>
+                        <ChevronDown className={`w-3 h-3 transition-transform ${moreKindsOpen ? "rotate-180" : ""}`} />
+                      </button>
+                      {moreKindsOpen && (
+                        <div className="rounded-xl border border-neutral-100 overflow-hidden">
+                          {PENDING_KINDS.map((k) => (
+                            <div
+                              key={k}
+                              className="flex items-center justify-between gap-2 px-2.5 py-2 bg-neutral-50 opacity-70"
+                            >
+                              <span className="text-xs text-neutral-400">{k}</span>
+                              <span className="rounded-full bg-neutral-200/70 px-1.5 py-0.5 text-[9px] text-neutral-500">
+                                未导入
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="mt-2 px-1.5 text-[9px] text-neutral-300 leading-relaxed">
+                    关闭的毛布商家不会出现在取色匹配结果中；至少保留一个毛布色库开启。
+                  </p>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="inline-flex items-center gap-1.5 min-h-[36px] px-4 rounded-full text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-700 transition-colors cursor-pointer"
@@ -1001,6 +1183,25 @@ export default function UnifiedSampler() {
       </div>
     </div>
   );
+}
+
+// ==================== 数据库面板开关（纯视觉，容器行负责点击切换）====================
+
+function KindSwitch({ on, disabled }: { on: boolean; disabled?: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`relative inline-block w-8 h-[18px] shrink-0 rounded-full transition-colors ${
+        on ? "bg-emerald-500" : "bg-neutral-300"
+      } ${disabled ? "opacity-80" : ""}`}
+    >
+      <span
+        className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-transform ${
+          on ? "translate-x-[14px]" : "translate-x-0"
+        }`}
+      />
+    </span>
+  )
 }
 
 // ==================== 参数卡（三栏：色块 | sRGB/Pantone×3/折叠OKLab | 参考毛布 Top3）====================
