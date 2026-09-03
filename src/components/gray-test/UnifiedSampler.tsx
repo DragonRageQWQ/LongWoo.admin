@@ -18,7 +18,7 @@
  * 毛布数据：真实 fabric-data.json 优先，缺失回退内置示例数据。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Upload, ImagePlus, MousePointerClick, X, Loader2, ChevronDown, Database } from "lucide-react";
+import { Upload, ImagePlus, MousePointerClick, X, Loader2, ChevronDown, Database, ZoomIn } from "lucide-react";
 import {
   type FabricMatch,
   type NormalizedFabric,
@@ -1316,21 +1316,36 @@ function PointCard({
       <div className="w-[36%] flex-shrink-0 space-y-1">
         <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">参考毛布 Top 3</p>
         {previews.length > 0 ? (
-          previews.map((m) => <FabricRow key={m.fabric.id} match={m} onOpen={setDetail} />)
+          previews.map((m) => (
+            <FabricRow
+              key={m.fabric.id}
+              match={m}
+              active={detail?.id === m.fabric.id}
+              onOpen={(f) => setDetail((cur) => (cur?.id === f.id ? null : f))}
+            />
+          ))
         ) : (
           <p className="text-[10px] text-neutral-400">毛布库加载中…</p>
         )}
       </div>
       </div>
-      {/* 毛布详情：点击参考毛布图标展开（全卡宽度） */}
-      {detail && <FabricDetail fabric={detail} onClose={() => setDetail(null)} />}
+      {/* 毛布详情：再次点击同一毛布行可收回（无右上角关闭按钮） */}
+      {detail && <FabricDetail fabric={detail} />}
     </div>
   );
 }
 
 // ==================== 毛布紧凑行（参数卡内预览，点击展开详情） ====================
 
-function FabricRow({ match, onOpen }: { match: FabricMatch; onOpen?: (f: NormalizedFabric) => void }) {
+function FabricRow({
+  match,
+  onOpen,
+  active,
+}: {
+  match: FabricMatch
+  onOpen?: (f: NormalizedFabric) => void
+  active?: boolean
+}) {
   const { fabric, delta } = match
   const [imgFailed, setImgFailed] = useState(false)
   const [r, g, b] = fabric.sRGB
@@ -1341,8 +1356,13 @@ function FabricRow({ match, onOpen }: { match: FabricMatch; onOpen?: (f: Normali
     <button
       type="button"
       onClick={() => onOpen?.(fabric)}
-      title={`点击查看毛布详情：${fabric.name}（${fabric.vendor}）`}
-      className="w-full text-left flex items-center gap-1.5 rounded-lg bg-neutral-50 border border-neutral-100 px-1.5 py-1 hover:border-neutral-300 hover:bg-neutral-100 transition-colors cursor-pointer"
+      title={active ? `再次点击收回详情：${fabric.name}（${fabric.vendor}）` : `点击查看毛布详情：${fabric.name}（${fabric.vendor}）`}
+      aria-expanded={active}
+      className={`w-full text-left flex items-center gap-1.5 rounded-lg border px-1.5 py-1 transition-colors cursor-pointer ${
+        active
+          ? "bg-neutral-100 border-neutral-400 hover:bg-neutral-100"
+          : "bg-neutral-50 border-neutral-100 hover:border-neutral-300 hover:bg-neutral-100"
+      }`}
     >
       <span className="relative w-6 h-6 rounded flex-shrink-0 overflow-hidden" style={{ backgroundColor: hex }}>
         {!imgFailed && (
@@ -1380,8 +1400,9 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
   );
 }
 
-function FabricDetail({ fabric, onClose }: { fabric: NormalizedFabric; onClose: () => void }) {
+function FabricDetail({ fabric }: { fabric: NormalizedFabric }) {
   const [imgFailed, setImgFailed] = useState(false)
+  const [zoom, setZoom] = useState(false)
   const [r, g, b] = fabric.sRGB
   const hex = fabric.hex ?? fabricHex(r, g, b)
   const imgPath = fabricImagePath(fabric.source)
@@ -1391,8 +1412,15 @@ function FabricDetail({ fabric, onClose }: { fabric: NormalizedFabric; onClose: 
   return (
     <div className="mt-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
       <div className="flex gap-3">
-        {/* 毛布大图（缩略图 + 底色） */}
-        <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 border border-neutral-200" style={{ backgroundColor: hex }}>
+        {/* 毛布大图：点击查看大图预览（图片加载失败时禁用） */}
+        <button
+          type="button"
+          onClick={() => setZoom(true)}
+          disabled={imgFailed}
+          title={imgFailed ? "图片加载失败，暂不可查看大图" : "点击查看大图"}
+          className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 border border-neutral-200 group cursor-zoom-in disabled:cursor-default"
+          style={{ backgroundColor: hex }}
+        >
           {!imgFailed && (
             // eslint-disable-next-line @next/next/no-img-element -- 详情缩略图
             <img
@@ -1404,7 +1432,12 @@ function FabricDetail({ fabric, onClose }: { fabric: NormalizedFabric; onClose: 
               className="w-full h-full object-cover"
             />
           )}
-        </div>
+          {!imgFailed && (
+            <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/25">
+              <ZoomIn className="w-5 h-5 text-white drop-shadow" />
+            </span>
+          )}
+        </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -1414,13 +1447,6 @@ function FabricDetail({ fabric, onClose }: { fabric: NormalizedFabric; onClose: 
               </p>
               <p className="text-[10px] font-mono text-neutral-400 truncate">{fabric.skuId} · #{fabric.id}</p>
             </div>
-            <button
-              onClick={onClose}
-              aria-label="关闭毛布详情"
-              className="shrink-0 w-6 h-6 rounded-full bg-white border border-neutral-200 text-neutral-400 hover:text-neutral-900 hover:border-neutral-400 flex items-center justify-center transition-colors cursor-pointer"
-            >
-              <X className="w-3 h-3" />
-            </button>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
             <DetailRow label="色系" value={`${cid.label}（${fabric.cid}）`} />
@@ -1437,6 +1463,43 @@ function FabricDetail({ fabric, onClose }: { fabric: NormalizedFabric; onClose: 
           {fabric.tips && <p className="mt-2 text-[9px] text-neutral-400 leading-relaxed">{fabric.tips}</p>}
         </div>
       </div>
+
+      {/* 大图预览（点击遮罩 / 右上角关闭；点开时再次点击同毛布行亦可直接收回） */}
+      {zoom && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/80 backdrop-blur-sm p-6"
+          onClick={() => setZoom(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${fabric.name}（${fabric.vendor}）大图预览`}
+        >
+          <button
+            type="button"
+            onClick={() => setZoom(false)}
+            aria-label="关闭大图预览"
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/25 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div
+            className="rounded-xl overflow-hidden shadow-2xl border border-white/15 max-w-[88vw]"
+            style={{ backgroundColor: hex }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={imgPath}
+              alt={fabric.name}
+              draggable={false}
+              className="max-w-[88vw] max-h-[72vh] object-contain"
+              style={{ backgroundColor: hex }}
+            />
+          </div>
+          <p className="text-xs text-white/85">
+            {fabric.name} · {fabric.vendor} · {fabricPhText(fabric.ph)}
+            <span className="text-white/50"> · 点击遮罩关闭</span>
+          </p>
+        </div>
+      )}
     </div>
   );
 }
