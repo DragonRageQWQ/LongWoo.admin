@@ -15,6 +15,23 @@ import { RU_PAGES } from './ru-pages'
 import { RU_ADMIN } from './ru-admin'
 import { FR_PAGES } from './fr-pages'
 import { FR_ADMIN } from './fr-admin'
+import { ZH_SAMPLER } from './zh-sampler'
+import { EN_SAMPLER } from './en-sampler'
+import { ZH_HANT_SAMPLER } from './zh-hant-sampler'
+import { JA_SAMPLER } from './ja-sampler'
+import { KO_SAMPLER } from './ko-sampler'
+import { RU_SAMPLER } from './ru-sampler'
+import { FR_SAMPLER } from './fr-sampler'
+
+const SAMPLER_OF: Record<Lang, Record<string, string>> = {
+  zh: ZH_SAMPLER,
+  en: EN_SAMPLER,
+  'zh-Hant': ZH_HANT_SAMPLER,
+  ja: JA_SAMPLER,
+  ko: KO_SAMPLER,
+  ru: RU_SAMPLER,
+  fr: FR_SAMPLER,
+}
 
 const PAGES_OF: Record<Lang, Record<string, string>> = {
   zh: { ...I18N_DICTS.zh, ...ZH_EXTRA },
@@ -103,6 +120,22 @@ describe('i18n 全语言一致性', () => {
       }
       for (const [key, zhVal] of Object.entries(ZH_ADMIN)) {
         expect(placeholderTokens(ADMIN_OF[lang][key]), `${lang} admin ${key}`).toEqual(placeholderTokens(zhVal))
+      }
+    }
+  })
+
+  it('sampler 字典七语言键等价 + token 保留', () => {
+    const zhKeys = Object.keys(SAMPLER_OF.zh).sort()
+    for (const lang of ['en', 'zh-Hant', 'ja', 'ko', 'ru', 'fr'] as Lang[]) {
+      const target = Object.keys(SAMPLER_OF[lang]).sort()
+      expect(target, `${lang} sampler 键`).toEqual(zhKeys)
+    }
+    for (const lang of ['en', 'zh-Hant', 'ja', 'ko', 'ru', 'fr'] as Lang[]) {
+      for (const [key, zhVal] of Object.entries(SAMPLER_OF.zh)) {
+        const v = SAMPLER_OF[lang][key]
+        expect(v, `${lang} sampler ${key}`).toBeTruthy()
+        expect(v, `${lang} sampler ${key} 裸键`).not.toBe(key)
+        expect(placeholderTokens(v), `${lang} sampler ${key} token`).toEqual(placeholderTokens(zhVal))
       }
     }
   })

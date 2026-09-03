@@ -44,6 +44,11 @@ import {
   zoomAt,
   type ViewState,
 } from "@/lib/view-transform";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
+
+/** 文案模板填充：把 {token} 替换为字典注入的动态值（数字 / 名称 / 坐标等），缺失时保留原文 */
+const fill = (s: string, m: Record<string, string | number>) =>
+  s.replace(/\{(\w+)\}/g, (_, k) => String(m[k] ?? `{${k}}`));
 
 interface PickPoint {
   id: number
@@ -106,6 +111,7 @@ const LOUPE_PX = LOUPE_SIZE * LOUPE_CELL
 const PENDING_KINDS = ["弹力短毛", "兔毛", "银狐绒", "麂皮"]
 
 export default function UnifiedSampler() {
+  const { t, lang } = useLanguage();
   // ===== 图片 =====
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null)
@@ -143,6 +149,12 @@ export default function UnifiedSampler() {
   const dbRef = useRef<HTMLDivElement>(null)
   const nextIdRef = useRef(1)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 镜像状态到 ref：语言切换后重发「数据库已就绪」提示时，仅当尚无图片/选点才覆盖状态条
+  const imageLoadedRef = useRef(false)
+  const pointCountRef = useRef(0)
+  imageLoadedRef.current = imageUrl !== null
+  pointCountRef.current = points.length
 
   // 长按按压状态（避免频繁 setState）
   const pressRef = useRef<{
@@ -224,7 +236,7 @@ export default function UnifiedSampler() {
         if (currentlyOn) {
           const onCount = Object.values(prev).filter((v) => v !== false).length
           if (onCount <= 1) {
-            showStatus("毛布色库至少保留一个商家，不能全部关闭")
+            showStatus(t("sampler.status.keepOneVendor"))
             return prev
           }
           return { ...prev, [vendor]: false }
@@ -232,7 +244,7 @@ export default function UnifiedSampler() {
         return { ...prev, [vendor]: true }
       })
     },
-    [showStatus]
+    [showStatus, t]
   )
 
   // 点击面板外部 → 收起数据库面板
@@ -370,21 +382,29 @@ export default function UnifiedSampler() {
       const vendors = [...new Set(result.fabrics.map((f) => f.vendor))]
       setVendorOn(Object.fromEntries(vendors.map((v) => [v, true])))
       const vendorCount = vendors.length
-      showStatus(
-        `数据库已就绪：潘通色库 ${PANTONE_DATA.length} 条 · 毛布 ${result.fabrics.length} 色 / ${vendorCount} 家商家${result.external ? "（真实数据）" : "（示例数据）"}· 上传图片后点击/长按取色`
-      )
+      // 语言切换后本 effect 会随 lang 重跑：仅在空闲状态（未上图/未选点）才刷新提示文案
+      if (!imageLoadedRef.current && pointCountRef.current === 0) {
+        showStatus(
+          fill(t("sampler.status.dbReady"), {
+            pantone: PANTONE_DATA.length,
+            fabric: result.fabrics.length,
+            vendor: vendorCount,
+            dataNote: result.external ? t("sampler.status.liveData") : t("sampler.status.sampleData"),
+          })
+        )
+      }
     })
     return () => {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [lang])
 
   // ===== 上传 =====
   const handleFile = useCallback(
     (file: File) => {
       if (!file.type.startsWith("image/")) {
-        showStatus("仅支持图片文件（jpg / png / webp / gif）")
+        showStatus(t("sampler.status.imageOnly"))
         return
       }
       const reader = new FileReader()
@@ -407,14 +427,18 @@ export default function UnifiedSampler() {
           nextIdRef.current = 1
           setView(IDENTITY_VIEW)
           showStatus(
-            `已载入 ${img.naturalWidth} × ${img.naturalHeight}px · 滚轮/双指缩放 · 点击/长按取色（最多 ${MAX_POINTS} 点）`
+            fill(t("sampler.status.imgLoaded"), {
+              w: img.naturalWidth,
+              h: img.naturalHeight,
+              max: MAX_POINTS,
+            })
           )
         }
         img.src = url
       }
       reader.readAsDataURL(file)
     },
-    [showStatus]
+    [showStatus, t]
   )
 
   const handlePickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -486,16 +510,16 @@ export default function UnifiedSampler() {
       if (hitIdx >= 0) {
         const removed = points[hitIdx]
         setPoints((prev) => prev.filter((_, i) => i !== hitIdx))
-        showStatus(`已删除点 ${removed.id}（${px}, ${py}）`)
+        showStatus(fill(t("sampler.status.pointDeleted"), { id: removed.id, x: px, y: py }))
         return
       }
 
       if (points.length >= MAX_POINTS) {
-        showStatus(`最多选择 ${MAX_POINTS} 个点，请先删除部分选点`)
+        showStatus(fill(t("sampler.status.maxPoints"), { max: MAX_POINTS }))
         return
       }
       if (points.some((p) => p.x === px && p.y === py)) {
-        showStatus(`该像素（${px}, ${py}）已选，请选择其他位置`)
+        showStatus(fill(t("sampler.status.pixelAlready"), { x: px, y: py }))
         return
       }
 
@@ -504,9 +528,16 @@ export default function UnifiedSampler() {
       const d = ctx.getImageData(px, py, 1, 1).data
       const id = nextIdRef.current++
       setPoints((prev) => [...prev, { id, x: px, y: py, r: d[0], g: d[1], b: d[2] }])
-      showStatus(`已选点 ${id} · 像素（${px}, ${py}）· #${rgbToHex(d[0], d[1], d[2])}`)
+      showStatus(
+        fill(t("sampler.status.pointAdded"), {
+          id,
+          x: px,
+          y: py,
+          hex: rgbToHex(d[0], d[1], d[2]),
+        })
+      )
     },
-    [points, fitRect, imageSize, containerSize, view, showStatus]
+    [points, fitRect, imageSize, containerSize, view, showStatus, t]
   )
 
   // ===== 放大镜：绘制 / 定位 / 信息 =====
@@ -891,16 +922,21 @@ export default function UnifiedSampler() {
   const hasImage = imageUrl && imageSize && fitRect
   // 数据库按钮 hover 概要
   const dbSummary = useMemo(() => {
-    if (dataSource === "loading") return "数据库加载中…"
+    if (dataSource === "loading") return t("sampler.db.loadingSummary")
     const onCount = vendorList.filter((v) => vendorOn[v] !== false).length
     const detail = kindGroups
       .map((g) => {
         const on = g.vendors.filter((v) => vendorOn[v.vendor] !== false).length
-        return `${g.kind} ${on}/${g.vendors.length}家开启`
+        return fill(t("sampler.db.kindSummary"), { kind: g.kind, on, total: g.vendors.length })
       })
-      .join("；")
-    return `数据库 · 潘通 ${PANTONE_DATA.length} 条 · ${vendorList.length} 家商家（开启 ${onCount} 家）：${detail}`
-  }, [dataSource, vendorList, vendorOn, kindGroups])
+      .join(t("sampler.db.summarySep"))
+    return fill(t("sampler.db.summary"), {
+      pantone: PANTONE_DATA.length,
+      vendor: vendorList.length,
+      on: onCount,
+      detail,
+    })
+  }, [dataSource, vendorList, vendorOn, kindGroups, t])
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-0 lg:h-full">
@@ -910,7 +946,7 @@ export default function UnifiedSampler() {
           <p className="flex items-center gap-1.5 text-xs text-neutral-500 min-w-0">
             <MousePointerClick className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="truncate">
-              点击选点（≤{MAX_POINTS}）· 长按放大镜精确取色 · 点已选点删除
+              {fill(t("sampler.hint.clickGuide"), { max: MAX_POINTS })}
             </span>
           </p>
           <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -935,7 +971,7 @@ export default function UnifiedSampler() {
                 ) : (
                   <Database className="w-3.5 h-3.5 flex-shrink-0" />
                 )}
-                <span>数据库</span>
+                <span>{t("sampler.db.button")}</span>
                 {/* 副标题：全量（绿）/ 自定义（蓝） */}
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none ${
@@ -946,7 +982,7 @@ export default function UnifiedSampler() {
                         : "bg-blue-600 text-white"
                   }`}
                 >
-                  {dataSource === "loading" ? "…" : allVendorsOn ? "全量" : "自定义"}
+                  {dataSource === "loading" ? "…" : allVendorsOn ? t("sampler.db.all") : t("sampler.db.custom")}
                 </span>
                 <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${dbOpen ? "rotate-180" : ""}`} />
               </button>
@@ -966,12 +1002,12 @@ export default function UnifiedSampler() {
                   <div className="flex items-center justify-between gap-2 px-1 pb-2 sm:hidden">
                     <p className="text-sm font-semibold text-neutral-800 flex items-center gap-1.5">
                       <Database className="w-3.5 h-3.5" />
-                      数据库筛选
+                      {t("sampler.db.mobileTitle")}
                     </p>
                     <button
                       type="button"
                       onClick={() => setDbOpen(false)}
-                      aria-label="关闭数据库面板"
+                      aria-label={t("sampler.db.closePanel")}
                       className="shrink-0 w-7 h-7 rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-900 flex items-center justify-center transition-colors cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -981,8 +1017,10 @@ export default function UnifiedSampler() {
                   <div className="rounded-xl px-2.5 py-2 bg-neutral-50 border border-neutral-100">
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-neutral-800">潘通色库</p>
-                        <p className="text-[10px] text-neutral-400">官方常用色库 · {PANTONE_DATA.length} 条 · 必选</p>
+                        <p className="text-xs font-semibold text-neutral-800">{t("sampler.pantone.title")}</p>
+                        <p className="text-[10px] text-neutral-400">
+                          {fill(t("sampler.pantone.sub"), { n: PANTONE_DATA.length })}
+                        </p>
                       </div>
                       <KindSwitch on disabled />
                     </div>
@@ -993,11 +1031,13 @@ export default function UnifiedSampler() {
                   {/* 毛布色库：已导入种类（含商家开关） */}
                   <div className="px-1">
                     <p className="px-1.5 pb-1 text-[9px] font-mono tracking-[0.18em] uppercase text-neutral-400">
-                      毛布色库
+                      {t("sampler.fabricLib.label")}
                     </p>
                     {kindGroups.map((g) => (
                       <div key={g.kind} className="mb-1">
-                        <p className="px-1.5 py-1 text-[10px] font-medium text-neutral-500">种类 · {g.kind}</p>
+                        <p className="px-1.5 py-1 text-[10px] font-medium text-neutral-500">
+                          {fill(t("sampler.fabricLib.kindPrefix"), { kind: g.kind })}
+                        </p>
                         <div className="rounded-xl border border-neutral-100 overflow-hidden">
                           {g.vendors.map((v) => {
                             const on = vendorOn[v.vendor] !== false
@@ -1008,7 +1048,7 @@ export default function UnifiedSampler() {
                                 role="switch"
                                 aria-checked={on}
                                 onClick={() => toggleVendor(v.vendor)}
-                                title={on ? "点击关闭该商家" : "点击开启该商家"}
+                                title={on ? t("sampler.fabricLib.vendorOnTitle") : t("sampler.fabricLib.vendorOffTitle")}
                                 className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left transition-colors cursor-pointer ${
                                   on ? "bg-white hover:bg-emerald-50/60" : "bg-neutral-50 hover:bg-neutral-100"
                                 }`}
@@ -1017,7 +1057,9 @@ export default function UnifiedSampler() {
                                   <span className={`block text-xs ${on ? "text-neutral-800" : "text-neutral-400 line-through decoration-neutral-300"}`}>
                                     {v.vendor}
                                   </span>
-                                  <span className="block text-[9px] font-mono text-neutral-400">{v.count} 色</span>
+                                  <span className="block text-[9px] font-mono text-neutral-400">
+                                    {fill(t("sampler.fabricLib.colorCount"), { count: v.count })}
+                                  </span>
                                 </span>
                                 <KindSwitch on={on} />
                               </button>
@@ -1035,7 +1077,7 @@ export default function UnifiedSampler() {
                         aria-expanded={moreKindsOpen}
                         className="w-full flex items-center justify-between gap-2 px-1.5 py-1.5 text-[10px] text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
                       >
-                        <span>更多种类（暂未开启）</span>
+                        <span>{t("sampler.fabricLib.moreKinds")}</span>
                         <ChevronDown className={`w-3 h-3 transition-transform ${moreKindsOpen ? "rotate-180" : ""}`} />
                       </button>
                       {moreKindsOpen && (
@@ -1047,7 +1089,7 @@ export default function UnifiedSampler() {
                             >
                               <span className="text-xs text-neutral-400">{k}</span>
                               <span className="rounded-full bg-neutral-200/70 px-1.5 py-0.5 text-[9px] text-neutral-500">
-                                未导入
+                                {t("sampler.fabricLib.notImported")}
                               </span>
                             </div>
                           ))}
@@ -1057,7 +1099,7 @@ export default function UnifiedSampler() {
                   </div>
 
                   <p className="mt-2 px-1.5 text-[9px] text-neutral-300 leading-relaxed">
-                    关闭的毛布商家不会出现在取色匹配结果中；至少保留一个毛布色库开启。
+                    {t("sampler.fabricLib.panelNote")}
                   </p>
                     </div>
                     </div>
@@ -1069,7 +1111,7 @@ export default function UnifiedSampler() {
               className="inline-flex items-center gap-1.5 min-h-[36px] px-4 rounded-full text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-700 transition-colors cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5" />
-              {hasImage ? "更换图片" : "上传图片"}
+              {hasImage ? t("sampler.upload.replace") : t("sampler.upload.new")}
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickFile} />
           </div>
@@ -1101,8 +1143,8 @@ export default function UnifiedSampler() {
                 <ImagePlus className="w-6 h-6 text-neutral-400" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium text-neutral-600">拖拽图片到此处，或点击选择</p>
-                <p className="text-xs text-neutral-400 mt-1">本地处理，不上传服务器 · 支持 jpg / png / webp / gif</p>
+                <p className="text-sm font-medium text-neutral-600">{t("sampler.drop.title")}</p>
+                <p className="text-xs text-neutral-400 mt-1">{t("sampler.drop.sub")}</p>
               </div>
             </button>
           ) : (
@@ -1114,7 +1156,7 @@ export default function UnifiedSampler() {
               <img
                 ref={imgRef}
                 src={imageUrl}
-                alt="取样源图"
+                alt={t("sampler.img.sourceAlt")}
                 draggable={false}
                 className="absolute pointer-events-none select-none"
                 style={{
@@ -1195,7 +1237,7 @@ export default function UnifiedSampler() {
                 />
                 {pressing && (
                   <div className="mt-1 px-2 py-1 rounded-md bg-neutral-900 text-white text-[10px] font-medium text-center shadow">
-                    {longPressActive ? "松手取色" : "长按取色…"}
+                    {longPressActive ? t("sampler.loupe.release") : t("sampler.loupe.press")}
                   </div>
                 )}
               </div>
@@ -1205,7 +1247,7 @@ export default function UnifiedSampler() {
                   {view.zoom > 1 ? (
                     <button
                       onClick={() => setView(IDENTITY_VIEW)}
-                      title="点击恢复 100%"
+                      title={t("sampler.zoom.restore")}
                       className="inline-flex items-center gap-0.5 text-neutral-700 hover:text-neutral-900 cursor-pointer"
                     >
                       <span>{Math.round(view.zoom * 100)}%</span>
@@ -1225,7 +1267,7 @@ export default function UnifiedSampler() {
           {pressing ? (
             <span className="inline-flex items-center gap-1.5 text-neutral-600">
               <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 animate-pulse" />
-              {longPressActive ? "已锁定像素，移动放大镜定位，松手取色" : "按住移动放大镜，长按锁定后松手取色…"}
+              {longPressActive ? t("sampler.statusBar.pressLocked") : t("sampler.statusBar.pressMove")}
             </span>
           ) : status ? (
             <span className="inline-flex items-center gap-1.5 text-neutral-600">
@@ -1233,7 +1275,11 @@ export default function UnifiedSampler() {
               {status}
             </span>
           ) : (
-            <span className="text-neutral-400">{hasImage ? `已选 ${points.length} / ${MAX_POINTS} 点` : "等待上传图片"}</span>
+            <span className="text-neutral-400">
+              {hasImage
+                ? fill(t("sampler.statusBar.pointsSelected"), { count: points.length, max: MAX_POINTS })
+                : t("sampler.statusBar.waiting")}
+            </span>
           )}
         </div>
       </div>
@@ -1241,17 +1287,17 @@ export default function UnifiedSampler() {
       {/* ===== 右侧：参数区（约 40%，可滚动查看详细参数）===== */}
       <div className="w-full lg:w-[40%] min-h-0 flex flex-col">
         <div className="flex items-center justify-between pb-2">
-          <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-neutral-400">Sampler · 取样参数</p>
+          <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-neutral-400">{t("sampler.params.title")}</p>
           {points.length > 0 && (
             <button
               onClick={() => {
                 setPoints([])
-                showStatus("已清空全部选点")
+                showStatus(t("sampler.status.cleared"))
               }}
               className="inline-flex items-center gap-1 text-[11px] text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
             >
               <X className="w-3 h-3" />
-              清空
+              {t("sampler.params.clear")}
             </button>
           )}
         </div>
@@ -1261,12 +1307,12 @@ export default function UnifiedSampler() {
           {!hasImage ? (
             <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-2xl border border-dashed border-neutral-300 text-xs text-neutral-400">
               <MousePointerClick className="w-5 h-5" />
-              上传图片并点击/长按取色后，参数显示在这里
+              {t("sampler.params.emptyNoImage")}
             </div>
           ) : points.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-2xl border border-dashed border-neutral-300 text-xs text-neutral-400">
               <MousePointerClick className="w-5 h-5" />
-              在上方图片中点击或长按取色（最多 {MAX_POINTS} 点）
+              {fill(t("sampler.params.emptyNoPoints"), { max: MAX_POINTS })}
             </div>
           ) : (
             points.map((p, idx) => (
@@ -1277,7 +1323,7 @@ export default function UnifiedSampler() {
                 derived={pointDerived.get(p.id)}
                 onDelete={() => {
                   setPoints((prev) => prev.filter((q) => q.id !== p.id))
-                  showStatus(`已删除点 ${idx + 1}`)
+                  showStatus(fill(t("sampler.status.pointRemoved"), { id: idx + 1 }))
                 }}
               />
             ))
@@ -1287,20 +1333,20 @@ export default function UnifiedSampler() {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] font-mono text-neutral-400">
             <span className="inline-flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
-              Δ≤0.030 直接使用
+              {t("sampler.legend.direct")}
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-neutral-500 inline-block" />
-              0.030&lt;Δ≤0.090 参考使用
+              {t("sampler.legend.reference")}
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-red-800 inline-block" />
-              Δ&gt;0.090 无参考价值
+              {t("sampler.legend.none")}
             </span>
           </div>
 
           <p className="text-[10px] text-neutral-300 leading-relaxed">
-            毛布色值来自商家色卡（社区/示例数据，非分光仪实测）；潘通为近似匹配，正式交付请以官方色卡为准
+            {t("sampler.disclaimer")}
           </p>
         </div>
       </div>
@@ -1358,6 +1404,7 @@ function PointCard({
   derived?: Derived
   onDelete: () => void
 }) {
+  const { t } = useLanguage();
   const p = point
   const hex = rgbToHex(p.r, p.g, p.b)
   const oklab = derived?.oklab
@@ -1380,7 +1427,7 @@ function PointCard({
         </span>
         <button
           onClick={onDelete}
-          aria-label={`删除选点 ${index + 1}`}
+          aria-label={fill(t("sampler.card.deleteAria"), { n: index + 1 })}
           className="absolute top-1 right-1 w-5 h-5 rounded-full bg-neutral-900/55 text-white/90 hover:bg-neutral-900 hover:text-white flex items-center justify-center cursor-pointer"
         >
           <X className="w-3 h-3" />
@@ -1397,7 +1444,7 @@ function PointCard({
         {pantones.length > 0 && (
           <div>
             <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">
-              Pantone 参考 ×{pantones.length}
+              {fill(t("sampler.card.pantoneRef"), { n: pantones.length })}
             </p>
             <div className="space-y-0.5">
               {pantones.map((pt) => (
@@ -1422,7 +1469,7 @@ function PointCard({
           className="inline-flex items-center gap-1 text-[10px] text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
         >
           <ChevronDown className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
-          {expanded ? "收起详细参数" : "详细参数"}
+          {expanded ? t("sampler.card.collapse") : t("sampler.card.expand")}
         </button>
         {expanded && oklab && (
           <div className="rounded-lg bg-neutral-50 border border-neutral-100 px-2 py-1.5">
@@ -1437,7 +1484,7 @@ function PointCard({
 
       {/* 右端：参考毛布 Top3 */}
       <div className="w-[36%] flex-shrink-0 space-y-1">
-        <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">参考毛布 Top 3</p>
+        <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-neutral-400">{t("sampler.card.fabricsTop")}</p>
         {previews.length > 0 ? (
           previews.map((m) => (
             <FabricRow
@@ -1448,7 +1495,7 @@ function PointCard({
             />
           ))
         ) : (
-          <p className="text-[10px] text-neutral-400">毛布库加载中…</p>
+          <p className="text-[10px] text-neutral-400">{t("sampler.card.fabricsLoading")}</p>
         )}
       </div>
       </div>
@@ -1469,6 +1516,7 @@ function FabricRow({
   onOpen?: (f: NormalizedFabric) => void
   active?: boolean
 }) {
+  const { t } = useLanguage();
   const { fabric, delta } = match
   const [imgFailed, setImgFailed] = useState(false)
   const [r, g, b] = fabric.sRGB
@@ -1479,7 +1527,11 @@ function FabricRow({
     <button
       type="button"
       onClick={() => onOpen?.(fabric)}
-      title={active ? `再次点击收回详情：${fabric.name}（${fabric.vendor}）` : `点击查看毛布详情：${fabric.name}（${fabric.vendor}）`}
+      title={
+        active
+          ? fill(t("sampler.fabricRow.collapseTitle"), { name: fabric.name, vendor: fabric.vendor })
+          : fill(t("sampler.fabricRow.viewTitle"), { name: fabric.name, vendor: fabric.vendor })
+      }
       aria-expanded={active}
       className={`w-full text-left flex items-center gap-1.5 rounded-lg border px-1.5 py-1 transition-colors cursor-pointer ${
         active
@@ -1524,6 +1576,7 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
 }
 
 function FabricDetail({ fabric }: { fabric: NormalizedFabric }) {
+  const { t } = useLanguage();
   const [imgFailed, setImgFailed] = useState(false)
   const [zoom, setZoom] = useState(false)
   const [r, g, b] = fabric.sRGB
@@ -1540,7 +1593,7 @@ function FabricDetail({ fabric }: { fabric: NormalizedFabric }) {
           type="button"
           onClick={() => setZoom(true)}
           disabled={imgFailed}
-          title={imgFailed ? "图片加载失败，暂不可查看大图" : "点击查看大图"}
+          title={imgFailed ? t("sampler.detail.largeImgFailed") : t("sampler.detail.viewLarge")}
           className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 border border-neutral-200 group cursor-zoom-in disabled:cursor-default"
           style={{ backgroundColor: hex }}
         >
@@ -1572,16 +1625,16 @@ function FabricDetail({ fabric }: { fabric: NormalizedFabric }) {
             </div>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
-            <DetailRow label="色系" value={`${cid.label}（${fabric.cid}）`} />
-            <DetailRow label="毛长" value={fabricPhText(fabric.ph)} />
-            <DetailRow label="毛布种类" value={fabric.fabricKind} />
+            <DetailRow label={t("sampler.detail.colorFamily")} value={`${cid.label}（${fabric.cid}）`} />
+            <DetailRow label={t("sampler.detail.furLength")} value={fabricPhText(fabric.ph)} />
+            <DetailRow label={t("sampler.detail.kind")} value={fabric.fabricKind} />
             <DetailRow label="sRGB" value={hex} mono />
             <DetailRow
               label="OKLab"
               value={`L ${lab[0].toFixed(3)} a ${(lab[1] >= 0 ? "+" : "") + lab[1].toFixed(3)} b ${(lab[2] >= 0 ? "+" : "") + lab[2].toFixed(3)}`}
               mono
             />
-            {fabric.pantone && <DetailRow label="潘通" value={fabric.pantone} mono />}
+            {fabric.pantone && <DetailRow label={t("sampler.detail.pantone")} value={fabric.pantone} mono />}
           </div>
           {fabric.tips && <p className="mt-2 text-[9px] text-neutral-400 leading-relaxed">{fabric.tips}</p>}
         </div>
@@ -1594,12 +1647,12 @@ function FabricDetail({ fabric }: { fabric: NormalizedFabric }) {
           onClick={() => setZoom(false)}
           role="dialog"
           aria-modal="true"
-          aria-label={`${fabric.name}（${fabric.vendor}）大图预览`}
+          aria-label={fill(t("sampler.detail.zoomAria"), { name: fabric.name, vendor: fabric.vendor })}
         >
           <button
             type="button"
             onClick={() => setZoom(false)}
-            aria-label="关闭大图预览"
+            aria-label={t("sampler.detail.closeZoom")}
             className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/25 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -1619,7 +1672,7 @@ function FabricDetail({ fabric }: { fabric: NormalizedFabric }) {
           </div>
           <p className="text-xs text-white/85">
             {fabric.name} · {fabric.vendor} · {fabricPhText(fabric.ph)}
-            <span className="text-white/50"> · 点击遮罩关闭</span>
+            <span className="text-white/50"> · {t("sampler.detail.overlayHint")}</span>
           </p>
         </div>
       )}

@@ -17,6 +17,13 @@ import { RU_PAGES } from './ru-pages'
 import { RU_ADMIN } from './ru-admin'
 import { FR_PAGES } from './fr-pages'
 import { FR_ADMIN } from './fr-admin'
+import { ZH_SAMPLER } from './zh-sampler'
+import { EN_SAMPLER } from './en-sampler'
+import { ZH_HANT_SAMPLER } from './zh-hant-sampler'
+import { JA_SAMPLER } from './ja-sampler'
+import { KO_SAMPLER } from './ko-sampler'
+import { RU_SAMPLER } from './ru-sampler'
+import { FR_SAMPLER } from './fr-sampler'
 
 export type Lang = 'zh' | 'en' | 'zh-Hant' | 'ja' | 'ko' | 'ru' | 'fr'
 
@@ -191,14 +198,14 @@ export const I18N_DICTS: Record<Lang, Record<string, string>> = {
   fr: FR_PAGES,
 }
 
-// 合并补充字典（profile / ai / admin 页面）
-const MERGED_ZH = { ...I18N_DICTS.zh, ...ZH_EXTRA, ...ZH_ADMIN }
-const MERGED_EN = { ...I18N_DICTS.en, ...EN_EXTRA, ...EN_ADMIN }
-const MERGED_ZH_HANT = { ...I18N_DICTS['zh-Hant'], ...ZH_HANT_ADMIN }
-const MERGED_JA = { ...I18N_DICTS.ja, ...JA_ADMIN }
-const MERGED_KO = { ...I18N_DICTS.ko, ...KO_ADMIN }
-const MERGED_RU = { ...I18N_DICTS.ru, ...RU_ADMIN }
-const MERGED_FR = { ...I18N_DICTS.fr, ...FR_ADMIN }
+// 合并补充字典（profile / ai / admin / sampler 页面）
+const MERGED_ZH = { ...I18N_DICTS.zh, ...ZH_EXTRA, ...ZH_ADMIN, ...ZH_SAMPLER }
+const MERGED_EN = { ...I18N_DICTS.en, ...EN_EXTRA, ...EN_ADMIN, ...EN_SAMPLER }
+const MERGED_ZH_HANT = { ...I18N_DICTS['zh-Hant'], ...ZH_HANT_ADMIN, ...ZH_HANT_SAMPLER }
+const MERGED_JA = { ...I18N_DICTS.ja, ...JA_ADMIN, ...JA_SAMPLER }
+const MERGED_KO = { ...I18N_DICTS.ko, ...KO_ADMIN, ...KO_SAMPLER }
+const MERGED_RU = { ...I18N_DICTS.ru, ...RU_ADMIN, ...RU_SAMPLER }
+const MERGED_FR = { ...I18N_DICTS.fr, ...FR_ADMIN, ...FR_SAMPLER }
 
 const MERGED_DICTS: Record<Lang, Record<string, string>> = {
   zh: MERGED_ZH,

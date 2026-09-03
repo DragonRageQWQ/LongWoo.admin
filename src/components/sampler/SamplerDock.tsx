@@ -20,7 +20,6 @@ import GlobeLangMenu from "@/components/i18n/GlobeLangMenu";
 import type { SamplerSnapshot } from "@/components/gray-test/UnifiedSampler";
 import "./sampler-dock.css";
 
-const LANG_KEY = "lw_lang";
 type PanelId = "none" | "export" | "account";
 
 type ExportPhase =
@@ -30,20 +29,33 @@ type ExportPhase =
   | { phase: "denied"; message: string }
   | { phase: "ready" };
 
+/** 文案模板填充：把 {token} 替换为动态值（数字 / 名称 / 坐标等），缺失时保留原文 */
+const fill = (s: string, m: Record<string, string | number>) =>
+  s.replace(/\{(\w+)\}/g, (_, k) => String(m[k] ?? `{${k}}`));
+
 /** 拼装可粘贴的纯文本选色清单 */
-function buildExportText(s: SamplerSnapshot): string {
+function buildExportText(s: SamplerSnapshot, t: (key: string) => string): string {
   const lines: string[] = [];
   const pad = (n: number) => String(n).padStart(2, "0");
   const d = new Date(s.exportedAt);
   const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  lines.push("LongWoo · 毛布取色方案");
-  lines.push(`生成时间：${stamp}`);
+  lines.push(t("sampler.export.title"));
+  lines.push(fill(t("sampler.export.time"), { time: stamp }));
   lines.push(
-    `图片来源：${s.source.name ?? "未命名"}（${s.source.width ?? "-"} × ${s.source.height ?? "-"} px）`
+    fill(t("sampler.export.source"), {
+      name: s.source.name ?? t("sampler.dock.unnamed"),
+      w: s.source.width ?? "-",
+      h: s.source.height ?? "-",
+    })
   );
   const db = s.database;
   lines.push(
-    `数据库：潘通 ${db.pantoneCount} 条 · 毛布 ${db.fabricCount} 色 / ${db.vendors.length} 家 · 已开启 ${db.vendorsOn.length} 家`
+    fill(t("sampler.export.db"), {
+      pantone: db.pantoneCount,
+      fabric: db.fabricCount,
+      vendor: db.vendors.length,
+      enabled: db.vendorsOn.length,
+    })
   );
   lines.push("");
   for (const p of s.points) {
@@ -53,13 +65,13 @@ function buildExportText(s: SamplerSnapshot): string {
     const ptText = p.pantones
       .map((pt) => `${pt.code}${pt.name && pt.name !== pt.code ? " " + pt.name : ""} (Δ${pt.delta.toFixed(3)})`)
       .join(" / ");
-    if (ptText) lines.push(`    Pantone：${ptText}`);
+    if (ptText) lines.push(`    ${t("sampler.export.pantoneLabel")}${ptText}`);
     const fbText = p.fabrics
       .map(
         (f) => `${f.name} · ${f.vendor} ${f.skuId} · ${(f.ph / 10).toFixed(1)}cm (Δ${f.delta.toFixed(3)})`
       )
       .join(" / ");
-    if (fbText) lines.push(`    毛布参考：${fbText}`);
+    if (fbText) lines.push(`    ${t("sampler.export.fabricLabel")}${fbText}`);
     lines.push("");
   }
   return lines.join("\n");
@@ -67,10 +79,8 @@ function buildExportText(s: SamplerSnapshot): string {
 
 export default function SamplerDock() {
   const { profile } = useSession();
-  // 取色器文案仅提供 zh/en：全站语言收敛为二元（en → en，其它 → zh）
-  const { lang: providerLang } = useLanguage();
-  const initialLang = providerLang === "en" ? "en" : "zh";
-  const [uiLang, setUiLang] = useState<"zh" | "en">(initialLang);
+  // 语言/文案统一走全局 LanguageProvider：切换时整页跳转并持久化（?lang= + lw_lang）
+  const { lang, setLang, t } = useLanguage();
   const [panel, setPanel] = useState<PanelId>("none");
   const [exportState, setExportState] = useState<ExportPhase>({ phase: "idle" });
   const [loggingOut, setLoggingOut] = useState(false);
@@ -97,22 +107,7 @@ export default function SamplerDock() {
     };
   }, [panel]);
 
-  /**
-   * 语言切换（取色器内部保留现场，不做整页跳转）：
-   * 与首页一致即时切换；语言持久化到 cookie/localStorage，
-   * 后续普通导航（个人中心等）按新语言渲染。
-   */
-  const handleLangSelect = useCallback((next: "zh" | "en") => {
-    setUiLang(next);
-    try {
-      localStorage.setItem(LANG_KEY, next);
-    } catch {
-      /* ignore */
-    }
-    document.cookie = `${LANG_KEY}=${next}; path=/; max-age=31536000; SameSite=Lax`;
-    document.documentElement.lang = next === "en" ? "en" : "zh-CN";
-  }, []);
-
+  // 语言切换交回全局 LanguageProvider（整页跳转 + 持久化），此处不再本地维护
   const openExport = useCallback(() => {
     setPanel((p) => (p === "export" ? "none" : "export"));
   }, []);
@@ -137,20 +132,19 @@ export default function SamplerDock() {
           const data = await res.json().catch(() => null);
           setExportState({
             phase: "denied",
-            message:
-              data?.error ?? "账号未获「测试B」导出授权标签，请联系超管开通后使用",
+            message: data?.error ?? t("sampler.dock.deniedDefault"),
           });
           return;
         }
         setExportState({ phase: "ready" });
       })
       .catch(() => {
-        if (alive) setExportState({ phase: "denied", message: "授权检查失败，请稍后重试" });
+        if (alive) setExportState({ phase: "denied", message: t("sampler.dock.checkFailed") });
       });
     return () => {
       alive = false;
     };
-  }, [panel, profile]);
+  }, [panel, profile, t]);
 
   const getSnapshot = useCallback((): SamplerSnapshot | null => {
     if (typeof window === "undefined") return null;
@@ -179,13 +173,13 @@ export default function SamplerDock() {
     const s = getSnapshot();
     if (!s || s.points.length === 0) return;
     try {
-      await navigator.clipboard.writeText(buildExportText(s));
+      await navigator.clipboard.writeText(buildExportText(s, t));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       /* 剪贴板不可用时忽略 */
     }
-  }, [getSnapshot]);
+  }, [getSnapshot, t]);
 
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);
@@ -208,11 +202,7 @@ export default function SamplerDock() {
     <div className="sd" ref={wrapRef}>
       <div className="gt2-dock">
       {/* 1. 语言切换：地球 icon（hover 提示 / 点击下拉列表，与首页一致） */}
-      <GlobeLangMenu
-        value={uiLang}
-        onSelect={(next) => handleLangSelect(next === "en" ? "en" : "zh")}
-        tip={uiLang === "en" ? "Switch language" : "语言切换"}
-      />
+      <GlobeLangMenu value={lang} onSelect={(next) => setLang(next)} tip={t("sampler.switchLangTip")} />
 
       {/* 2. 数据导出圆（需登录 + 管理员 + 测试B 授权） */}
       <div className="gt2-dock-pop">
@@ -221,8 +211,8 @@ export default function SamplerDock() {
           className="gt2-dock-circle"
           onClick={openExport}
           aria-expanded={panel === "export"}
-          aria-label="数据导出"
-          title="数据导出"
+          aria-label={t("sampler.dock.exportAria")}
+          title={t("sampler.dock.exportHead")}
         >
           <Download strokeWidth={1.8} />
         </button>
@@ -230,12 +220,14 @@ export default function SamplerDock() {
         {panel === "export" && (
           <div className="gt2-dock-panel gt2-dock-panel--export">
             <div className="gt2-dock-panel-head">
-              <span>数据导出</span>
-              {ready && <span className="gt2-field-count">{pointCount} 点</span>}
+              <span>{t("sampler.dock.exportHead")}</span>
+              {ready && (
+                <span className="gt2-field-count">{fill(t("sampler.dock.pointCount"), { count: pointCount })}</span>
+              )}
               <button
                 type="button"
                 onClick={() => setPanel("none")}
-                aria-label="关闭"
+                aria-label={t("sampler.dock.close")}
                 className="ml-auto -mr-1 p-1 text-neutral-400 hover:text-neutral-900 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
@@ -246,29 +238,27 @@ export default function SamplerDock() {
               {exportState.phase === "checking" && (
                 <div className="flex items-center justify-center gap-2 py-8 text-neutral-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-xs">授权检查中…</span>
+                  <span className="text-xs">{t("sampler.dock.checking")}</span>
                 </div>
               )}
 
               {exportState.phase === "guest" && (
                 <div className="py-5 text-center">
-                  <p className="text-[13px] text-neutral-800 font-medium">导出取色数据需要登录</p>
-                  <p className="text-[11px] text-neutral-400 mt-1">
-                    登录后需为管理员并携带「测试B」授权标签方可导出到电脑
-                  </p>
+                  <p className="text-[13px] text-neutral-800 font-medium">{t("sampler.dock.guestTitle")}</p>
+                  <p className="text-[11px] text-neutral-400 mt-1">{t("sampler.dock.guestDesc")}</p>
                   <Link
                     href="/login?next=/sampler"
                     onClick={() => setPanel("none")}
                     className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-neutral-900 text-white text-xs px-5 py-2.5 hover:opacity-85 transition-opacity"
                   >
-                    去登录
+                    {t("sampler.dock.guestCta")}
                   </Link>
                 </div>
               )}
 
               {exportState.phase === "denied" && (
                 <div className="py-5 text-center">
-                  <p className="text-[13px] text-neutral-800 font-medium">暂无导出权限</p>
+                  <p className="text-[13px] text-neutral-800 font-medium">{t("sampler.dock.deniedTitle")}</p>
                   <p className="text-[11px] text-neutral-400 mt-1.5 leading-relaxed">
                     {exportState.message}
                   </p>
@@ -280,15 +270,22 @@ export default function SamplerDock() {
                   {/* 来源与数据库摘要 */}
                   <div className="rounded-xl bg-neutral-50 border border-neutral-100 px-3 py-2.5 text-[11px] text-neutral-600 leading-relaxed">
                     <p className="truncate">
-                      <span className="text-neutral-400">图片 · </span>
-                      {snapshot?.source.name ?? "未命名"}
-                      {snapshot?.source.width ? `（${snapshot.source.width} × ${snapshot.source.height} px）` : ""}
+                      <span className="text-neutral-400">{t("sampler.dock.imgLabel")}</span>
+                      {snapshot?.source.name ?? t("sampler.dock.unnamed")}
+                      {snapshot?.source.width
+                        ? fill(t("sampler.dock.dims"), {
+                            w: snapshot.source.width ?? "-",
+                            h: snapshot.source.height ?? "-",
+                          })
+                        : ""}
                     </p>
                     <p className="truncate">
-                      <span className="text-neutral-400">数据库 · </span>
-                      潘通 {snapshot?.database.pantoneCount ?? "-"} 条 · 毛布{" "}
-                      {snapshot?.database.fabricCount ?? "-"} 色 /{" "}
-                      {snapshot?.database.vendors.length ?? "-"} 家
+                      <span className="text-neutral-400">{t("sampler.dock.dbLabel")}</span>
+                      {fill(t("sampler.dock.dbInfo"), {
+                        pantone: snapshot?.database.pantoneCount ?? "-",
+                        fabric: snapshot?.database.fabricCount ?? "-",
+                        vendor: snapshot?.database.vendors.length ?? "-",
+                      })}
                     </p>
                   </div>
 
@@ -312,7 +309,7 @@ export default function SamplerDock() {
                           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-neutral-900 text-white text-xs px-4 py-2.5 hover:opacity-85 transition-opacity cursor-pointer"
                         >
                           {downloaded ? <Check className="w-3.5 h-3.5" /> : <FileJson className="w-3.5 h-3.5" />}
-                          {downloaded ? "已下载" : "下载 JSON"}
+                          {downloaded ? t("sampler.dock.downloaded") : t("sampler.dock.downloadJson")}
                         </button>
                         <button
                           type="button"
@@ -320,15 +317,13 @@ export default function SamplerDock() {
                           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full border border-neutral-900 text-neutral-900 text-xs px-4 py-2.5 hover:bg-neutral-900 hover:text-white transition-colors cursor-pointer"
                         >
                           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                          {copied ? "已复制" : "复制文本"}
+                          {copied ? t("sampler.dock.copied") : t("sampler.dock.copyText")}
                         </button>
                       </div>
                     </>
                   ) : (
                     <div className="py-5 text-center">
-                      <p className="text-[12px] text-neutral-400">
-                        尚未取色 —— 先上传图片并点击添加取色点，即可导出方案
-                      </p>
+                      <p className="text-[12px] text-neutral-400">{t("sampler.dock.emptyHint")}</p>
                     </div>
                   )}
                 </>
@@ -364,12 +359,12 @@ export default function SamplerDock() {
               <div className="gt2-dock-panel gt2-dock-panel--account">
                 <Link className="gt2-dock-menu-item" href="/profile" prefetch={false}>
                   <UserRound />
-                  个人中心
+                  {t("nav.profile")}
                 </Link>
                 {isAdmin && (
                   <Link className="gt2-dock-menu-item" href="/admin/dashboard" prefetch={false}>
                     <Shield />
-                    管理后台
+                    {t("header.enterAdmin")}
                   </Link>
                 )}
                 <button
@@ -379,7 +374,7 @@ export default function SamplerDock() {
                   disabled={loggingOut}
                 >
                   {loggingOut ? <Loader2 className="animate-spin" /> : <LogOut />}
-                  {loggingOut ? "退出中…" : "退出登录"}
+                  {loggingOut ? t("header.loggingOut") : t("header.logout")}
                 </button>
               </div>
             )}
@@ -390,8 +385,8 @@ export default function SamplerDock() {
               <UserRound />
             </span>
             <span className="gt2-dock-pill-text">
-              <b>Sign up</b>
-              <small>登录/注册</small>
+              <b>{t("sampler.dock.signUp")}</b>
+              <small>{t("sampler.dock.signInSmall")}</small>
             </span>
           </Link>
         )}

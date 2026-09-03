@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { cookies } from "next/headers";
 import UnifiedSampler from "@/components/gray-test/UnifiedSampler";
-import SamplerDock from "@/components/sampler/SamplerDock";
+import SamplerHeader from "@/components/sampler/SamplerHeader";
+import { parseLang, translate, type Lang } from "@/lib/i18n/dict";
 
 /**
  * 图片与毛布取样器（正式版 · 生产环境公开入口）
@@ -12,11 +13,15 @@ import SamplerDock from "@/components/sampler/SamplerDock";
  * 匹配全部在客户端完成，服务器零计算；游客与登录用户均可直接使用。
  * 灰度页 /gray-test/sampler 保留，供管理后台继续验收新改动。
  */
-export const metadata: Metadata = {
-  title: "毛布取色器 | LongWoo Studio",
-  description: "上传设定图进行像素取色，自动匹配潘通参考色与毛布色库，快速预览毛布搭配效果。",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  // 服务端读取语言 cookie（与根布局注入 LanguageProvider 的方式一致，避免 hydration mismatch）
+  const lang: Lang = parseLang((await cookies()).get("lw_lang")?.value);
+  return {
+    title: translate(lang, "sampler.metaTitle"),
+    description: translate(lang, "sampler.metaDesc"),
+    robots: { index: false, follow: false },
+  };
+}
 
 export default function SamplerPage() {
   return (
@@ -31,37 +36,8 @@ export default function SamplerPage() {
         aria-hidden="true"
       />
 
-      {/* 页头（与 /profile 顶部一致的品牌角标） */}
-      <header className="relative z-30 border-b border-neutral-200 bg-white/80 backdrop-blur">
-        <div className="max-w-7xl mx-auto w-full px-5 py-3.5 flex items-center justify-between gap-4">
-          <Link
-            href="/"
-            aria-label="LongWoo 龙坞 · 返回首页"
-            className="flex items-center gap-2.5 text-neutral-900 flex-shrink-0 no-underline hover:opacity-80 transition-opacity"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/longwoo-logo.svg" alt="LongWoo 龙坞" className="w-7 h-7 block" />
-            <span className="text-[15px] font-bold tracking-[0.02em] leading-none">龙坞</span>
-            <span className="hidden sm:inline text-[11px] text-neutral-400 font-mono tracking-[0.08em] leading-none">
-              LongWoo Studio
-            </span>
-          </Link>
-
-          <div className="min-w-0 flex-1 flex items-center gap-4">
-            <span className="hidden sm:block w-px h-5 bg-neutral-200 flex-shrink-0" aria-hidden="true" />
-            <div className="min-w-0">
-              <h1 className="text-base font-bold tracking-tight truncate">图片与毛布取样器</h1>
-              <p className="hidden sm:block text-[10px] text-neutral-400 mt-0.5 font-mono tracking-wider truncate">
-                PIXEL &amp; FABRIC SAMPLER · sRGB / OKLAB / PANTONE / FABRIC MATCH
-              </p>
-            </div>
-          </div>
-
-          <div className="flex-shrink-0">
-            <SamplerDock />
-          </div>
-        </div>
-      </header>
+      {/* 页头（客户端组件：标题/语言即时切换；与 /profile 顶部一致的品牌角标） */}
+      <SamplerHeader />
 
       {/* 主体：移动端随内容自然延伸（整页滚动），桌面端撑满高度内部滚动 */}
       <div className="relative z-10 lg:flex-1 lg:min-h-0 max-w-7xl w-full mx-auto px-5 py-4">
