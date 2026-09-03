@@ -207,6 +207,16 @@ export default function UnifiedSampler() {
     }
   }, [dbOpen])
 
+  // 面板展开期间锁定页面背景滚动（桌面下拉 / 移动端抽屉各自内部滚动）
+  useEffect(() => {
+    if (!dbOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [dbOpen])
+
   // 每点派生数据：OKLab / Pantone Top3 / 毛布 Top3（仅来自开启的商家）
   const pointDerived = useMemo(() => {
     const map = new Map<
@@ -855,7 +865,31 @@ export default function UnifiedSampler() {
               </button>
 
               {dbOpen && (
-                <div className="absolute right-0 top-full mt-1.5 z-40 w-[330px] max-h-[min(560px,72vh)] overflow-y-auto rounded-2xl border border-neutral-200 bg-white shadow-xl p-2.5">
+                <>
+                  {/* 移动端遮罩：点击关闭并隔离背景（桌面端隐藏） */}
+                  <div
+                    className="fixed inset-0 z-40 bg-black/25 sm:hidden"
+                    onClick={() => setDbOpen(false)}
+                    aria-hidden
+                  />
+                  {/* 面板：移动端 = 底部抽屉（全宽，不超出屏幕）；桌面端 = 按钮下方下拉 */}
+                  <div className="fixed inset-x-0 bottom-0 z-50 p-2.5 sm:p-0 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-1.5 sm:w-[330px] sm:z-40">
+                    <div className="max-h-[min(72vh,560px)] overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white shadow-xl p-2.5 sm:max-h-[min(560px,72vh)]">
+                  {/* 移动端抽屉标题栏（桌面端隐藏） */}
+                  <div className="flex items-center justify-between gap-2 px-1 pb-2 sm:hidden">
+                    <p className="text-sm font-semibold text-neutral-800 flex items-center gap-1.5">
+                      <Database className="w-3.5 h-3.5" />
+                      数据库筛选
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setDbOpen(false)}
+                      aria-label="关闭数据库面板"
+                      className="shrink-0 w-7 h-7 rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-900 flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                   {/* 潘通色库（必选，不可关闭） */}
                   <div className="rounded-xl px-2.5 py-2 bg-neutral-50 border border-neutral-100">
                     <div className="flex items-center justify-between gap-2">
@@ -938,7 +972,9 @@ export default function UnifiedSampler() {
                   <p className="mt-2 px-1.5 text-[9px] text-neutral-300 leading-relaxed">
                     关闭的毛布商家不会出现在取色匹配结果中；至少保留一个毛布色库开启。
                   </p>
-                </div>
+                    </div>
+                    </div>
+                </>
               )}
             </div>
             <button
