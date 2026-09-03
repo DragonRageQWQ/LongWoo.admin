@@ -2192,6 +2192,10 @@ textarea.gt2-input {
 
 .gt2-entry-cta {
   margin-top: 46px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 
 /* ============================================================

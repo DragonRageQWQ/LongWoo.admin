@@ -20,6 +20,9 @@ export interface Gt2EntryCopy {
   features: string[];
   cta: string;
   href: string;
+  /** 可选次要 CTA（与主 CTA 按钮并排展示） */
+  secondaryCta?: string;
+  secondaryHref?: string;
 }
 
 export interface Gt2Copy {
@@ -554,6 +557,8 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         features: ["个人资料管理", "历史订单汇总", "通知与安全设置"],
         cta: "龙坞图鉴",
         href: "/gallery",
+        secondaryCta: "毛布取色器",
+        secondaryHref: "/sampler",
       },
     },
     bubble: {
@@ -857,6 +862,8 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         features: ["Profile management", "Order history", "Notifications & security"],
         cta: "View Gallery",
         href: "/gallery",
+        secondaryCta: "Fabric Sampler",
+        secondaryHref: "/sampler",
       },
     },
     bubble: {

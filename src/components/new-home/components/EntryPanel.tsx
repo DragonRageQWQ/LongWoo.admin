@@ -34,6 +34,15 @@ export default function EntryPanel({ entry, mark }: { entry: Gt2EntryCopy; mark:
               <path d="M12 5l7 7-7 7" />
             </svg>
           </a>
+          {entry.secondaryCta && entry.secondaryHref && (
+            <a className="gt2-btn-ghost" href={entry.secondaryHref}>
+              {entry.secondaryCta}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14" />
+                <path d="M12 5l7 7-7 7" />
+              </svg>
+            </a>
+          )}
         </div>
       </div>
     </div>
