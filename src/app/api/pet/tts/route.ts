@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fork } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import fsp from 'node:fs/promises'
 import os from 'node:os'
@@ -50,73 +49,14 @@ interface SynthOpts {
 }
 
 /**
- * 通过独立 Node 子进程合成（开发环境主通道）。
- * Next dev（Turbopack）路由进程内原生 socket upgrade 存在环境性停滞，
- * 子进程（经独立验证可稳定直连）绕开该问题；失败时回退进程内合成。
- */
-function synthViaWorker(opts: SynthOpts): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const workerPath = path.join(process.cwd(), 'src', 'lib', 'pet', 'edge-worker.cjs')
-    let settled = false
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-    const child = fork(workerPath, [], {
-      // execArgv 置空：防止 Next dev(Turbopack) 把注入的 --import/loader 传给子进程，污染其网络栈
-      execArgv: [],
-      // 不吞子进程输出，便于诊断上游真实错误
-      silent: true,
-      env: {
-        ...process.env,
-        NODE_OPTIONS: '',
-      },
-    })
-    // 采集子进程输出，超时/失败时附带诊断信息
-    let childLog = ''
-    const capture = (chunk: Buffer) => {
-      if (childLog.length < 2000) childLog += chunk.toString('utf8')
-    }
-    child.stdout?.on('data', capture)
-    child.stderr?.on('data', capture)
-    const timer = setTimeout(() => {
-      if (settled) return
-      settled = true
-      try { child.kill() } catch { /* 忽略 */ }
-      reject(new Error(`Edge TTS 子进程合成超时${childLog ? ` | ${childLog.slice(0, 500)}` : ''}`))
-    }, 40_000)
-
-    child.on('message', (m: { id?: string; ok?: boolean; audio?: string; error?: string }) => {
-      if (!m || m.id !== id) return
-      clearTimeout(timer)
-      if (settled) return
-      settled = true
-      try { child.kill() } catch { /* 忽略 */ }
-      if (m.ok && m.audio) {
-        resolve(Buffer.from(m.audio, 'base64'))
-      } else {
-        reject(new Error(`${m.error || 'Edge TTS 子进程合成失败'}${childLog ? ` | ${childLog.slice(0, 500)}` : ''}`))
-      }
-    })
-    child.on('error', (err) => {
-      clearTimeout(timer)
-      if (settled) return
-      settled = true
-      reject(new Error(`Edge TTS 子进程错误: ${err.message}`))
-    })
-    child.on('exit', () => {
-      clearTimeout(timer)
-      if (settled) return
-      settled = true
-      reject(new Error('Edge TTS 子进程意外退出'))
-    })
-    child.send({ id, opts })
-  })
-}
-
-/**
  * 文件桥合成（本地开发守护进程通道）
  *
- * 本机沙箱对"监听端口的进程"的出站大流量 ws 有限制（微软 Read Aloud 音频帧被丢弃），
- * 而非监听进程不受限。tts-daemon.cjs 刻意不监听端口，通过文件系统收发任务；
- * 路由在有守护进程时优先走此通道，无守护进程（生产）时走 worker/inline 通道。
+ * 说明：fork 子进程 worker 仅在本机沙箱调试时使用，无法通过生产构建
+ * （Turbopack 会把 fork 的动态路径当作模块解析而失败，且 Serverless 环境
+ * 不支持子进程）。因此线上只保留两条通道：
+ *  - 生产 / 无守护进程：进程内合成（edgeSynthesize，直连微软 Read Aloud）
+ *  - 本地开发有守护进程：tts-daemon.cjs 通过文件系统收发任务
+ *    （本机沙箱限制监听进程的出站大流量 ws，非监听进程不受限）
  */
 function petTtsSpoolDir(): string {
   return process.env.PET_TTS_SPOOL || path.join(os.tmpdir(), 'pet-tts-spool')
@@ -185,30 +125,12 @@ async function synthViaDaemon(opts: SynthOpts): Promise<Buffer> {
   }
 }
 
-/** 按环境选择合成通道：dev/本地默认子进程，生产默认进程内（失败自动回退另一通道） */
+/** 合成通道：本地开发有守护进程时走守护进程（沙箱出站限制的绕行方案），否则进程内合成 */
 async function synthAudio(opts: SynthOpts): Promise<Buffer> {
-  // 本地有文件桥守护进程时只走守护进程：
-  // 本机沙箱内 worker/inline 都无法流式收取音频（监听进程出站 ws 受限），避免 60s 空等
   if (await daemonAvailable()) {
     return synthViaDaemon(opts)
   }
-  const preferWorker =
-    process.env.PET_TTS_ENGINE === 'worker' ||
-    (process.env.PET_TTS_ENGINE !== 'inline' && process.env.NODE_ENV === 'development')
-  if (preferWorker) {
-    try {
-      return await synthViaWorker(opts)
-    } catch (e) {
-      console.warn('[pet:tts] 子进程合成失败，回退进程内合成', String((e as Error).message || e))
-      return edgeSynthesize(opts)
-    }
-  }
-  try {
-    return await edgeSynthesize(opts)
-  } catch (e) {
-    console.warn('[pet:tts] 进程内合成失败，回退子进程合成', String((e as Error).message || e))
-    return synthViaWorker(opts)
-  }
+  return edgeSynthesize(opts)
 }
 
 // 轻量内存限流：IP -> 窗口内请求时间戳
