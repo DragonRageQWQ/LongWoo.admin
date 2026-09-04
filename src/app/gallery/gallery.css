@@ -177,6 +177,146 @@
   border-radius: 14px;
 }
 
+/* ============================================================
+   作品翻面卡（flip card）
+   默认正面展示原图；桌面 hover / 键盘聚焦、移动端左右滑动后翻面，
+   背面展示作品原介绍文案。编辑模式卡片不套用（保持按钮可操作）。
+   ============================================================ */
+.gl-card.gl-flip-card {
+  /* 3D 翻转要求容器可透视且不被裁剪（overflow:hidden 会强制 flatten 3D） */
+  overflow: visible;
+  background: transparent;
+  border-color: transparent;
+  perspective: 1500px;
+  border-radius: 14px;
+}
+
+.gl-flip-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.8s var(--ease);
+}
+
+.gl-flip-face {
+  display: block;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.gl-flip-front {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.gl-flip-back {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 22px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(165deg, #1c1a17 0%, #131110 62%, #0e0c0a 100%);
+  color: #f5f4f2;
+  overflow: hidden;
+  transform: rotateY(180deg);
+  text-align: left;
+}
+
+.gl-back-kicker {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.gl-back-title {
+  margin: 12px 0 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  line-height: 1.25;
+  color: #fff;
+}
+
+.gl-back-tag {
+  display: block;
+  margin-top: 7px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.gl-back-desc {
+  margin: 14px 0 0;
+  font-size: 13px;
+  line-height: 1.85;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.gl-back-meta {
+  margin: 16px 0 0;
+}
+
+.gl-back-meta-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.gl-back-meta-row dt {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+
+.gl-back-meta-row dd {
+  margin: 0;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.86);
+  text-align: right;
+}
+
+.gl-back-hint {
+  display: block;
+  margin-top: auto;
+  padding-top: 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+/* 桌面：hover / 键盘聚焦翻面 */
+@media (hover: hover) {
+  .gl-flip-card:hover .gl-flip-inner,
+  .gl-flip-card:focus-visible .gl-flip-inner {
+    transform: rotateY(180deg);
+  }
+}
+
+/* 移动端：左右滑动卡片后翻面/翻回（JS 切换 .is-flipped） */
+.gl-flip-card.is-flipped .gl-flip-inner {
+  transform: rotateY(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gl-flip-inner {
+    transition-duration: 0.01ms;
+  }
+}
+
 .gl-foot {
   border-top: 1px solid var(--line);
   padding: 28px 32px;
