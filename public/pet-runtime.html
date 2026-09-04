@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LongWoo Pet Runtime</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  #pet-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    z-index: 9999;
+    touch-action: none;
+  }
+  #pet-container:active { cursor: grabbing; }
+
+  /* 桌宠图片容器 */
+  .pet-body {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+  }
+
+  /* 动画包装层（img 整体承载动画） */
+  .pet-anim-wrap {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    transform-origin: center bottom;
+    width: 100%;
+    height: 100%;
+  }
+  .pet-anim-wrap img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+    /* 明确按比例显示，避免布局未就绪时的拉伸 */
+    max-width: 100%;
+    max-height: 100%;
+    flex-shrink: 0;
+  }
+
+  /* 呼吸动画 */
+  @keyframes breathe {
+    0%, 100% { transform: scaleY(1) translateY(0); }
+    50% { transform: scaleY(1.03) translateY(-2px); }
+  }
+  .pet-breathe { animation: breathe 3s ease-in-out infinite; }
+
+  /* 开心跳跃 */
+  @keyframes happyJump {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-12px) rotate(-3deg); }
+    50% { transform: translateY(-4px) rotate(0deg); }
+    75% { transform: translateY(-12px) rotate(3deg); }
+  }
+  .pet-happy { animation: happyJump 0.8s ease-in-out infinite; }
+
+  /* 惊讶 */
+  @keyframes surprise {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.1) translateY(-5px); }
+    60% { transform: scale(0.95) translateY(2px); }
+    100% { transform: scale(1); }
+  }
+  .pet-surprise { animation: surprise 0.6s ease-out; }
+
+  /* 悲伤 */
+  @keyframes sad {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(3px) rotate(1.5deg); }
+  }
+  .pet-sad { animation: sad 2s ease-in-out infinite; }
+
+  /* 挥手（整图左右摇摆） */
+  @keyframes waveSway {
+    0%, 100% { transform: rotate(0deg) translateY(0); }
+    20% { transform: rotate(-8deg) translateY(2px); }
+    40% { transform: rotate(6deg) translateY(-2px); }
+    60% { transform: rotate(-6deg) translateY(1px); }
+    80% { transform: rotate(4deg) translateY(-1px); }
+  }
+  .pet-wave { animation: waveSway 0.9s ease-in-out infinite; }
+
+  /* 休眠 */
+  @keyframes sleep {
+    0%, 100% { transform: translateY(0) scaleY(0.95); }
+    50% { transform: translateY(2px) scaleY(0.92); }
+  }
+  .pet-sleep { animation: sleep 4s ease-in-out infinite; }
+
+  /* 拖拽状态：暂停一切动画 */
+  .pet-drag .pet-anim-wrap {
+    animation: none !important;
+    transform: rotate(-6deg) scale(1.02);
+  }
+
+  /* ZZZ 睡眠符号 */
+  .zzz {
+    position: absolute;
+    top: 4%;
+    right: 6%;
+    font-size: 16px;
+    color: #94a3b8;
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .pet-sleep ~ .zzz, .sleeping .zzz { opacity: 1; }
+
+  /* 对话气泡 */
+  .speech-bubble {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border-radius: 16px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #334155;
+    white-space: nowrap;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: white;
+  }
+  .speech-bubble.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-4px);
+  }
+
+  /* 粒子效果容器 */
+  .particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* 加载占位 */
+  .pet-img-loading {
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .pet-img-loaded {
+    opacity: 1;
+  }
+
+  /* 工具栏（调试用） */
+  #debug-panel {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-family: monospace;
+    display: none;
+    z-index: 10000;
+  }
+  #debug-panel.show { display: block; }
+  #debug-panel select, #debug-panel button {
+    font-size: 11px;
+    margin: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div id="pet-container">
+  <div class="speech-bubble" id="speech-bubble">你好呀~</div>
+  <div class="pet-body" id="pet-body">
+    <!-- 预设桌宠形象：用户上传图（pet-user/preset.png，白底已抠除） -->
+    <div class="pet-anim-wrap pet-img-loading" id="pet-anim-group">
+      <img id="pet-img" src="/pet-user/preset.png" alt="LongWoo Pet" draggable="false" />
+    </div>
+    <div class="zzz" id="zzz">zZ</div>
+    <div class="particles" id="particles"></div>
+  </div>
+</div>
+
+<!-- 调试面板（灰度测试用） -->
+<div id="debug-panel">
+  <div>mood: <span id="dbg-mood">idle</span></div>
+  <div>
+    <select id="mood-select">
+      <option value="idle">idle</option>
+      <option value="happy">happy</option>
+      <option value="surprise">surprise</option>
+      <option value="sad">sad</option>
+      <option value="wave">wave</option>
+      <option value="sleep">sleep</option>
+    </select>
+    <button id="btn-speak">说话</button>
+    <button id="btn-reset">重置位置</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ============== 配置 ==============
+  const CONFIG = {
+    storageKey: 'longwoo_pet_state',
+    idleTimeout: 60000, // 60秒无操作进入休眠
+    dragThreshold: 5,
+    moods: ['idle', 'happy', 'surprise', 'sad', 'wave', 'sleep'],
+    defaultMood: 'idle',
+    /** 预设形象默认尺寸（宽/高，可按图片比例微调） */
+    defaultSize: { width: 140, height: 150 },
+  };
+
+  // ============== 状态 ==============
+  const state = {
+    mood: CONFIG.defaultMood,
+    position: { x: null, y: null },
+    uid: 'guest',
+    textures: null,
+    isDragging: false,
+    lastActivity: Date.now(),
+    sleepTimer: null,
+    sleeping: false,
+  };
+
+  // ============== DOM 引用 ==============
+  const container = document.getElementById('pet-container');
+  const petBody = document.getElementById('pet-body');
+  const animGroup = document.getElementById('pet-anim-group');
+  const petImg = document.getElementById('pet-img');
+  const speechBubble = document.getElementById('speech-bubble');
+  const zzz = document.getElementById('zzz');
+  const particles = document.getElementById('particles');
+  const debugPanel = document.getElementById('debug-panel');
+  const dbgMood = document.getElementById('dbg-mood');
+  const moodSelect = document.getElementById('mood-select');
+  const btnSpeak = document.getElementById('btn-speak');
+  const btnReset = document.getElementById('btn-reset');
+
+  // ============== 尺寸适配（按图片实际宽高比） ==============
+  function applySize() {
+    const d = CONFIG.defaultSize;
+    container.style.width = d.width + 'px';
+    container.style.height = d.height + 'px';
+    // 若已加载图片，按图片宽高比微调高度（防变形留白）
+    if (petImg && petImg.naturalWidth > 0) {
+      const ratio = petImg.naturalHeight / petImg.naturalWidth;
+      container.style.height = Math.round(d.width * ratio) + 'px';
+    }
+  }
+
+  // ============== 情绪动画映射 ==============
+  const moodAnimClass = {
+    idle: 'pet-breathe',
+    happy: 'pet-happy',
+    surprise: 'pet-surprise',
+    sad: 'pet-sad',
+    wave: 'pet-wave',
+    sleep: 'pet-sleep',
+  };
+
+  // ============== 初始化 ==============
+  function init() {
+    loadState();
+    applyPosition();
+    applySize();
+    // 图片加载完成后再应用尺寸与淡入
+    if (petImg.complete) {
+      onImgReady();
+    } else {
+      petImg.addEventListener('load', onImgReady);
+      petImg.addEventListener('error', onImgError);
+    }
+    setMood(CONFIG.defaultMood);
+    setupDrag();
+    setupClick();
+    setupSleepTimer();
+    setupPostMessage();
+    setupDebug();
+    sayHello();
+  }
+
+  function onImgReady() {
+    applySize();
+    animGroup.classList.remove('pet-img-loading');
+    animGroup.classList.add('pet-img-loaded');
+  }
+
+  function onImgError() {
+    console.warn('[pet] 预设图加载失败，回退占位色块');
+    petImg.style.display = 'none';
+    animGroup.style.background =
+      'radial-gradient(circle at 50% 35%, #fcd5ce 0%, #e8a598 60%, #d98c7a 100%)';
+    animGroup.style.borderRadius = '45% 45% 40% 40%';
+    animGroup.style.width = '60%';
+    animGroup.style.margin = '0 auto';
+    onImgReady();
+  }
+
+  // ============== 状态持久化 ==============
+  function loadState() {
+    try {
+      const saved = localStorage.getItem(CONFIG.storageKey);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.position) state.position = data.position;
+        if (data.uid) state.uid = data.uid;
+      }
+    } catch (e) {
+      console.warn('[pet] 读取本地状态失败', e);
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(CONFIG.storageKey, JSON.stringify({
+        position: state.position,
+        uid: state.uid,
+      }));
+    } catch (e) {
+      console.warn('[pet] 保存状态失败', e);
+    }
+  }
+
+  // ============== 位置控制 ==============
+  function applyPosition() {
+    if (state.position.x !== null && state.position.y !== null) {
+      container.style.left = state.position.x + 'px';
+      container.style.top = state.position.y + 'px';
+      container.style.right = 'auto';
+      container.style.bottom = 'auto';
+    }
+  }
+
+  function resetPosition() {
+    state.position = { x: null, y: null };
+    container.style.left = '';
+    container.style.top = '';
+    container.style.right = '20px';
+    container.style.bottom = '20px';
+    saveState();
+    postMessageToParent({ type: 'pet:position', position: null });
+  }
+
+  // ============== 拖拽 ==============
+  let dragStartX = 0, dragStartY = 0;
+  let elemStartX = 0, elemStartY = 0;
+  let hasMoved = false;
+
+  function setupDrag() {
+    container.addEventListener('mousedown', onDragStart);
+    container.addEventListener('touchstart', onDragStart, { passive: false });
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('touchmove', onDragMove, { passive: false });
+    document.addEventListener('mouseup', onDragEnd);
+    document.addEventListener('touchend', onDragEnd);
+  }
+
+  function onDragStart(e) {
+    e.preventDefault();
+    state.isDragging = true;
+    hasMoved = false;
+    const point = e.touches ? e.touches[0] : e;
+    dragStartX = point.clientX;
+    dragStartY = point.clientY;
+
+    const rect = container.getBoundingClientRect();
+    elemStartX = rect.left;
+    elemStartY = rect.top;
+
+    container.classList.add('pet-drag');
+    resetSleepTimer();
+  }
+
+  function onDragMove(e) {
+    if (!state.isDragging) return;
+    e.preventDefault();
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - dragStartX;
+    const dy = point.clientY - dragStartY;
+
+    if (Math.abs(dx) > CONFIG.dragThreshold || Math.abs(dy) > CONFIG.dragThreshold) {
+      hasMoved = true;
+    }
+
+    let newX = elemStartX + dx;
+    let newY = elemStartY + dy;
+
+    // 边界限制
+    const maxX = window.innerWidth - container.offsetWidth;
+    const maxY = window.innerHeight - container.offsetHeight;
+    newX = Math.max(0, Math.min(newX, maxX));
+    newY = Math.max(0, Math.min(newY, maxY));
+
+    container.style.left = newX + 'px';
+    container.style.top = newY + 'px';
+    container.style.right = 'auto';
+    container.style.bottom = 'auto';
+  }
+
+  function onDragEnd() {
+    if (!state.isDragging) return;
+    state.isDragging = false;
+    container.classList.remove('pet-drag');
+
+    if (hasMoved) {
+      const rect = container.getBoundingClientRect();
+      state.position = { x: rect.left, y: rect.top };
+      saveState();
+      postMessageToParent({ type: 'pet:position', position: state.position });
+    }
+    resetSleepTimer();
+  }
+
+  // ============== 点击交互 ==============
+  function setupClick() {
+    container.addEventListener('click', function(e) {
+      if (hasMoved) return; // 拖拽不触发点击
+      onPetClick();
+    });
+  }
+
+  function onPetClick() {
+    resetSleepTimer();
+    // 随机小动作
+    const actions = ['happy', 'wave', 'surprise'];
+    const action = actions[Math.floor(Math.random() * actions.length)];
+    triggerMood(action, 1500);
+
+    // 随机对话
+    const greetings = [
+      '你好呀~',
+      '嘿嘿~',
+      '摸摸头~',
+      '有什么事吗？',
+      '我超可爱的！',
+      '呼呼~',
+    ];
+    speak(greetings[Math.floor(Math.random() * greetings.length)]);
+
+    // 爱心粒子
+    spawnHearts();
+
+    postMessageToParent({ type: 'pet:click' });
+  }
+
+  // ============== 情绪系统 ==============
+  function setMood(mood) {
+    if (!CONFIG.moods.includes(mood)) {
+      console.warn('[pet] 未知情绪:', mood);
+      return;
+    }
+    state.mood = mood;
+    state.sleeping = mood === 'sleep';
+    dbgMood.textContent = mood;
+
+    // 移除所有情绪类
+    for (const m of Object.keys(moodAnimClass)) {
+      animGroup.classList.remove(moodAnimClass[m]);
+    }
+
+    // 添加当前情绪类
+    const animClass = moodAnimClass[mood];
+    if (animClass) {
+      animGroup.classList.add(animClass);
+    }
+
+    // ZZZ 显示
+    container.classList.toggle('sleeping', state.sleeping);
+
+    postMessageToParent({ type: 'pet:mood', mood: mood });
+  }
+
+  /**
+   * 临时触发一个情绪动画，完成后回到 idle
+   */
+  function triggerMood(mood, duration) {
+    setMood(mood);
+    if (mood !== 'idle' && mood !== 'sleep') {
+      setTimeout(() => {
+        if (!state.isDragging) {
+          setMood('idle');
+        }
+      }, duration || 1500);
+    }
+  }
+
+  // ============== 休眠计时器 ==============
+  function setupSleepTimer() {
+    resetSleepTimer();
+  }
+
+  function resetSleepTimer() {
+    state.lastActivity = Date.now();
+    if (state.sleepTimer) clearTimeout(state.sleepTimer);
+    state.sleepTimer = setTimeout(() => {
+      if (state.mood !== 'sleep') {
+        setMood('sleep');
+      }
+    }, CONFIG.idleTimeout);
+  }
+
+  // ============== 对话气泡 + TTS ==============
+  let speechTimer = null;
+  function speak(text, duration) {
+    speechBubble.textContent = text;
+    speechBubble.classList.add('show');
+    if (speechTimer) clearTimeout(speechTimer);
+    speechTimer = setTimeout(() => {
+      speechBubble.classList.remove('show');
+    }, duration || 2500);
+
+    // TTS 语音合成（如果可用）
+    if ('speechSynthesis' in window) {
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-CN';
+        utterance.rate = 1.1;
+        utterance.volume = 0.6;
+        window.speechSynthesis.speak(utterance);
+      } catch (e) { /* 静默失败 */ }
+    }
+  }
+
+  function sayHello() {
+    setTimeout(() => {
+      speak('你好呀~我是你的桌宠！');
+    }, 800);
+  }
+
+  // ============== 粒子效果 ==============
+  function spawnHearts() {
+    const count = 5;
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const heart = document.createElement('div');
+        heart.textContent = '❤';
+        heart.style.cssText = `
+          position: absolute;
+          left: ${30 + Math.random() * 60}%;
+          top: 40%;
+          font-size: ${12 + Math.random() * 8}px;
+          color: ${Math.random() > 0.5 ? '#ff6b9d' : '#ff9eb5'};
+          pointer-events: none;
+          animation: floatUp 1.2s ease-out forwards;
+        `;
+        particles.appendChild(heart);
+        setTimeout(() => heart.remove(), 1200);
+      }, i * 80);
+    }
+  }
+
+  // 添加浮动动画
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(0.5); }
+      100% { opacity: 0; transform: translateY(-40px) scale(1.2) rotate(15deg); }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // ============== postMessage 通信 ==============
+  function setupPostMessage() {
+    window.addEventListener('message', function(e) {
+      const data = e.data;
+      if (!data || !data.type || !data.type.startsWith('pet:')) return;
+
+      switch (data.type) {
+        case 'pet:mood':
+          if (data.mood) setMood(data.mood);
+          break;
+        case 'pet:speak':
+          if (data.text) speak(data.text, data.duration);
+          break;
+        case 'pet:trigger':
+          if (data.mood) triggerMood(data.mood, data.duration);
+          break;
+        case 'pet:reset':
+          resetPosition();
+          break;
+        case 'pet:config':
+          if (data.uid) state.uid = data.uid;
+          if (data.textures) applyTextures(data.textures);
+          saveState();
+          break;
+        case 'pet:debug':
+          debugPanel.classList.toggle('show', data.show !== false);
+          break;
+        case 'pet:ping':
+          postMessageToParent({ type: 'pet:pong', ready: true });
+          break;
+        default:
+          console.log('[pet] 未知消息:', data.type);
+      }
+    });
+
+    // 通知父页面已就绪
+    postMessageToParent({ type: 'pet:ready' });
+  }
+
+  function postMessageToParent(data) {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(data, '*');
+    }
+  }
+
+  // ============== 贴图替换（预留 Spine 接口） ==============
+  function applyTextures(textures) {
+    // 占位实现：实际项目中这里会替换 Spine 插槽贴图
+    // 当前演示版使用整图，若提供 body 贴图则替换主形象
+    if (textures && typeof textures.body === 'string') {
+      petImg.src = textures.body;
+    }
+    console.log('[pet] 应用用户贴图:', textures);
+    state.textures = textures;
+    postMessageToParent({ type: 'pet:texturesApplied' });
+  }
+
+  // ============== 调试面板 ==============
+  function setupDebug() {
+    moodSelect.addEventListener('change', function() {
+      triggerMood(this.value, 2000);
+    });
+    btnSpeak.addEventListener('click', function() {
+      speak('这是一个测试语音~', 3000);
+    });
+    btnReset.addEventListener('click', resetPosition);
+
+    // URL 参数控制 debug 面板
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('debug') === '1') {
+      debugPanel.classList.add('show');
+    }
+  }
+
+  // ============== 页面可见性 ==============
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      // 页面隐藏时暂停动画节省性能
+      animGroup.style.animationPlayState = 'paused';
+    } else {
+      animGroup.style.animationPlayState = '';
+      resetSleepTimer();
+    }
+  });
+
+  // 启动
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

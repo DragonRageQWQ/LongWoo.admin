@@ -24,6 +24,13 @@ import { JA_SAMPLER } from './ja-sampler'
 import { KO_SAMPLER } from './ko-sampler'
 import { RU_SAMPLER } from './ru-sampler'
 import { FR_SAMPLER } from './fr-sampler'
+import { ZH_PET } from './zh-pet'
+import { EN_PET } from './en-pet'
+import { ZH_HANT_PET } from './zh-hant-pet'
+import { JA_PET } from './ja-pet'
+import { KO_PET } from './ko-pet'
+import { RU_PET } from './ru-pet'
+import { FR_PET } from './fr-pet'
 
 export type Lang = 'zh' | 'en' | 'zh-Hant' | 'ja' | 'ko' | 'ru' | 'fr'
 
@@ -198,14 +205,14 @@ export const I18N_DICTS: Record<Lang, Record<string, string>> = {
   fr: FR_PAGES,
 }
 
-// 合并补充字典（profile / ai / admin / sampler 页面）
-const MERGED_ZH = { ...I18N_DICTS.zh, ...ZH_EXTRA, ...ZH_ADMIN, ...ZH_SAMPLER }
-const MERGED_EN = { ...I18N_DICTS.en, ...EN_EXTRA, ...EN_ADMIN, ...EN_SAMPLER }
-const MERGED_ZH_HANT = { ...I18N_DICTS['zh-Hant'], ...ZH_HANT_ADMIN, ...ZH_HANT_SAMPLER }
-const MERGED_JA = { ...I18N_DICTS.ja, ...JA_ADMIN, ...JA_SAMPLER }
-const MERGED_KO = { ...I18N_DICTS.ko, ...KO_ADMIN, ...KO_SAMPLER }
-const MERGED_RU = { ...I18N_DICTS.ru, ...RU_ADMIN, ...RU_SAMPLER }
-const MERGED_FR = { ...I18N_DICTS.fr, ...FR_ADMIN, ...FR_SAMPLER }
+// 合并补充字典（profile / ai / admin / sampler / pet 页面）
+const MERGED_ZH = { ...I18N_DICTS.zh, ...ZH_EXTRA, ...ZH_ADMIN, ...ZH_SAMPLER, ...ZH_PET }
+const MERGED_EN = { ...I18N_DICTS.en, ...EN_EXTRA, ...EN_ADMIN, ...EN_SAMPLER, ...EN_PET }
+const MERGED_ZH_HANT = { ...I18N_DICTS['zh-Hant'], ...ZH_HANT_ADMIN, ...ZH_HANT_SAMPLER, ...ZH_HANT_PET }
+const MERGED_JA = { ...I18N_DICTS.ja, ...JA_ADMIN, ...JA_SAMPLER, ...JA_PET }
+const MERGED_KO = { ...I18N_DICTS.ko, ...KO_ADMIN, ...KO_SAMPLER, ...KO_PET }
+const MERGED_RU = { ...I18N_DICTS.ru, ...RU_ADMIN, ...RU_SAMPLER, ...RU_PET }
+const MERGED_FR = { ...I18N_DICTS.fr, ...FR_ADMIN, ...FR_SAMPLER, ...FR_PET }
 
 const MERGED_DICTS: Record<Lang, Record<string, string>> = {
   zh: MERGED_ZH,

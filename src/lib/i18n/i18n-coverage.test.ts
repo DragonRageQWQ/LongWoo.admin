@@ -22,6 +22,13 @@ import { JA_SAMPLER } from './ja-sampler'
 import { KO_SAMPLER } from './ko-sampler'
 import { RU_SAMPLER } from './ru-sampler'
 import { FR_SAMPLER } from './fr-sampler'
+import { ZH_PET } from './zh-pet'
+import { EN_PET } from './en-pet'
+import { ZH_HANT_PET } from './zh-hant-pet'
+import { JA_PET } from './ja-pet'
+import { KO_PET } from './ko-pet'
+import { RU_PET } from './ru-pet'
+import { FR_PET } from './fr-pet'
 
 const SAMPLER_OF: Record<Lang, Record<string, string>> = {
   zh: ZH_SAMPLER,
@@ -31,6 +38,16 @@ const SAMPLER_OF: Record<Lang, Record<string, string>> = {
   ko: KO_SAMPLER,
   ru: RU_SAMPLER,
   fr: FR_SAMPLER,
+}
+
+const PET_OF: Record<Lang, Record<string, string>> = {
+  zh: ZH_PET,
+  en: EN_PET,
+  'zh-Hant': ZH_HANT_PET,
+  ja: JA_PET,
+  ko: KO_PET,
+  ru: RU_PET,
+  fr: FR_PET,
 }
 
 const PAGES_OF: Record<Lang, Record<string, string>> = {
@@ -136,6 +153,22 @@ describe('i18n 全语言一致性', () => {
         expect(v, `${lang} sampler ${key}`).toBeTruthy()
         expect(v, `${lang} sampler ${key} 裸键`).not.toBe(key)
         expect(placeholderTokens(v), `${lang} sampler ${key} token`).toEqual(placeholderTokens(zhVal))
+      }
+    }
+  })
+
+  it('pet 字典七语言键等价 + token 保留', () => {
+    const zhKeys = Object.keys(PET_OF.zh).sort()
+    for (const lang of ['en', 'zh-Hant', 'ja', 'ko', 'ru', 'fr'] as Lang[]) {
+      const target = Object.keys(PET_OF[lang]).sort()
+      expect(target, `${lang} pet 键`).toEqual(zhKeys)
+    }
+    for (const lang of ['en', 'zh-Hant', 'ja', 'ko', 'ru', 'fr'] as Lang[]) {
+      for (const [key, zhVal] of Object.entries(PET_OF.zh)) {
+        const v = PET_OF[lang][key]
+        expect(v, `${lang} pet ${key}`).toBeTruthy()
+        expect(v, `${lang} pet ${key} 裸键`).not.toBe(key)
+        expect(placeholderTokens(v), `${lang} pet ${key} token`).toEqual(placeholderTokens(zhVal))
       }
     }
   })

@@ -51,4 +51,12 @@ export const grayTestEntries: GrayTestEntry[] = [
     description: "兽装定制相关问题咨询；功能暂未开启，入口仅保留在灰度环境",
     href: "/ai-chat.html",
   },
+  {
+    id: "pet",
+    label: "new",
+    title: "全局桌宠 Demo",
+    description:
+      "Spine 公共骨骼 + 自定义兽设贴图 + 全站悬浮持久桌宠；支持情绪动画、拖拽交互、AI 对话驱动（灰度演示版，预设形象已替换为用户毛绒兽设图）",
+    href: "/gray-test/pet",
+  },
 ]
