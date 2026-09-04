@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, canViewOrderDetail, requireAdmin, requireZeroUser } from '@/lib/auth'
 import { escapeHtml, escapePostgrestKeyword, escapeIlikeKeyword } from '@/lib/postgrest-utils'
 import { validateUrl, isValidUUID } from '@/lib/order-utils'
+import { ADMIN_PUSHABLE_STATUSES, allowedFromStatuses, isOrderStatus } from '@/lib/order-status'
 import { maskPhone, maskEmail } from '@/lib/utils'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { validateCsrf } from '@/lib/csrf'
@@ -568,7 +569,7 @@ export async function rejectOrder(
         reject_reason: trimmedReason,
       })
       .eq('id', orderId)
-      .in('status', ['pending', 'estimated', 'agreed'])
+      .in('status', [...allowedFromStatuses('rejected')])
       .select()
       .single()
 
@@ -620,9 +621,8 @@ export async function updateOrderStatus(
 
   const supabase = await createClient()
 
-  // 校验状态值
-  const validStatuses = ['processing', 'delivered', 'completed']
-  if (!validStatuses.includes(newStatus)) {
+  // 校验状态值：仅管理员可主动推进的状态（processing/delivered/completed）
+  if (!isOrderStatus(newStatus) || !ADMIN_PUSHABLE_STATUSES.includes(newStatus)) {
     return { success: false, error: '无效的状态值' }
   }
 
@@ -644,19 +644,14 @@ export async function updateOrderStatus(
       updateData.delivery_url = deliveryUrl
     }
 
-    // 状态转换校验：确保只允许合法的状态转换
-    const allowedTransitions: Record<string, string[]> = {
-      processing: ['accepted'],
-      delivered: ['processing'],
-      completed: ['delivered'],
-    }
-    const allowedFromStatuses = allowedTransitions[newStatus] || []
-    
+    // 状态转换校验：规则取自 src/lib/order-status.ts（唯一事实来源，已被单元测试覆盖）
+    const fromStatuses = allowedFromStatuses(newStatus)
+
     const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
       .update(updateData)
       .eq('id', orderId)
-      .in('status', allowedFromStatuses)
+      .in('status', [...fromStatuses])
       .select()
       .single()
 
