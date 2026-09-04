@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell, Loader2, CheckCheck, X, ArrowRight } from "lucide-react";
+import BellIcon from "@/components/ui/BellIcon";
 import { formatDate } from "@/lib/utils";
 
 interface NotificationItem {
@@ -44,6 +45,7 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<NotificationItem | null>(null);
+  const [bellTick, setBellTick] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -173,11 +175,16 @@ export default function NotificationBell() {
     <div ref={containerRef} className="relative">
       {/* 铃铛按钮 */}
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          setOpen(!open);
+          setBellTick((t) => t + 1);
+        }}
         aria-label="通知"
-        className="relative p-1.5 text-gray-400 hover:text-lw-accent hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+        className={`relative p-1.5 rounded-lg transition-colors cursor-pointer ${
+          unreadCount > 0 ? "text-lw-accent" : "text-gray-400 hover:text-lw-accent hover:bg-gray-100"
+        }`}
       >
-        <Bell className="w-4.5 h-4.5" />
+        <BellIcon solid={unreadCount > 0} tick={bellTick} className="w-4.5 h-4.5" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center">
             {unreadCount > 99 ? "99+" : unreadCount}

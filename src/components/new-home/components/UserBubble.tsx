@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Loader2, LogOut, Shield, UserRound } from "lucide-react";
+import { Loader2, LogOut, Shield, UserRound } from "lucide-react";
+import BellIcon from "@/components/ui/BellIcon";
 import { useSession, clearSessionCache } from "@/components/providers/SessionProvider";
 import { logoutUser } from "@/actions/auth-actions";
 import { formatDate } from "@/lib/utils";
@@ -45,6 +46,7 @@ export default function UserBubble({
   const [loggingOut, setLoggingOut] = useState(false);
   // 站内信详情：点击列表项打开完整内容弹层（null=未打开）
   const [activeNotif, setActiveNotif] = useState<NotificationItem | null>(null);
+  const [bellTick, setBellTick] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -194,12 +196,13 @@ export default function UserBubble({
           onClick={() => {
             setPanel((p) => (p === "notif" ? "none" : "notif"));
             setActiveNotif(null);
+            setBellTick((t) => t + 1);
           }}
           aria-expanded={panel === "notif"}
           aria-label={c.notifLabel}
           title={c.notifLabel}
         >
-          <Bell strokeWidth={1.8} />
+          <BellIcon solid={unread > 0} tick={bellTick} />
           {profile && unread > 0 && (
             <span className="gt2-dock-badge">{unread > 99 ? "99+" : unread}</span>
           )}
