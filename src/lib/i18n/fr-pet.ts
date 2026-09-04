@@ -17,6 +17,14 @@ export const FR_PET: Record<string, string> = {
   'pet.test.debugMode': 'Mode débogage',
   'pet.test.resetPosition': 'Réinitialiser la position',
   'pet.test.architecture': 'Architecture',
+  'pet.test.voicePanel': 'Voix et tonalité',
+  'pet.test.voiceSelect': 'Choix de la voix',
+  'pet.test.voiceSystem': 'Par défaut du système',
+  'pet.test.voicePreview': 'Écouter',
+  'pet.test.voicePitch': 'Hauteur',
+  'pet.test.voiceGroupBuiltin': 'Voix intégrées (sans installation)',
+  'pet.test.voiceGroupSystem': 'Voix système (navigateur)',
+  'pet.test.voiceHint': 'Les voix intégrées sont synthétisées côté serveur et fonctionnent immédiatement, sans installation ; les voix système dépendent du navigateur/OS. Le changement s\'applique instantanément et Écouter lit une phrase d\'exemple.',
 
   // Noms d'humeur
   'pet.mood.idle': 'Attente',

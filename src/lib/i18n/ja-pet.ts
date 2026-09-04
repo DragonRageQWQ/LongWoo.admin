@@ -17,6 +17,14 @@ export const JA_PET: Record<string, string> = {
   'pet.test.debugMode': 'デバッグモード',
   'pet.test.resetPosition': '位置をリセット',
   'pet.test.architecture': 'アーキテクチャ',
+  'pet.test.voicePanel': '音声と声色',
+  'pet.test.voiceSelect': '声色を選択',
+  'pet.test.voiceSystem': 'システムデフォルト',
+  'pet.test.voicePreview': '試聴',
+  'pet.test.voicePitch': 'ピッチ',
+  'pet.test.voiceGroupBuiltin': '内蔵ボイス（インストール不要）',
+  'pet.test.voiceGroupSystem': 'システム音声（ブラウザー）',
+  'pet.test.voiceHint': '内蔵ボイスはサーバー側で合成され、インストール不要です。システム音声はブラウザー／OS の環境に依存します。切替はすぐ反映され、試聴ボタンでサンプルを読み上げます。',
 
   // 気分名
   'pet.mood.idle': '待機',

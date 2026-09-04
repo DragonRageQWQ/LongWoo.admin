@@ -30,6 +30,18 @@ export const PET_CONFIG = {
 
   /** 支持的情绪列表 */
   moods: ['idle', 'happy', 'surprise', 'sad', 'wave', 'sleep'] as PetMood[],
+
+  /** 默认音调（1 = 原声；<1 低沉，>1 尖细） */
+  defaultPitch: 1,
+
+  /** 音调可调范围 */
+  pitchRange: { min: 0.5, max: 2, step: 0.1 },
+
+  /** TTS 默认语速 */
+  defaultRate: 1.1,
+
+  /** localStorage 中 voice 配置键 */
+  voiceStorageKey: 'longwoo_pet_voice',
 };
 
 /**

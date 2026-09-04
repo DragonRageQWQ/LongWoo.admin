@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   // 隐藏 X-Powered-By 响应头，减少信息泄露
   poweredByHeader: false,
 
+  // TTS 代理使用 ws 直连微软 Read Aloud WebSocket，交由 Node 运行时原生加载（external）
+  serverExternalPackages: ['ws'],
+
   // 首页（v2.0.0）：由 src/app/page.tsx 渲染新首页（App Router 动态页面）
   // 旧版首页已归档至 public/gray-test/test2/index.html（灰度预览）
   // 旧书签/外链兼容：/index.html（旧首页静态文件地址）301 至新首页

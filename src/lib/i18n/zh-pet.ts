@@ -17,6 +17,14 @@ export const ZH_PET: Record<string, string> = {
   'pet.test.debugMode': '调试模式',
   'pet.test.resetPosition': '重置位置',
   'pet.test.architecture': '技术架构',
+  'pet.test.voicePanel': '语音与音色',
+  'pet.test.voiceSelect': '音色选择',
+  'pet.test.voiceSystem': '跟随系统默认',
+  'pet.test.voicePreview': '试听',
+  'pet.test.voicePitch': '音调',
+  'pet.test.voiceGroupBuiltin': '内置音色（免安装）',
+  'pet.test.voiceGroupSystem': '系统语音（浏览器）',
+  'pet.test.voiceHint': '内置音色由服务端合成、无需安装任何语音包；系统语音则取决于浏览器环境。切换即生效，可拖动音调改变听感，试听按钮会朗读一句示例。',
 
   // 情绪名称
   'pet.mood.idle': '待机',

@@ -17,6 +17,14 @@ export const KO_PET: Record<string, string> = {
   'pet.test.debugMode': '디버그 모드',
   'pet.test.resetPosition': '위치 재설정',
   'pet.test.architecture': '아키텍처',
+  'pet.test.voicePanel': '음성 및 음색',
+  'pet.test.voiceSelect': '음색 선택',
+  'pet.test.voiceSystem': '시스템 기본값 사용',
+  'pet.test.voicePreview': '미리 듣기',
+  'pet.test.voicePitch': '음높이',
+  'pet.test.voiceGroupBuiltin': '내장 음성 (설치 불필요)',
+  'pet.test.voiceGroupSystem': '시스템 음성 (브라우저)',
+  'pet.test.voiceHint': '내장 음성은 서버에서 합성되어 별도 설치 없이 바로 사용할 수 있으며, 시스템 음성은 브라우저 환경에 따라 다릅니다. 선택 즉시 적용되고 미리 듣기 버튼으로 샘플 문장을 들을 수 있습니다.',
 
   // 기분 이름
   'pet.mood.idle': '대기',

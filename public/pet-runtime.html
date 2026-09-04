@@ -218,7 +218,7 @@
 
 <!-- 调试面板（灰度测试用） -->
 <div id="debug-panel">
-  <div>mood: <span id="dbg-mood">idle</span></div>
+  <div>mood: <span id="dbg-mood">idle</span> | voice: <span id="dbg-voice">system</span></div>
   <div>
     <select id="mood-select">
       <option value="idle">idle</option>
@@ -230,6 +230,13 @@
     </select>
     <button id="btn-speak">说话</button>
     <button id="btn-reset">重置位置</button>
+  </div>
+  <div>
+    <select id="voice-select">
+      <option value="">system (default)</option>
+    </select>
+    <label>pitch <input type="range" id="pitch-range" min="0.5" max="2" step="0.1" value="1" style="width:70px;vertical-align:middle" /></label>
+    <span id="pitch-value">1.0</span>
   </div>
 </div>
 
@@ -246,6 +253,16 @@
     defaultMood: 'idle',
     /** 预设形象默认尺寸（宽/高，可按图片比例微调） */
     defaultSize: { width: 140, height: 150 },
+    /** TTS 默认语速 / 音量 / 音调 */
+    ttsRate: 1.05,
+    ttsVolume: 0.6,
+    defaultPitch: 1,
+    voiceStorageKey: 'longwoo_pet_voice',
+    /** 内置音色（服务端合成，用户无需安装系统语音）相关地址 */
+    ttsVoicesApi: '/api/pet/voices',
+    ttsSynthApi: '/api/pet/tts',
+    /** 内置音色 voiceURI 前缀（与浏览器系统语音区分） */
+    builtinPrefix: 'edge:',
   };
 
   // ============== 状态 ==============
@@ -258,6 +275,16 @@
     lastActivity: Date.now(),
     sleepTimer: null,
     sleeping: false,
+    /** 当前音色 voiceURI（null = 跟随系统默认；edge:* = 内置音色） */
+    voiceURI: null,
+    /** 音调 0.5~2 */
+    voicePitch: CONFIG.defaultPitch,
+    /** 系统音色缓存（speechSynthesis.getVoices()） */
+    systemVoices: [],
+    /** 内置音色缓存（服务端目录 /api/pet/voices） */
+    builtinVoices: [],
+    /** 合并后的全量音色（host UI 用） */
+    voices: [],
   };
 
   // ============== DOM 引用 ==============
@@ -270,7 +297,11 @@
   const particles = document.getElementById('particles');
   const debugPanel = document.getElementById('debug-panel');
   const dbgMood = document.getElementById('dbg-mood');
+  const dbgVoice = document.getElementById('dbg-voice');
   const moodSelect = document.getElementById('mood-select');
+  const voiceSelect = document.getElementById('voice-select');
+  const pitchRange = document.getElementById('pitch-range');
+  const pitchValue = document.getElementById('pitch-value');
   const btnSpeak = document.getElementById('btn-speak');
   const btnReset = document.getElementById('btn-reset');
 
@@ -314,7 +345,30 @@
     setupSleepTimer();
     setupPostMessage();
     setupDebug();
+    loadBuiltinVoices();
+    setupTTS();
     sayHello();
+  }
+
+  // ---------- TTS 初始化：内置音色（服务端）+ 系统音色（浏览器） ----------
+  function setupTTS() {
+    // 1) 拉取内置音色目录（不依赖浏览器语音，用户无需安装系统语音）
+    //    由 loadBuiltinVoices() 完成，成功后自动广播音色列表
+    // 2) 系统语音（Chrome 首次异步，监听 voiceschanged）
+    if ('speechSynthesis' in window) {
+      refreshSystemVoices();
+      window.speechSynthesis.onvoiceschanged = function() {
+        refreshSystemVoices();
+      };
+    }
+    // 兜底：1.5s 后再拉一次并广播全量列表 + 恢复的音色偏好
+    setTimeout(function() {
+      refreshSystemVoices();
+      mergeAndBroadcastVoices();
+      syncVoiceUI();
+      // 通知宿主当前已恢复的音色偏好（若 iframe 被重新加载）
+      postMessageToParent({ type: 'pet:voiceChanged', selected: state.voiceURI, pitch: state.voicePitch });
+    }, 1500);
   }
 
   function onImgReady() {
@@ -346,6 +400,7 @@
     } catch (e) {
       console.warn('[pet] 读取本地状态失败', e);
     }
+    loadVoicePref();
   }
 
   function saveState() {
@@ -357,6 +412,186 @@
     } catch (e) {
       console.warn('[pet] 保存状态失败', e);
     }
+    saveVoicePref();
+  }
+
+  // ---------- TTS 音色偏好持久化（独立键，避免整体状态频繁写） ----------
+  function loadVoicePref() {
+    try {
+      const saved = localStorage.getItem(CONFIG.voiceStorageKey);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data && typeof data.voiceURI === 'string') state.voiceURI = data.voiceURI;
+        if (data && typeof data.pitch === 'number' && data.pitch >= 0.5 && data.pitch <= 2) {
+          state.voicePitch = data.pitch;
+        }
+      }
+    } catch (e) {
+      console.warn('[pet] 读取音色偏好失败', e);
+    }
+  }
+
+  function saveVoicePref() {
+    try {
+      localStorage.setItem(CONFIG.voiceStorageKey, JSON.stringify({
+        voiceURI: state.voiceURI,
+        pitch: state.voicePitch,
+      }));
+    } catch (e) {
+      console.warn('[pet] 保存音色偏好失败', e);
+    }
+  }
+
+  // ---------- 内置音色（服务端合成，用户无需安装系统语音） ----------
+  function loadBuiltinVoices() {
+    fetch(CONFIG.ttsVoicesApi, { headers: { 'Accept': 'application/json' } })
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        const list = Array.isArray(data && data.voices) ? data.voices : [];
+        state.builtinVoices = list.map(function(v) {
+          return {
+            voiceURI: v.voiceURI,             // edge:zh-CN-XiaoxiaoNeural
+            name: (v.label || '') + ' ' + (v.name || v.id), // 晓晓 Xiaoxiao
+            lang: v.lang || 'zh-CN',
+            isDefault: false,
+            localService: false,
+            source: 'builtin',
+            engineId: v.id,
+          };
+        });
+        mergeAndBroadcastVoices();
+        syncVoiceUI();
+      })
+      .catch(function(e) {
+        console.warn('[pet] 获取内置音色失败（仅使用系统语音）', e);
+      });
+  }
+
+  // ---------- 系统音色枚举（浏览器 speechSynthesis，异步） ----------
+  function refreshSystemVoices() {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      const list = (window.speechSynthesis.getVoices() || []).map(function(v) {
+        return {
+          voiceURI: v.voiceURI,
+          name: v.name,
+          lang: v.lang,
+          isDefault: !!v.default,
+          localService: !!v.localService,
+          source: 'system',
+          raw: v, // SpeechSynthesisVoice 原生对象，speak 时使用
+        };
+      });
+      // 排序：默认音色优先，其次按语言、名称
+      list.sort(function(a, b) {
+        if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+        return a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name);
+      });
+      state.systemVoices = list;
+      mergeAndBroadcastVoices();
+    } catch (e) {
+      console.warn('[pet] 枚举系统音色失败', e);
+    }
+  }
+
+  /** 合并内置 + 系统音色并推送宿主 / 刷新调试面板 */
+  function mergeAndBroadcastVoices() {
+    state.voices = state.builtinVoices.concat(state.systemVoices);
+    broadcastVoices();
+  }
+
+  function broadcastVoices() {
+    const info = (state.voices || []).map(function(v) {
+      return {
+        voiceURI: v.voiceURI,
+        name: v.name,
+        lang: v.lang,
+        isDefault: v.isDefault,
+        localService: v.localService,
+        source: v.source || 'system',
+      };
+    });
+    postMessageToParent({ type: 'pet:voices', voices: info, selected: state.voiceURI });
+    // 同步调试面板下拉（内置音色优先展示，无需安装）
+    if (voiceSelect) {
+      voiceSelect.innerHTML = '';
+      const optDefault = document.createElement('option');
+      optDefault.value = '';
+      optDefault.textContent = 'system (default)';
+      voiceSelect.appendChild(optDefault);
+      if (state.builtinVoices.length > 0) {
+        const g1 = document.createElement('optgroup');
+        g1.label = '内置音色 (免安装)';
+        state.builtinVoices.forEach(function(v) {
+          const opt = document.createElement('option');
+          opt.value = v.voiceURI;
+          opt.textContent = v.name + ' [' + v.lang + ']';
+          g1.appendChild(opt);
+        });
+        voiceSelect.appendChild(g1);
+      }
+      if (state.systemVoices.length > 0) {
+        const g2 = document.createElement('optgroup');
+        g2.label = '系统语音 (浏览器)';
+        state.systemVoices.forEach(function(v) {
+          const opt = document.createElement('option');
+          opt.value = v.voiceURI;
+          const mark = v.isDefault ? ' ★' : '';
+          opt.textContent = v.name + mark + ' [' + v.lang + ']';
+          g2.appendChild(opt);
+        });
+        voiceSelect.appendChild(g2);
+      }
+      if (state.voiceURI) voiceSelect.value = state.voiceURI;
+    }
+  }
+
+  /** 同步调试面板的音色显示 + pitch 滑块 */
+  function syncVoiceUI() {
+    if (dbgVoice) {
+      const v = findVoice(state.voiceURI);
+      dbgVoice.textContent = v ? v.name : 'system';
+    }
+    if (voiceSelect && state.voiceURI) voiceSelect.value = state.voiceURI;
+    if (pitchRange) pitchRange.value = String(state.voicePitch);
+    if (pitchValue) pitchValue.textContent = Number(state.voicePitch).toFixed(1);
+  }
+
+  /** voiceURI 是否为内置音色（edge:*） */
+  function isBuiltinURI(uri) {
+    return typeof uri === 'string' && uri.indexOf(CONFIG.builtinPrefix) === 0;
+  }
+
+  /** 按 voiceURI 查找音色（内置或系统；找不到返回 null = 跟随系统默认） */
+  function findVoice(uri) {
+    if (!uri) return null;
+    return (state.voices || []).find(function(v) { return v.voiceURI === uri; }) || null;
+  }
+
+  /** 根据语言生成对应的试听示例文本 */
+  function previewSampleForLang(lang) {
+    const l = (lang || '').toLowerCase();
+    if (l.indexOf('zh') === 0) return '你好呀~我是你的小桌宠！';
+    if (l.indexOf('ja') === 0) return 'こんにちは！わたしは、あなたのデスクトップペットです！';
+    if (l.indexOf('ko') === 0) return '안녕하세요! 저는 당신의 데스크톱 펫이에요!';
+    if (l.indexOf('ru') === 0) return 'Привет! Я твой настольный питомец!';
+    if (l.indexOf('fr') === 0) return 'Salut ! Je suis ton petit compagnon de bureau !';
+    return 'Hello! I am your desktop pet!';
+  }
+
+  /** 用当前音色朗读一句试听（无选中音色时：系统中文优先，其次内置中文） */
+  function speakPreview() {
+    const zh = function(arr) {
+      return (arr || []).find(function(v) { return /^zh/i.test(v.lang); }) || null;
+    };
+    const voice = findVoice(state.voiceURI)
+      || zh(state.systemVoices)
+      || zh(state.builtinVoices)
+      || null;
+    speak(previewSampleForLang(voice ? voice.lang : ''), 3000);
   }
 
   // ============== 位置控制 ==============
@@ -539,7 +774,74 @@
 
   // ============== 对话气泡 + TTS ==============
   let speechTimer = null;
+  // 内置音色播放（服务端合成音频）
+  let audioEl = null;
+  // 发声序号：用于丢弃被新发声取代的旧合成结果
+  let speechSeq = 0;
+
+  /** 打断当前发声（系统语音 + 内置音色播放） */
+  function stopSpeaking() {
+    if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) { /* 忽略 */ }
+    }
+    if (audioEl) {
+      try { audioEl.pause(); } catch (e) { /* 忽略 */ }
+    }
+  }
+
+  /** 内置音色：服务端合成后播放（带序号防乱序，失败回退系统语音） */
+  function synthSpeak(text, voiceURI, seq) {
+    fetch(CONFIG.ttsSynthApi, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: text,
+        voice: voiceURI,
+        pitch: state.voicePitch,
+        rate: CONFIG.ttsRate,
+      }),
+    })
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.blob();
+      })
+      .then(function(blob) {
+        if (seq !== speechSeq) return; // 已被更新的发声取代
+        const url = URL.createObjectURL(blob);
+        if (!audioEl) {
+          audioEl = new Audio();
+        } else {
+          if (audioEl._url) URL.revokeObjectURL(audioEl._url);
+          audioEl._url = null;
+        }
+        audioEl._url = url;
+        audioEl.src = url;
+        audioEl.volume = CONFIG.ttsVolume;
+        const p = audioEl.play();
+        if (p && typeof p.catch === 'function') p.catch(function() { /* 自动播放被拦时静默 */ });
+      })
+      .catch(function(e) {
+        console.warn('[pet] 内置音色合成失败，回退系统语音', e);
+        if ('speechSynthesis' in window) {
+          try {
+            const u = new SpeechSynthesisUtterance(text);
+            const zh = (state.systemVoices || []).find(function(v) { return /^zh/i.test(v.lang); });
+            if (zh) { u.voice = zh.raw; u.lang = zh.lang; }
+            u.pitch = state.voicePitch;
+            u.rate = CONFIG.ttsRate;
+            u.volume = CONFIG.ttsVolume;
+            window.speechSynthesis.speak(u);
+          } catch (e2) { /* 静默失败 */ }
+        }
+      });
+  }
+
   function speak(text, duration) {
+    // 新发声前打断旧的，避免叠音
+    stopSpeaking();
+    speechSeq++;
+    const seq = speechSeq;
+
     speechBubble.textContent = text;
     speechBubble.classList.add('show');
     if (speechTimer) clearTimeout(speechTimer);
@@ -547,16 +849,55 @@
       speechBubble.classList.remove('show');
     }, duration || 2500);
 
-    // TTS 语音合成（如果可用）
-    if ('speechSynthesis' in window) {
-      try {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'zh-CN';
-        utterance.rate = 1.1;
-        utterance.volume = 0.6;
-        window.speechSynthesis.speak(utterance);
-      } catch (e) { /* 静默失败 */ }
+    const voice = findVoice(state.voiceURI);
+    // 选中内置音色 → 服务端合成播放
+    if (voice && voice.source === 'builtin') {
+      synthSpeak(text, voice.voiceURI, seq);
+      return;
     }
+    // 系统语音路径
+    if (!('speechSynthesis' in window)) return;
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      if (voice) {
+        // 系统语音：使用原生 SpeechSynthesisVoice
+        utterance.voice = voice.raw || null;
+        utterance.lang = voice.lang;
+      } else {
+        // 未选择音色：跟随系统默认，中文优先
+        const zhSystem = (state.systemVoices || []).find(function(v) { return /^zh/i.test(v.lang); });
+        const zhBuiltin = (state.builtinVoices || []).find(function(v) { return /^zh/i.test(v.lang); });
+        if (zhSystem) {
+          utterance.voice = zhSystem.raw;
+          utterance.lang = zhSystem.lang;
+        } else if (zhBuiltin) {
+          // 系统无中文语音 → 自动用内置中文音色兜底（用户无需安装语音）
+          synthSpeak(text, zhBuiltin.voiceURI, seq);
+          return;
+        } else {
+          utterance.lang = 'zh-CN';
+        }
+      }
+      utterance.pitch = state.voicePitch;
+      utterance.rate = CONFIG.ttsRate;
+      utterance.volume = CONFIG.ttsVolume;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) { /* 静默失败 */ }
+  }
+
+  /** 设置音色 + 音调，持久化并回传状态 */
+  function setVoice(voiceURI, pitch) {
+    if (typeof voiceURI === 'string' && voiceURI !== '') {
+      state.voiceURI = voiceURI;
+    } else {
+      state.voiceURI = null; // 空/缺省 = 跟随系统
+    }
+    if (typeof pitch === 'number' && pitch >= 0.5 && pitch <= 2) {
+      state.voicePitch = pitch;
+    }
+    saveVoicePref();
+    syncVoiceUI();
+    postMessageToParent({ type: 'pet:voiceChanged', selected: state.voiceURI, pitch: state.voicePitch });
   }
 
   function sayHello() {
@@ -619,7 +960,22 @@
         case 'pet:config':
           if (data.uid) state.uid = data.uid;
           if (data.textures) applyTextures(data.textures);
+          if (data.voiceURI !== undefined || data.pitch !== undefined) {
+            setVoice(data.voiceURI !== undefined ? data.voiceURI : state.voiceURI, data.pitch);
+          }
           saveState();
+          break;
+        case 'pet:getVoices':
+          // 宿主主动拉取音色列表（内置 + 系统，异步就绪后推送）
+          refreshSystemVoices();
+          mergeAndBroadcastVoices();
+          break;
+        case 'pet:setVoice':
+          if (data.voiceURI !== undefined || data.pitch !== undefined) {
+            setVoice(data.voiceURI, data.pitch);
+            // 设置后立即用新音色说一句，方便宿主"试听"
+            if (data.preview) speakPreview();
+          }
           break;
         case 'pet:debug':
           debugPanel.classList.toggle('show', data.show !== false);
@@ -663,6 +1019,23 @@
       speak('这是一个测试语音~', 3000);
     });
     btnReset.addEventListener('click', resetPosition);
+
+    // 音色切换：下拉选择即应用并试听
+    voiceSelect.addEventListener('change', function() {
+      setVoice(this.value, undefined);
+      speakPreview();
+    });
+    // 音调滑杆：拖动实时应用（不打断）
+    pitchRange.addEventListener('input', function() {
+      const p = parseFloat(this.value);
+      state.voicePitch = p;
+      if (pitchValue) pitchValue.textContent = p.toFixed(1);
+    });
+    pitchRange.addEventListener('change', function() {
+      const p = parseFloat(this.value);
+      setVoice(state.voiceURI, p);
+      speakPreview();
+    });
 
     // URL 参数控制 debug 面板
     const params = new URLSearchParams(window.location.search);

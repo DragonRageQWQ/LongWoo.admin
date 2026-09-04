@@ -15,10 +15,11 @@ import {
   Moon,
   Hand,
   Zap,
+  Volume2,
 } from "lucide-react";
 import PetIframe from "@/components/pet/PetIframe";
 import { PET_CONFIG } from "@/lib/pet/config";
-import type { PetMood } from "@/lib/pet/types";
+import type { PetMood, PetVoiceInfo } from "@/lib/pet/types";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 const MOOD_BUTTONS: { mood: PetMood; label: string; icon: any; color: string }[] = [
@@ -45,6 +46,10 @@ export default function PetTestPanel() {
   const [debugMode, setDebugMode] = useState(true);
   const [currentMood, setCurrentMood] = useState<PetMood>("idle");
   const [isReady, setIsReady] = useState(false);
+  const [voices, setVoices] = useState<PetVoiceInfo[]>([]);
+  const [voiceURI, setVoiceURI] = useState<string>("");
+  const [voicePitch, setVoicePitch] = useState(PET_CONFIG.defaultPitch);
+  const [voiceSynced, setVoiceSynced] = useState(false);
 
   /** 触发情绪动画 */
   const triggerMood = (mood: PetMood) => {
@@ -60,6 +65,26 @@ export default function PetTestPanel() {
       (window as any).__pet.speak(text, 3000);
     }
   };
+
+  /** 应用音色（voiceURI 空串 = 系统默认） */
+  const applyVoice = (uri: string, preview: boolean) => {
+    setVoiceURI(uri);
+    if (typeof window !== "undefined" && (window as any).__pet) {
+      (window as any).__pet.setVoice(uri || null, voicePitch, preview);
+    }
+  };
+
+  /** 应用音调 */
+  const applyPitch = (p: number) => {
+    setVoicePitch(p);
+    if (typeof window !== "undefined" && (window as any).__pet) {
+      (window as any).__pet.setVoice(voiceURI || null, p, false);
+    }
+  };
+
+  /** 按来源分组（内置音色 = 服务端合成免安装；系统语音 = 浏览器） */
+  const builtinVoices = voices.filter((v) => v.source === "builtin");
+  const systemVoices = voices.filter((v) => v.source !== "builtin");
 
   /** 重置位置 */
   const resetPosition = () => {
@@ -100,6 +125,13 @@ export default function PetTestPanel() {
         debug={debugMode}
         onReady={() => setIsReady(true)}
         onMoodChange={setCurrentMood}
+        onVoicesChange={(list) => setVoices(list)}
+        onVoiceChange={(uri, p) => {
+          // 运行时恢复/切换音色后同步本地 UI
+          setVoiceURI(uri ?? "");
+          setVoicePitch(p);
+          setVoiceSynced(true);
+        }}
       />
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-8">
@@ -229,6 +261,74 @@ export default function PetTestPanel() {
                 <RefreshCw className="w-4 h-4" />
                 {t("pet.test.resetPosition")}
               </button>
+            </div>
+          </section>
+
+          {/* 语音与音色 */}
+          <section className="rounded-2xl bg-white/[0.04] border border-white/10 p-5 backdrop-blur-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Volume2 className="w-4 h-4 text-emerald-300" />
+              <h2 className="text-sm font-semibold">{t("pet.test.voicePanel")}</h2>
+              {voiceSynced ? (
+                <span className="ml-auto text-[10px] text-emerald-300/80">TTS ✓</span>
+              ) : null}
+            </div>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-xs text-slate-400">{t("pet.test.voiceSelect")}</span>
+                <div className="flex gap-2 mt-1.5">
+                  <select
+                    value={voiceURI}
+                    onChange={(e) => applyVoice(e.target.value, false)}
+                    className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900/70 border border-white/10 text-sm text-slate-200 outline-none focus:border-emerald-400/50"
+                  >
+                    <option value="">{t("pet.test.voiceSystem")}</option>
+                    {builtinVoices.length > 0 && (
+                      <optgroup label={t("pet.test.voiceGroupBuiltin")}>
+                        {builtinVoices.map((v) => (
+                          <option key={v.voiceURI} value={v.voiceURI}>
+                            {v.name} ({v.lang})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {systemVoices.length > 0 && (
+                      <optgroup label={t("pet.test.voiceGroupSystem")}>
+                        {systemVoices.map((v) => (
+                          <option key={v.voiceURI} value={v.voiceURI}>
+                            {v.name} ({v.lang})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                  <button
+                    onClick={() => applyVoice(voiceURI, true)}
+                    className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 hover:bg-emerald-500/25 transition-colors text-xs"
+                    title={t("pet.test.voicePreview")}
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    {t("pet.test.voicePreview")}
+                  </button>
+                </div>
+              </label>
+              <div className="flex items-center gap-3 px-1 pt-1">
+                <span className="text-xs text-slate-400 whitespace-nowrap">
+                  {t("pet.test.voicePitch")} {voicePitch.toFixed(1)}
+                </span>
+                <input
+                  type="range"
+                  min={PET_CONFIG.pitchRange.min}
+                  max={PET_CONFIG.pitchRange.max}
+                  step={PET_CONFIG.pitchRange.step}
+                  value={voicePitch}
+                  onChange={(e) => applyPitch(parseFloat(e.target.value))}
+                  className="flex-1 accent-emerald-400"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                {t("pet.test.voiceHint")}
+              </p>
             </div>
           </section>
 

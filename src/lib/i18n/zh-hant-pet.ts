@@ -17,6 +17,14 @@ export const ZH_HANT_PET: Record<string, string> = {
   'pet.test.debugMode': '除錯模式',
   'pet.test.resetPosition': '重置位置',
   'pet.test.architecture': '技術架構',
+  'pet.test.voicePanel': '語音與音色',
+  'pet.test.voiceSelect': '音色選擇',
+  'pet.test.voiceSystem': '跟隨系統預設',
+  'pet.test.voicePreview': '試聽',
+  'pet.test.voicePitch': '音調',
+  'pet.test.voiceGroupBuiltin': '內建音色（免安裝）',
+  'pet.test.voiceGroupSystem': '系統語音（瀏覽器）',
+  'pet.test.voiceHint': '內建音色由伺服器合成、無需安裝任何語音包；系統語音則取決於瀏覽器環境。切換即生效，可拖動音調改變聽感，試聽按鈕會朗讀一句範例。',
 
   // 情緒名稱
   'pet.mood.idle': '待機',

@@ -17,6 +17,14 @@ export const EN_PET: Record<string, string> = {
   'pet.test.debugMode': 'Debug Mode',
   'pet.test.resetPosition': 'Reset Position',
   'pet.test.architecture': 'Architecture',
+  'pet.test.voicePanel': 'Voice & Tone',
+  'pet.test.voiceSelect': 'Voice',
+  'pet.test.voiceSystem': 'System default',
+  'pet.test.voicePreview': 'Preview',
+  'pet.test.voicePitch': 'Pitch',
+  'pet.test.voiceGroupBuiltin': 'Built-in voices (no install)',
+  'pet.test.voiceGroupSystem': 'System voices (browser)',
+  'pet.test.voiceHint': 'Built-in voices are synthesized on the server with zero installation; system voices depend on your browser/OS. Changes apply instantly, and Preview reads a sample line.',
 
   // Mood names
   'pet.mood.idle': 'Idle',

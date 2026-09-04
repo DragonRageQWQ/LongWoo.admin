@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { PET_CONFIG, EMOTION_MAP } from "@/lib/pet/config";
-import type { PetMessage, PetMood, PetTextureConfig, PetPosition } from "@/lib/pet/types";
+import type {
+  PetMessage,
+  PetMood,
+  PetTextureConfig,
+  PetPosition,
+  PetVoiceInfo,
+} from "@/lib/pet/types";
 
 interface PetIframeProps {
   /** 是否启用桌宠 */
@@ -13,6 +19,10 @@ interface PetIframeProps {
   textures?: PetTextureConfig;
   /** 调试模式 */
   debug?: boolean;
+  /** 初始音色 voiceURI（空 = 跟随系统） */
+  voiceURI?: string | null;
+  /** 初始音调 0.5~2 */
+  pitch?: number;
   /** 桌宠就绪回调 */
   onReady?: () => void;
   /** 情绪变化回调 */
@@ -21,6 +31,10 @@ interface PetIframeProps {
   onClick?: () => void;
   /** 位置变化回调 */
   onPositionChange?: (position: PetPosition) => void;
+  /** 可用音色列表更新回调（iframe 枚举完成后推送） */
+  onVoicesChange?: (voices: PetVoiceInfo[]) => void;
+  /** 当前音色/音调变化回调 */
+  onVoiceChange?: (voiceURI: string | null, pitch: number) => void;
 }
 
 /**
@@ -38,10 +52,14 @@ export default function PetIframe({
   uid = "guest",
   textures,
   debug = false,
+  voiceURI,
+  pitch,
   onReady,
   onMoodChange,
   onClick,
   onPositionChange,
+  onVoicesChange,
+  onVoiceChange,
 }: PetIframeProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const isReadyRef = useRef(false);
@@ -81,12 +99,11 @@ export default function PetIframe({
             const msg = messageQueueRef.current.shift();
             if (msg) sendMessage(msg);
           }
-          // 发送初始配置
-          sendMessage({
-            type: "pet:config",
-            uid,
-            textures,
-          });
+          // 发送初始配置（voiceURI/pitch 仅在宿主显式传入时下发，避免覆盖运行时已持久化的音色偏好）
+          const configMsg: PetMessage = { type: "pet:config", uid, textures };
+          if (voiceURI !== undefined) configMsg.voiceURI = voiceURI;
+          if (pitch !== undefined) configMsg.pitch = pitch;
+          sendMessage(configMsg);
           if (debug) {
             sendMessage({ type: "pet:debug", show: true });
           }
@@ -104,9 +121,31 @@ export default function PetIframe({
         case "pet:position":
           if (data.position) onPositionChange?.(data.position);
           break;
+
+        case "pet:voices":
+          // 仅同步可用音色列表；当前选中音色由 pet:voiceChanged 单独推送
+          if (data.voices) onVoicesChange?.(data.voices);
+          break;
+
+        case "pet:voiceChanged":
+          onVoiceChange?.(data.selected ?? null, data.pitch ?? PET_CONFIG.defaultPitch);
+          break;
       }
     },
-    [uid, textures, debug, sendMessage, onReady, onMoodChange, onClick, onPositionChange]
+    [
+      uid,
+      textures,
+      voiceURI,
+      pitch,
+      debug,
+      sendMessage,
+      onReady,
+      onMoodChange,
+      onClick,
+      onPositionChange,
+      onVoicesChange,
+      onVoiceChange,
+    ]
   );
 
   /** 播放情绪动画 */
@@ -133,6 +172,19 @@ export default function PetIframe({
     [sendMessage]
   );
 
+  /** 设置音色 + 音调（可选试听） */
+  const setVoice = useCallback(
+    (voiceURI: string | null, pitch?: number, preview?: boolean) => {
+      sendMessage({ type: "pet:setVoice", voiceURI, pitch, preview });
+    },
+    [sendMessage]
+  );
+
+  /** 主动拉取 iframe 内可用音色列表 */
+  const getVoices = useCallback(() => {
+    sendMessage({ type: "pet:getVoices" });
+  }, [sendMessage]);
+
   /** 重置位置 */
   const resetPosition = useCallback(() => {
     sendMessage({ type: "pet:reset" });
@@ -154,12 +206,14 @@ export default function PetIframe({
         setMood,
         triggerMood,
         speak,
+        setVoice,
+        getVoices,
         resetPosition,
         playEmotion,
         isReady: () => isReadyRef.current,
       };
     }
-  }, [setMood, triggerMood, speak, resetPosition, playEmotion]);
+  }, [setMood, triggerMood, speak, setVoice, getVoices, resetPosition, playEmotion]);
 
   // 监听消息
   useEffect(() => {
@@ -175,16 +229,15 @@ export default function PetIframe({
     }, 100);
   }, [sendMessage]);
 
-  // uid/textures 变化时更新
+  // uid/textures/voiceURI/pitch 变化时更新（同样的条件下发规则）
   useEffect(() => {
     if (isReadyRef.current) {
-      sendMessage({
-        type: "pet:config",
-        uid,
-        textures,
-      });
+      const configMsg: PetMessage = { type: "pet:config", uid, textures };
+      if (voiceURI !== undefined) configMsg.voiceURI = voiceURI;
+      if (pitch !== undefined) configMsg.pitch = pitch;
+      sendMessage(configMsg);
     }
-  }, [uid, textures, sendMessage]);
+  }, [uid, textures, voiceURI, pitch, sendMessage]);
 
   if (!enabled) return null;
 
