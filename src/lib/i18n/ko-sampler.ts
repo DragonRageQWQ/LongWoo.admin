@@ -10,8 +10,8 @@
  * ◆ 브랜드·영문·전문 용어는 원문 유지: LongWoo / Studio / Pantone / OKLab / sRGB /
  *   Top 3 / Δ / Sampler / Sign up / PIXEL & FABRIC SAMPLER, 확장자 jpg·png·webp·gif,
  *   단위 px·cm. 태그명 「测试B」는 인용부호와 함께 “Test B”로 표기.
- * ◆ 어조: 지시문은 존댓말(~하세요/해 주세요), 상태·결과 메시지는 '-습니다/-ㅂ니다'체,
- *   버튼·라벨은 명사형·명령형으로 처리.
+ * ◆ 어조: 지시문·안내문은 공식 웹문어(합쇼체 ~합니다/~입니다), 요청은 '~해 주시기 바랍니다'로
+ *   통일하고, 버튼·라벨은 명사형·명령형으로 처리(해요체 '~하세요/~주세요' 지양).
  * ◆ 문장부호(취사): 인용은 한국어 인용부호 “ ”, 괄호는 반각 (), 콜론은 반각 ': ',
  *   열거 구분은 중점 ' · '·쉼표(zh의 '；'는 자연스러운 ', '로 전환). 점(占位符)·숫자·단위는 원문 유지.
  * ◆ 수량사: 条/个 → 개, 家 → 곳(업체 수), 色 → 색, 点(포인트) → 개/포인트로 통일.
@@ -53,12 +53,12 @@ export const KO_SAMPLER: Record<string, string> = {
   'sampler.fabricLib.moreKinds': '추가 종류(아직 활성화되지 않음)',
   'sampler.fabricLib.notImported': '가져오지 않음',
   'sampler.fabricLib.panelNote':
-    '비활성화한 퍼 원단 업체는 색상 추출 매칭 결과에 나타나지 않습니다. 퍼 원단 라이브러리는 최소 한 곳 이상 활성화해 두세요.',
+    '비활성화한 퍼 원단 업체는 색상 추출 매칭 결과에 나타나지 않습니다. 퍼 원단 라이브러리는 최소 한 곳 이상 활성화해 두시기 바랍니다.',
 
   // ===== 업로드 / 드래그 =====
   'sampler.upload.replace': '이미지 교체',
   'sampler.upload.new': '이미지 업로드',
-  'sampler.drop.title': '이미지를 이곳으로 끌어다 놓거나, 클릭하여 선택하세요',
+  'sampler.drop.title': '이미지를 이곳으로 끌어다 놓거나, 클릭하여 선택해 주시기 바랍니다',
   'sampler.drop.sub': '로컬에서 처리되어 서버에 업로드되지 않습니다 · jpg / png / webp / gif 지원',
   'sampler.img.sourceAlt': '추출 원본 이미지',
 
@@ -68,7 +68,7 @@ export const KO_SAMPLER: Record<string, string> = {
   'sampler.statusBar.pressLocked':
     '픽셀이 잠겼습니다. 돋보기를 이동해 위치를 정한 뒤, 손을 떼면 색상이 추출됩니다',
   'sampler.statusBar.pressMove':
-    '돋보기를 누른 채 이동하세요. 길게 누르면 픽셀이 잠기고, 손을 떼면 색상이 추출됩니다…',
+    '돋보기를 누른 채 이동해 주시기 바랍니다. 길게 누르면 픽셀이 잠기고, 손을 떼면 색상이 추출됩니다…',
   'sampler.zoom.restore': '클릭하여 100%로 되돌리기',
   'sampler.statusBar.pointsSelected': '{count} / {max}개 선택됨',
   'sampler.statusBar.waiting': '이미지 업로드를 기다리는 중',
@@ -79,14 +79,14 @@ export const KO_SAMPLER: Record<string, string> = {
   'sampler.params.emptyNoImage':
     '이미지를 업로드한 뒤 클릭/길게 눌러 색상을 추출하면 이곳에 파라미터가 표시됩니다',
   'sampler.params.emptyNoPoints':
-    '위쪽 이미지에서 클릭하거나 길게 눌러 색상을 추출하세요(최대 {max}개)',
+    '위쪽 이미지에서 클릭하거나 길게 눌러 색상을 추출해 주시기 바랍니다(최대 {max}개)',
 
   // ===== 색차 범례 / 하단 설명 =====
   'sampler.legend.direct': 'Δ≤0.030 바로 사용',
   'sampler.legend.reference': '0.030<Δ≤0.090 참고로 사용',
   'sampler.legend.none': 'Δ>0.090 참고 가치 없음',
   'sampler.disclaimer':
-    '퍼 원단 색상 값은 업체 컬러 카드에서 가져온 것으로 커뮤니티/샘플 데이터이며 분광기 실측값이 아닙니다. Pantone은 근사 매칭이므로, 최종 납품 전에는 반드시 공식 컬러 카드를 기준으로 확인해 주세요.',
+    '퍼 원단 색상 값은 업체 컬러 카드에서 가져온 것으로 커뮤니티/샘플 데이터이며 분광기 실측값이 아닙니다. Pantone은 근사 매칭이므로, 최종 납품 전에는 반드시 공식 컬러 카드를 기준으로 확인해 주시기 바랍니다.',
 
   // ===== 파라미터 카드(PointCard) =====
   'sampler.card.deleteAria': '선택 포인트 {n} 삭제',
@@ -112,7 +112,7 @@ export const KO_SAMPLER: Record<string, string> = {
 
   // ===== showStatus 상태 메시지 =====
   'sampler.status.dbReady':
-    '데이터베이스 준비 완료: Pantone 색상 라이브러리 {pantone}개 · 퍼 원단 {fabric}색 / 업체 {vendor}곳{dataNote} · 이미지 업로드 후 클릭/길게 눌러 색상을 추출하세요',
+    '데이터베이스 준비 완료: Pantone 색상 라이브러리 {pantone}개 · 퍼 원단 {fabric}색 / 업체 {vendor}곳{dataNote} · 이미지 업로드 후 클릭/길게 눌러 색상을 추출해 주시기 바랍니다',
   'sampler.status.liveData': '(실제 데이터)',
   'sampler.status.sampleData': '(샘플 데이터)',
   'sampler.status.imageOnly': '이미지 파일만 지원합니다(jpg / png / webp / gif)',
@@ -120,8 +120,8 @@ export const KO_SAMPLER: Record<string, string> = {
     '{w} × {h}px 로드됨 · 휠/핀치로 확대·축소 · 클릭/길게 눌러 색상 추출(최대 {max}개)',
   'sampler.status.pointDeleted': '포인트 {id} 삭제됨({x}, {y})',
   'sampler.status.maxPoints':
-    '포인트는 최대 {max}개까지 선택할 수 있습니다. 기존 선택 포인트 중 일부를 먼저 삭제해 주세요',
-  'sampler.status.pixelAlready': '픽셀({x}, {y})은 이미 선택되었습니다. 다른 위치를 선택해 주세요',
+    '포인트는 최대 {max}개까지 선택할 수 있습니다. 기존 선택 포인트 중 일부를 먼저 삭제해 주시기 바랍니다',
+  'sampler.status.pixelAlready': '픽셀({x}, {y})은 이미 선택되었습니다. 다른 위치를 선택해 주시기 바랍니다',
   'sampler.status.pointAdded': '포인트 {id} 선택됨 · 픽셀({x}, {y}) · #{hex}',
   'sampler.status.pointRemoved': '포인트 {id} 삭제됨',
   'sampler.status.cleared': '선택한 모든 포인트가 삭제되었습니다',
@@ -140,8 +140,8 @@ export const KO_SAMPLER: Record<string, string> = {
   'sampler.dock.guestCta': '로그인하러 가기',
   'sampler.dock.deniedTitle': '내보내기 권한이 없습니다',
   'sampler.dock.deniedDefault':
-    '이 계정에는 “Test B” 내보내기 권한 태그가 없습니다. 최고 관리자에게 문의해 권한을 부여받은 뒤 사용해 주세요',
-  'sampler.dock.checkFailed': '권한 확인에 실패했습니다. 잠시 후 다시 시도해 주세요',
+    '이 계정에는 “Test B” 내보내기 권한 태그가 없습니다. 최고 관리자에게 문의해 권한을 부여받은 뒤 사용해 주시기 바랍니다',
+  'sampler.dock.checkFailed': '권한 확인에 실패했습니다. 잠시 후 다시 시도해 주시기 바랍니다',
   'sampler.dock.imgLabel': '이미지 · ',
   'sampler.dock.dbLabel': '데이터베이스 · ',
   'sampler.dock.unnamed': '제목 없음',
