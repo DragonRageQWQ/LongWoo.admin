@@ -134,7 +134,8 @@
 .gl-img-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  /* 5:7（宽:高）= 1:1.4，对齐 PTCG 对战卡标准（63mm × 88mm） */
+  aspect-ratio: 5 / 7;
   overflow: hidden;
   background: #f3f3f1;
 }
@@ -451,7 +452,7 @@
 
 .gl-edit-img {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 5 / 7;
   object-fit: cover;
   border-radius: 10px;
   border: 1px solid var(--line);
@@ -461,7 +462,7 @@
 
 .gl-edit-img-empty {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 5 / 7;
   display: flex;
   align-items: center;
   justify-content: center;

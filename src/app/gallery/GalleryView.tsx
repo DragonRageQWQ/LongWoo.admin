@@ -178,6 +178,7 @@ function WorkFlipCard({
     >
       <span className="gl-flip-inner">
         <span className="gl-flip-face gl-flip-front">
+          {/* 正面完全只显示出厂照（5:7，PTCG 对战卡比例），无任何文字叠加 */}
           <div className="gl-img-wrap">
             {imgUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -188,17 +189,12 @@ function WorkFlipCard({
                 loading={index < 3 ? "eager" : "lazy"}
                 fetchPriority={index < 3 ? "high" : undefined}
                 decoding="async"
-                width={600}
-                height={600}
+                width={500}
+                height={700}
               />
             ) : (
               <div className="gl-img gl-img--empty" aria-hidden="true" />
             )}
-            {work.code && <span className="gl-card-code">No.{work.code}</span>}
-          </div>
-          <div className="gl-card-body">
-            <h3 className="gl-card-title">{work.title}</h3>
-            {work.tag && <p className="gl-card-tag">{work.tag}</p>}
           </div>
         </span>
         <span className="gl-flip-face gl-flip-back" style={backBg ? { background: backBg } : undefined}>
@@ -526,8 +522,8 @@ export default function GalleryView() {
                 loading={i < 3 ? "eager" : "lazy"}
                 fetchPriority={i < 3 ? "high" : undefined}
                 decoding="async"
-                width={600}
-                height={600}
+                width={500}
+                height={700}
               />
             ) : (
               <div className="gl-img gl-img--empty" aria-hidden="true" />
