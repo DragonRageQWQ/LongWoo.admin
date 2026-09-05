@@ -306,6 +306,9 @@ export const JA_COPY: Gt2Copy = {
       href: "/gallery",
       secondaryCta: "ファー生地カラー抽出",
       secondaryHref: "/sampler",
+      headAction: { label: "参加する", href: "mailto:hello@longwoo.studio" },
+      joinDesc: "下記のチャンネルで龍塢（LongWoo）を見つけて、コミュニティに参加しましょう。",
+      joinClose: "閉じる",
     },
   },
   bubble: {

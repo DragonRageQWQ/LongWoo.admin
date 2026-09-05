@@ -31,6 +31,12 @@ export interface Gt2EntryCopy {
   /** 可选次要 CTA（与主 CTA 按钮并排展示） */
   secondaryCta?: string;
   secondaryHref?: string;
+  /** 标题右侧可选动作按钮（打开「加入我们」渠道浮层） */
+  headAction?: { label: string; href: string };
+  /** @deprecated 旧版弹框描述文案，浮层已改为纯渠道图标 + 二维码视图，不再展示 */
+  joinDesc?: string;
+  /** @deprecated 旧版弹框关闭按钮文案，浮层已移除右上角关闭叉 */
+  joinClose?: string;
 }
 
 export interface Gt2Copy {
@@ -574,6 +580,9 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         href: "/gallery",
         secondaryCta: "毛布取色器",
         secondaryHref: "/sampler",
+        headAction: { label: "加入我们", href: "mailto:hello@longwoo.studio" },
+        joinDesc: "通过下方渠道找到龙坞，一起加入我们的社群吧。",
+        joinClose: "关闭",
       },
     },
     bubble: {
@@ -882,6 +891,9 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         href: "/gallery",
         secondaryCta: "Fabric Sampler",
         secondaryHref: "/sampler",
+        headAction: { label: "Join Us", href: "mailto:hello@longwoo.studio" },
+        joinDesc: "Find LongWoo through the channels below and join our community.",
+        joinClose: "Close",
       },
     },
     bubble: {

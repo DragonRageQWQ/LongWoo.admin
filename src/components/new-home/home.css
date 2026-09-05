@@ -2198,6 +2198,379 @@ textarea.gt2-input {
   gap: 12px;
 }
 
+/* 标题行：大标题居左，「加入我们」按钮居右（仅 About 面板配置 headAction 时出现） */
+.gt2-entry-headrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: clamp(16px, 3vw, 44px);
+}
+
+/* ---------- 加入我们按钮（uiverse wise-shrimp-26 · type C） ---------- */
+.gj-btn {
+  --gj-line: #00135c;
+  --gj-back: #defffa;
+  position: relative;
+  z-index: 0;
+  width: 240px;
+  height: 56px;
+  flex-shrink: 0;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: inherit;
+  color: var(--gj-line);
+  letter-spacing: 2px;
+  transition: all 0.3s ease;
+}
+.gj-text {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+.gj-btn::before,
+.gj-btn::after,
+.gj-text::before,
+.gj-text::after {
+  content: "";
+  position: absolute;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--gj-line);
+  transition: all 0.5s ease;
+}
+.gj-btn::before {
+  top: 0;
+  left: 54px;
+  width: calc(100% - 56px * 2 - 16px);
+}
+.gj-btn::after {
+  top: 0;
+  right: 54px;
+  width: 8px;
+}
+.gj-text::before {
+  bottom: 0;
+  right: 54px;
+  width: calc(100% - 56px * 2 - 16px);
+}
+.gj-text::after {
+  bottom: 0;
+  left: 54px;
+  width: 8px;
+}
+.gj-line {
+  display: block;
+  position: absolute;
+  top: 0;
+  width: 56px;
+  height: 100%;
+  overflow: hidden;
+}
+.gj-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 150%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 300px;
+  border: solid 3px var(--gj-line);
+}
+.gj-line:nth-child(1),
+.gj-line:nth-child(1)::before {
+  left: 0;
+}
+.gj-line:nth-child(2),
+.gj-line:nth-child(2)::before {
+  right: 0;
+}
+.gj-btn:hover {
+  letter-spacing: 6px;
+}
+.gj-btn:hover::before,
+.gj-btn:hover .gj-text::before {
+  width: 8px;
+}
+.gj-btn:hover::after,
+.gj-btn:hover .gj-text::after {
+  width: calc(100% - 56px * 2 - 16px);
+}
+.gj-btn:focus-visible {
+  outline: 2px solid var(--gj-line);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.gj-drow1,
+.gj-drow2 {
+  display: block;
+  position: absolute;
+  z-index: -1;
+  border-radius: 16px;
+  transform-origin: 16px 16px;
+}
+.gj-drow1 {
+  top: -16px;
+  left: 40px;
+  width: 32px;
+  height: 0;
+  transform: rotate(30deg);
+}
+.gj-drow2 {
+  top: 44px;
+  left: 77px;
+  width: 32px;
+  height: 0;
+  transform: rotate(-127deg);
+}
+.gj-drow1::before,
+.gj-drow1::after,
+.gj-drow2::before,
+.gj-drow2::after {
+  content: "";
+  position: absolute;
+}
+.gj-drow1::before {
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 32px;
+  border-radius: 16px;
+  transform-origin: 16px 16px;
+  transform: rotate(-60deg);
+}
+.gj-drow1::after {
+  top: -10px;
+  left: 45px;
+  width: 0;
+  height: 32px;
+  border-radius: 16px;
+  transform-origin: 16px 16px;
+  transform: rotate(69deg);
+}
+.gj-drow2::before {
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 32px;
+  border-radius: 16px;
+  transform-origin: 16px 16px;
+  transform: rotate(-146deg);
+}
+.gj-drow2::after {
+  bottom: 26px;
+  left: -40px;
+  width: 0;
+  height: 32px;
+  border-radius: 16px;
+  transform-origin: 16px 16px;
+  transform: rotate(-262deg);
+}
+.gj-drow1,
+.gj-drow1::before,
+.gj-drow1::after,
+.gj-drow2,
+.gj-drow2::before,
+.gj-drow2::after {
+  background: var(--gj-back);
+}
+.gj-btn:hover .gj-drow1 {
+  animation: gj-drow1 ease-in 0.06s;
+  animation-fill-mode: forwards;
+}
+.gj-btn:hover .gj-drow1::before {
+  animation: gj-drow2 linear 0.08s 0.06s;
+  animation-fill-mode: forwards;
+}
+.gj-btn:hover .gj-drow1::after {
+  animation: gj-drow3 linear 0.03s 0.14s;
+  animation-fill-mode: forwards;
+}
+.gj-btn:hover .gj-drow2 {
+  animation: gj-drow4 linear 0.06s 0.2s;
+  animation-fill-mode: forwards;
+}
+.gj-btn:hover .gj-drow2::before {
+  animation: gj-drow3 linear 0.03s 0.26s;
+  animation-fill-mode: forwards;
+}
+.gj-btn:hover .gj-drow2::after {
+  animation: gj-drow5 linear 0.06s 0.32s;
+  animation-fill-mode: forwards;
+}
+@keyframes gj-drow1 {
+  0% { height: 0; }
+  100% { height: 100px; }
+}
+@keyframes gj-drow2 {
+  0% { width: 0; opacity: 0; }
+  10% { opacity: 0; }
+  11% { opacity: 1; }
+  100% { width: 120px; }
+}
+@keyframes gj-drow3 {
+  0% { width: 0; }
+  100% { width: 80px; }
+}
+@keyframes gj-drow4 {
+  0% { height: 0; }
+  100% { height: 120px; }
+}
+@keyframes gj-drow5 {
+  0% { width: 0; }
+  100% { width: 124px; }
+}
+
+/* gj-btn 原生 <button> 重置 */
+button.gj-btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ============================================================
+   「加入我们」社群渠道浮层（从按钮向上挤出，同屏不遮整页）
+   ============================================================ */
+.gj-pop {
+  position: fixed;
+  z-index: 240;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  background: #e0e0e0;
+  border-radius: 26px;
+  padding: 20px 18px;
+  text-align: center;
+  /* 新拟态浮雕卡片（用户指定双阴影，宽高由内容自适应） */
+  box-shadow:
+    20px 20px 60px #bebebe,
+    -20px -20px 60px #ffffff;
+  animation: gj-grow 0.3s cubic-bezier(0.2, 0.85, 0.35, 1.12) both;
+  transform-origin: bottom center;
+}
+.gj-pop--down {
+  transform-origin: top center;
+}
+@keyframes gj-grow {
+  from { opacity: 0; transform: scaleY(0.3) scaleX(0.92); }
+  to { opacity: 1; transform: none; }
+}
+/* 指向触发按钮的箭头 */
+.gj-pop::after {
+  content: "";
+  position: absolute;
+  right: 34px;
+  width: 0;
+  height: 0;
+  border: 9px solid transparent;
+}
+.gj-pop--up::after {
+  bottom: -18px;
+  border-top-color: #e0e0e0;
+  border-bottom: 0;
+}
+.gj-pop--down::after {
+  top: -18px;
+  border-bottom-color: #e0e0e0;
+  border-top: 0;
+}
+.gj-channels {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 2px 0;
+}
+
+/* ---------- 二维码视图（QQ 加群） ---------- */
+.gj2-qr {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(90, 92, 98, 0.18);
+}
+.gj2-qr img {
+  display: block;
+  margin: 0 auto;
+  width: 150px;
+  height: 150px;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 8px;
+  object-fit: contain;
+  box-shadow:
+    inset 3px 3px 8px rgba(160, 163, 170, 0.4),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.9);
+}
+.gj2-qr-note {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #33363c;
+  font-family: var(--gt2-mono);
+}
+
+/* ---------- 渠道图标按钮（uiverse ordinary-moth-92 旋转底色动画） ---------- */
+.gj2-btn {
+  position: relative;
+  z-index: 0;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  overflow: hidden;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+.gj2-svgc {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  backdrop-filter: blur(0px);
+  border-radius: 14px;
+  transition: all 0.3s;
+  border: 1px solid rgba(150, 154, 162, 0.35);
+}
+.gj2-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  z-index: -1;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+.gj2-btn:hover .gj2-bg {
+  transform: rotate(38deg);
+  transform-origin: bottom;
+}
+.gj2-btn:hover .gj2-svgc {
+  background-color: rgba(246, 247, 249, 0.6);
+  border-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+}
+.gj2-btn:hover svg {
+  fill: #17181c;
+}
+/* 选中态（如展开 QQ 二维码） */
+.gj2-btn--active .gj2-svgc {
+  border-color: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 0 0 3px rgba(18, 183, 245, 0.45);
+  backdrop-filter: blur(3px);
+}
+.gj2-btn:focus-visible {
+  outline: 2px solid #00135c;
+  outline-offset: 3px;
+}
+
 /* ============================================================
    右上角操作条：返回入口 + 三联气泡（语言 / 铃铛 / 登录）
    与旧首页顶栏右上角位置一致

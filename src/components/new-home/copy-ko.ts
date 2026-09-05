@@ -303,6 +303,9 @@ export const KO_COPY: Gt2Copy = {
       href: "/gallery",
       secondaryCta: "퍼 원단 색상 추출",
       secondaryHref: "/sampler",
+      headAction: { label: "참여하기", href: "mailto:hello@longwoo.studio" },
+      joinDesc: "아래 채널에서 LongWoo를 찾아 커뮤니티에 참여해 보세요.",
+      joinClose: "닫기",
     },
   },
   bubble: {

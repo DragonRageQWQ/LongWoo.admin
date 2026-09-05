@@ -324,6 +324,9 @@ export const FR_COPY: Gt2Copy = {
       href: "/gallery",
       secondaryCta: "Sélecteur de couleur du tissu",
       secondaryHref: "/sampler",
+      headAction: { label: "Rejoignez-nous", href: "mailto:hello@longwoo.studio" },
+      joinDesc: "Retrouvez LongWoo via les canaux ci-dessous et rejoignez notre communauté.",
+      joinClose: "Fermer",
     },
   },
   bubble: {

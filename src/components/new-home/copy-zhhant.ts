@@ -307,6 +307,9 @@ export const ZH_HANT_COPY: Gt2Copy = {
       href: "/gallery",
       secondaryCta: "毛布取色器",
       secondaryHref: "/sampler",
+      headAction: { label: "加入我們", href: "mailto:hello@longwoo.studio" },
+      joinDesc: "透過下方管道找到龍塢，一起加入我們的社群吧。",
+      joinClose: "關閉",
     },
   },
   bubble: {

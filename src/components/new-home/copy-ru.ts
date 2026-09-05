@@ -305,6 +305,9 @@ export const RU_COPY: Gt2Copy = {
       href: "/gallery",
       secondaryCta: "Извлечение цвета меха",
       secondaryHref: "/sampler",
+      headAction: { label: "Присоединиться", href: "mailto:hello@longwoo.studio" },
+      joinDesc: "Найдите LongWoo в каналах ниже и присоединяйтесь к нашему сообществу.",
+      joinClose: "Закрыть",
     },
   },
   bubble: {
