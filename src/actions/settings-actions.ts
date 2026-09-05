@@ -157,7 +157,7 @@ export async function getSystemSettings(): Promise<{
       logRetentionDays: 30,
     },
     rateLimits: [
-      { key: 'order-query', label: '订单查询', value: `每分钟 ${5} 次（IP+手机号）` },
+      { key: 'order-query', label: '订单查询', value: `每分钟 ${5} 次（邮箱）、${20} 次（IP）` },
       { key: 'order-create', label: '下单提交', value: `每分钟 ${RATE_LIMIT_ORDER_MAX} 次（IP）` },
       { key: 'login', label: '登录', value: `${RATE_LIMIT_LOGIN_MAX_FAILS} 次失败锁定 ${RATE_LIMIT_LOGIN_LOCK_MS / 60000} 分钟` },
       { key: 'otp', label: '验证码发送', value: `每分钟 ${RATE_LIMIT_OTP_MAX} 次，${OTP_TTL_MS / 60000} 分钟有效，最多尝试 ${OTP_MAX_ATTEMPTS} 次` },

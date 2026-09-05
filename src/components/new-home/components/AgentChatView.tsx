@@ -363,8 +363,8 @@ export default function AgentChatView({
             type="button"
             className="gt2-chat-chip gt2-chat-chip-add"
             onClick={onNew}
-            aria-label={c.uploadBtn}
-            title={c.uploadBtn}
+            aria-label={c.newRole}
+            title={c.newRole}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M12 5v14" />
@@ -483,7 +483,7 @@ export default function AgentChatView({
               className="gt2-chat-send"
               onClick={handleSend}
               disabled={sending || !input.trim() || !currentId}
-              aria-label={c.uploadBtn}
+              aria-label={c.send}
             >
               <SendIcon />
             </button>

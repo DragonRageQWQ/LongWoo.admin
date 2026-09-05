@@ -887,12 +887,15 @@ export async function replyEmail(
       return { success: false, error: '回复失败，请稍后重试' }
     }
 
-    // 站内通知客户：有新的邮件回复（模板化）
+    // 站内通知客户：有新的邮件回复（模板化）；邮件未发出时如实告知，避免用户空等
+    const replyNotice = emailSent
+      ? '工作室对您的委托单进行了回复（已同步发送邮件），请登录个人中心查看。'
+      : '工作室对您的委托单进行了回复（邮件发送失败，请登录个人中心查看）。'
     await sendOrderNotification(
       order,
       'reply',
       '委托单有新的回复',
-      '工作室对您的委托单进行了回复（已同步发送邮件），请登录个人中心查看。',
+      replyNotice,
       { reply: trimmedContent }
     )
 

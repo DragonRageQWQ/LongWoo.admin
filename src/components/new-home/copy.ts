@@ -48,6 +48,10 @@ export interface Gt2Copy {
     heroTitleEn: string;
     heroLines: string[];
     uploadBtn: string;
+    /** 聊天页「新建角色」胶囊按钮的无障碍名称 */
+    newRole: string;
+    /** 聊天输入栏「发送」按钮的无障碍名称 */
+    send: string;
     formTitle: string;
     formTitleEn: string;
     avatarHint: string;
@@ -305,7 +309,9 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         "长期的学习与陪伴，可以让 AI 心智无限逼近于真实状态。",
         "已被充分训练的 AI 角色，未来可以被载入实体兽装。",
       ],
-      uploadBtn: "上传",
+      uploadBtn: "开始创建",
+      newRole: "新建角色",
+      send: "发送",
       formTitle: "角色设定",
       formTitleEn: "Character Profile",
       avatarHint: "点击上传头像 · JPEG / PNG / GIF / WebP · ≤ 2MB",
@@ -341,7 +347,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       chatHelloWithName: "和 TA 打个招呼吧 · 叫你「{name}」",
       chatInputPh: "对 TA 说点什么…",
       chatClearTitle: "清空对话",
-      chatClearConfirm: "确定要清空和这个角色的全部对话记录吗？",
+      chatClearConfirm: "确定要清空与这个角色的全部对话记录吗？",
       errChatLoad: "角色加载失败，请稍后重试",
       errChatSend: "发送失败，请稍后重试",
       errChatClear: "清空失败，请重试",
@@ -366,7 +372,7 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
       deliveryHint: "预计 4-6 周后交付*",
       priceRangeHint: "首次购置价格依照15000RMB-25000RMB区间计算",
       uploadTitle: "上传设定图",
-      uploadHint: "图片不大于 20M",
+      uploadHint: "图片不大于 20MB",
       reupload: "重新上传",
       remove: "移除",
       addonMicro: "选配 · ADD-ON",
@@ -571,11 +577,11 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         href: "/?tab=check",
       },
       about: {
-        kicker: "05 / ACCOUNT",
+        kicker: "05 / ABOUT",
         title: "关于",
         titleEn: "About",
-        desc: "管理你的个人资料、历史委托与通知设置。",
-        features: ["个人资料管理", "历史订单汇总", "通知与安全设置"],
+        desc: "认识龙坞：作品图鉴、毛布取色器与创作社群，都从这里开始。",
+        features: ["作品图鉴", "毛布取色器", "加入社群"],
         cta: "龙坞图鉴",
         href: "/gallery",
         secondaryCta: "毛布取色器",
@@ -616,7 +622,9 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         "With long-term learning and companionship, the AI mind gets infinitely close to a real one.",
         "A fully trained AI character can be loaded into a physical fursuit in the future.",
       ],
-      uploadBtn: "Upload",
+      uploadBtn: "Start Creating",
+      newRole: "New character",
+      send: "Send",
       formTitle: "Character Profile",
       formTitleEn: "角色设定",
       avatarHint: "Tap to upload avatar · JPEG / PNG / GIF / WebP · ≤ 2MB",
@@ -882,11 +890,11 @@ export const COPY: Record<Gt2Lang, Gt2Copy> = {
         href: "/?tab=check",
       },
       about: {
-        kicker: "05 / ACCOUNT",
+        kicker: "05 / ABOUT",
         title: "About",
         titleEn: "关于",
-        desc: "Manage your profile, past commissions and notification settings.",
-        features: ["Profile management", "Order history", "Notifications & security"],
+        desc: "Get to know LongWoo: our work gallery, fabric sampler and community, all from here.",
+        features: ["Work gallery", "Fabric sampler", "Community"],
         cta: "View Gallery",
         href: "/gallery",
         secondaryCta: "Fabric Sampler",

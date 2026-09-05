@@ -177,7 +177,7 @@ export default function CharacterChatPage() {
   // 清空对话
   const handleClear = useCallback(async () => {
     if (!characterId || clearing) return
-    if (!window.confirm('确定要清空和这个角色的全部对话记录吗？')) return
+    if (!window.confirm('确定要清空与这个角色的全部对话记录吗？')) return
 
     setClearing(true)
     try {
