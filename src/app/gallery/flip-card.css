@@ -1,0 +1,172 @@
+/* ============================================================
+   作品翻面卡（WorkFlipCard，图鉴列表 / 详情页“更多作品”共用）
+   默认正面展示原图；桌面 hover / 键盘聚焦、移动端左右滑动后翻面，
+   背面展示作品介绍文案（背景取自主图基色渐变，由组件内联）。
+   自包含样式：不依赖 gallery.css / work-detail.css 中的变量。
+   ============================================================ */
+.gfc-card {
+  position: relative;
+  display: block;
+  border-radius: 14px;
+  text-decoration: none;
+  perspective: 1500px;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  /* 3D 翻转要求容器不被裁剪（overflow:hidden 会强制 flatten 3D） */
+  overflow: visible;
+}
+
+.gfc-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(10, 10, 10, 0.06);
+}
+
+.gfc-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gfc-face {
+  display: block;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.gfc-front {
+  position: relative;
+  display: block;
+  border: 1px solid #e6e6e3;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+/* 正面图框：5:7（宽:高）= 1:1.4，对齐 PTCG 对战卡标准（63mm × 88mm） */
+.gfc-media {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  overflow: hidden;
+  background: #f3f3f1;
+}
+
+.gfc-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gfc-img--empty {
+  background: linear-gradient(135deg, #f3f3f1 25%, #ececea 25%, #ececea 50%, #f3f3f1 50%, #f3f3f1 75%, #ececea 75%);
+  background-size: 20px 20px;
+}
+
+.gfc-back {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 20px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(165deg, #1c1a17 0%, #131110 62%, #0e0c0a 100%);
+  color: #f5f4f2;
+  overflow: hidden;
+  text-align: left;
+  transform: rotateY(180deg);
+}
+
+.gfc-back-kicker {
+  display: block;
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.gfc-back-title {
+  margin: 10px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  line-height: 1.3;
+  color: #fff;
+}
+
+.gfc-back-tag {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.gfc-back-desc {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  line-height: 1.85;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.gfc-back-meta {
+  margin: 14px 0 0;
+}
+
+.gfc-back-meta-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.gfc-back-meta-row dt {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+
+.gfc-back-meta-row dd {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.86);
+  text-align: right;
+}
+
+.gfc-back-hint {
+  display: block;
+  margin-top: auto;
+  padding-top: 14px;
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+/* 桌面：hover / 键盘聚焦翻面 */
+@media (hover: hover) {
+  .gfc-card:hover .gfc-inner,
+  .gfc-card:focus-visible .gfc-inner {
+    transform: rotateY(180deg);
+  }
+}
+
+/* 移动端：左右滑动卡片后翻面/翻回（JS 切换 .is-flipped） */
+.gfc-card.is-flipped .gfc-inner {
+  transform: rotateY(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gfc-inner,
+  .gfc-card {
+    transition-duration: 0.01ms;
+  }
+}

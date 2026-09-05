@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Work } from "@/types/database";
 import WorkDetailView from "./WorkDetailView";
 import "./work-detail.css";
+import "../flip-card.css";
 
 // 作品详情为公开低频变更数据，CDN/ISR 缓存 30 秒（与 /api/works 一致）
 export const revalidate = 30;
@@ -64,10 +65,10 @@ export default async function GalleryWorkDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // 更多作品（同列表序，排除当前作品）
+  // 更多作品（同列表序，排除当前作品）；翻面卡背面需展示描述与定制信息
   const { data: others } = await supabase
     .from("works")
-    .select("id, code, title, tag, image_url")
+    .select("id, code, title, tag, image_url, description, work_type, delivery, craft")
     .eq("is_active", true)
     .neq("id", id)
     .order("sort_order", { ascending: true })

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import GalleryView from "./GalleryView";
 import "./gallery.css";
+import "./flip-card.css";
 
 export const metadata: Metadata = {
   title: "龙坞图鉴 | LongWoo Studio",

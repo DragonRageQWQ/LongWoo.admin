@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { updateWork, deleteWork } from "@/actions/works-actions";
 import type { Work, WorkInput } from "@/types/database";
+import WorkFlipCard, { type FlipWork } from "../WorkFlipCard";
 
 /** 更多作品条目（列表页展示所需字段） */
-export interface WorkCard {
+export interface WorkCard extends FlipWork {
   id: string;
   code?: string;
   title: string;
@@ -68,6 +69,37 @@ export default function WorkDetailView({ work: initial, others }: WorkDetailProp
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   const msgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 卡牌检视：5×5 热区 → 三轴倾斜（角度映射同参考 css：行向 20/10/0/-10/-20°，列向 -10~+10° 每格 5°）
+  const cardBoxRef = useRef<HTMLDivElement | null>(null);
+
+  const tiltFromZone = useCallback((zone: HTMLElement) => {
+    const box = cardBoxRef.current;
+    const face = box?.querySelector<HTMLElement>(".gd-card-face");
+    if (!box || !face) return;
+    const idx = Number(zone.dataset.zone ?? NaN);
+    if (!Number.isFinite(idx) || idx < 0 || idx > 24) return;
+    const row = Math.floor(idx / 5);
+    const col = idx % 5;
+    face.style.transform = `rotateX(${20 - row * 10}deg) rotateY(${(col - 2) * 5}deg)`;
+    face.style.transitionDuration = "125ms"; // 切入快速，离开时恢复 700ms 缓出
+    box.classList.add("gd-tilting");
+  }, []);
+
+  const resetCardTilt = useCallback(() => {
+    const box = cardBoxRef.current;
+    const face = box?.querySelector<HTMLElement>(".gd-card-face");
+    if (!box || !face) return;
+    face.style.transform = "";
+    face.style.transitionDuration = "";
+    box.classList.remove("gd-tilting");
+  }, []);
+
+  // 保留原功能：点击卡牌查看原画质大图
+  const openLightbox = useCallback(() => {
+    const url = absImageUrl(work.image_url);
+    if (url) setLightbox(url);
+  }, [work.image_url]);
 
   const showMsg = useCallback((type: "ok" | "err", text: string) => {
     if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
@@ -295,27 +327,63 @@ export default function WorkDetailView({ work: initial, others }: WorkDetailProp
           /* ===== 展示视图 ===== */
           <>
             <section className="gd-hero">
-              <div className="gd-img-wrap">
-                {work.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    className="gd-img"
-                    src={absImageUrl(work.image_url)}
-                    alt={work.title}
-                    width={800}
-                    height={800}
-                    decoding="async"
-                    onClick={() => setLightbox(absImageUrl(work.image_url))}
-                    role="button"
-                    aria-label="查看大图"
-                    title="查看大图"
-                  />
-                ) : (
-                  <div className="gd-img gd-img--empty" aria-hidden="true" />
-                )}
-                {work.code && <span className="gd-code">No.{work.code}</span>}
+              <div
+                ref={cardBoxRef}
+                className={`gd-card-box${editMode ? " gd-card-box--edit" : ""}`}
+                role="button"
+                tabIndex={0}
+                aria-label={work.image_url ? `${work.title}：点击查看原图` : work.title}
+                onClick={openLightbox}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openLightbox();
+                  }
+                }}
+                onMouseOver={(e) => {
+                  const el = (e.target as HTMLElement).closest?.("[data-zone]");
+                  if (el instanceof HTMLElement) tiltFromZone(el);
+                }}
+                onMouseLeave={resetCardTilt}
+              >
+                {/* 卡面：5:7 标准 PTCG 卡牌比例 */}
+                <div className="gd-card-face">
+                  {work.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className="gd-card-img"
+                      src={absImageUrl(work.image_url)}
+                      alt={work.title}
+                      width={800}
+                      height={800}
+                      decoding="async"
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="gd-card-img gd-card-img--empty" aria-hidden="true" />
+                  )}
+                  <span className="gd-card-frame" aria-hidden="true" />
+                  {work.code && <span className="gd-code">No.{work.code}</span>}
+                  <span className="gd-card-zoom" aria-hidden="true">查看原图</span>
+                </div>
+
+                {/* 5×5 检视热区（悬浮任意一格即向该方向倾斜） */}
+                <div className="gd-card-canvas" aria-hidden="true">
+                  {Array.from({ length: 25 }, (_, k) => (
+                    <span key={k} data-zone={k} className="gd-zone" />
+                  ))}
+                </div>
+
                 {editMode && (
-                  <button type="button" className="gd-btn-solid gd-hero-edit" onClick={() => { setDraft(toDraft(work)); setEditing(true); }}>
+                  <button
+                    type="button"
+                    className="gd-btn-solid gd-hero-edit"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDraft(toDraft(work));
+                      setEditing(true);
+                    }}
+                  >
                     编辑作品
                   </button>
                 )}
@@ -357,21 +425,8 @@ export default function WorkDetailView({ work: initial, others }: WorkDetailProp
             <p className="gd-empty">暂无其他作品</p>
           ) : (
             <div className="gd-more-grid">
-              {others.map((w) => (
-                <Link key={w.id} className="gd-more-card" href={linkTo(w.id)}>
-                  <div className="gd-more-img-wrap">
-                    {w.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img className="gd-more-img" src={absImageUrl(w.image_url)} alt={w.title} loading="lazy" decoding="async" width={400} height={400} />
-                    ) : (
-                      <div className="gd-more-img gd-more-img--empty" aria-hidden="true" />
-                    )}
-                  </div>
-                  <div className="gd-more-card-body">
-                    <h3 className="gd-more-card-title">{w.title}</h3>
-                    {w.tag && <p className="gd-more-card-tag">{w.tag}</p>}
-                  </div>
-                </Link>
+              {others.map((w, i) => (
+                <WorkFlipCard key={w.id} work={w} index={i} href={linkTo(w.id)} />
               ))}
             </div>
           )}
