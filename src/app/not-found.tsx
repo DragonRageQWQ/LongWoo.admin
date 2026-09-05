@@ -1,48 +1,49 @@
 import Link from "next/link";
-import { Home, Search, Package } from "lucide-react";
+import s from "./not-found.module.css";
 
+/** 404：黑洞主题。任意不存在路径（含 URL 后追加乱码）都会落入此页。 */
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-lw-gray px-4">
-      <div className="max-w-md w-full text-center">
-        {/* 404 大字 */}
-        <div className="relative mb-8">
-          <h1 className="text-[120px] sm:text-[160px] font-bold leading-none text-lw-accent select-none">
-            404
-          </h1>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-full shadow-lg flex items-center justify-center -mt-8">
-              <Search className="w-10 h-10 sm:w-12 sm:h-12 text-lw-accent" />
-            </div>
-          </div>
+    <main className={s.page}>
+      <div className={s.stage}>
+        {/* 中央黑洞：吸积波纹 + 弧光 + 事件视界 */}
+        <div className={s.hole} aria-hidden="true">
+          {Array.from({ length: 10 }, (_, k) => (
+            <i key={k} className={s.wave} style={{ animationDelay: `${0.3 * (k + 1)}s` }} />
+          ))}
+          <span className={s.disc} />
+          <span className={s.core} />
         </div>
 
-        {/* 文案 */}
-        <h2 className="text-xl font-bold text-lw-black mb-2">
-          页面走丢了
-        </h2>
-        <p className="text-sm text-gray-500 mb-8 leading-relaxed">
-          您访问的页面不存在或已被移除，请检查网址是否正确，或返回首页继续浏览。
-        </p>
-
-        {/* 操作按钮 */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-lw-accent text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Home className="w-4 h-4" />
-            返回首页
-          </Link>
-          <Link
-            href="/?tab=fursuit"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-lw-black text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            <Package className="w-4 h-4" />
-            提交委托
-          </Link>
+        {/* 透镜文字：被黑洞轻微吸入，主体保持可读 */}
+        <div className={s.textBlock}>
+          <p className={s.eyebrow}>Event Horizon · Lost in Gravity</p>
+          <h1 className={s.title} aria-label="404">404</h1>
+          <p className={s.sub}>
+            你访问的页面已越过事件视界，
+            <b> 被黑洞吞噬</b>，化作一缕引力波。
+          </p>
         </div>
+
+        {/* 返回原点 */}
+        <Link href="/" className={s.btn}>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M19 12H5" />
+            <path d="M12 19l-7-7 7-7" />
+          </svg>
+          返回原点
+        </Link>
       </div>
-    </div>
+    </main>
   );
 }

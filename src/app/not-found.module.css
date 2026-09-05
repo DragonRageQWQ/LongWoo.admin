@@ -1,0 +1,286 @@
+/* 404 黑洞主题：底 #212121，中央黑洞 + 向下被吸入的透镜文字 + 返回原点 */
+
+.page {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px 56px;
+  background: #212121;
+  color: #ffffff;
+  overflow: hidden;
+  font-family: "MiSans VF", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 星尘 */
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(1.5px 1.5px at 14% 18%, rgba(255, 255, 255, 0.65) 50%, transparent 51%),
+    radial-gradient(1px 1px at 26% 9%, rgba(255, 255, 255, 0.4) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 82% 14%, rgba(255, 255, 255, 0.55) 50%, transparent 51%),
+    radial-gradient(1px 1px at 91% 34%, rgba(255, 255, 255, 0.4) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 8% 72%, rgba(255, 255, 255, 0.35) 50%, transparent 51%),
+    radial-gradient(1px 1px at 94% 78%, rgba(255, 255, 255, 0.45) 50%, transparent 51%),
+    radial-gradient(1px 1px at 22% 88%, rgba(255, 255, 255, 0.3) 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 90%, rgba(255, 255, 255, 0.32) 50%, transparent 51%);
+}
+
+/* 角落暗角 */
+.page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 46%, rgba(0, 0, 0, 0.42) 100%);
+}
+
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 1;
+}
+
+/* ---------- 黑洞（吸积波纹，放大版） ---------- */
+.hole {
+  position: relative;
+  width: min(360px, 82vw);
+  height: min(360px, 82vw);
+  flex-shrink: 0;
+  animation: bh-drift 8s ease-in-out infinite;
+}
+@keyframes bh-drift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* 收缩波纹（用户提供的 scale 动画，放大并加强发光） */
+.wave {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58%;
+  height: 58%;
+  margin: -29% 0 0 -29%;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.08) 46%, transparent 72%);
+  animation-name: bh-scale;
+  animation-duration: 3s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+  pointer-events: none;
+}
+@keyframes bh-scale {
+  0% {
+    transform: scale(1.9);
+    opacity: 0;
+    box-shadow: 0px 0px 70px rgba(255, 255, 255, 0.5);
+  }
+  50% {
+    transform: scale(1) translate(0px, -6px);
+    opacity: 1;
+    box-shadow: 0px 10px 26px rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    transform: scale(0.12) translate(0px, 6px);
+    opacity: 0;
+    box-shadow: 0px 12px 26px rgba(255, 255, 255, 0);
+  }
+}
+
+/* 吸积盘弧光：偏心旋转的 conic 光环 */
+.disc {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 74%;
+  height: 74%;
+  margin: -37% 0 0 -37%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 26deg,
+    rgba(255, 236, 200, 0.55) 52deg 74deg,
+    transparent 120deg 168deg,
+    rgba(255, 255, 255, 0.4) 208deg 230deg,
+    transparent 270deg 318deg,
+    rgba(214, 235, 255, 0.5) 350deg 360deg
+  );
+  filter: blur(2.5px);
+  mix-blend-mode: screen;
+  animation: bh-spin 16s linear infinite;
+  -webkit-mask: radial-gradient(closest-side, transparent 58%, #000 63%, #000 88%, transparent 94%);
+  mask: radial-gradient(closest-side, transparent 58%, #000 63%, #000 88%, transparent 94%);
+  pointer-events: none;
+}
+@keyframes bh-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 事件视界：中央黑核 + 细亮环 */
+.core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44%;
+  height: 44%;
+  margin: -22% 0 0 -22%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #000000 0%, #060709 55%, #101216 100%);
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.16),
+    0 0 26px rgba(255, 255, 255, 0.18),
+    0 0 80px rgba(255, 255, 255, 0.1),
+    inset 0 0 34px 8px rgba(0, 0, 0, 0.95);
+  z-index: 2;
+}
+
+/* ---------- 透镜文字：近黑洞端被模糊吸入，主体保持可读 ---------- */
+.textBlock {
+  margin-top: clamp(22px, 4vh, 44px);
+}
+.eyebrow {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.34);
+  margin-bottom: 14px;
+}
+.title {
+  font-size: clamp(92px, 21vw, 190px);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: rgba(244, 246, 249, 0.94);
+  /* 朝黑洞方向（上方）的引力拖尾 */
+  text-shadow:
+    0 -12px 22px rgba(255, 255, 255, 0.18),
+    0 -30px 54px rgba(255, 255, 255, 0.14),
+    0 4px 14px rgba(255, 255, 255, 0.1);
+  transform-origin: center bottom;
+  animation: bh-lens 6.5s ease-in-out infinite;
+  will-change: transform, filter;
+}
+/* 柔和向黑洞拉伸 + 轻度模糊（仍可识读） */
+@keyframes bh-lens {
+  0%, 100% {
+    transform: translateY(0) scaleY(1);
+    filter: blur(0.35px);
+  }
+  50% {
+    transform: translateY(-5px) scaleY(1.04);
+    filter: blur(1.1px);
+  }
+}
+.sub {
+  margin-top: 16px;
+  font-size: clamp(13.5px, 1.6vw, 15.5px);
+  line-height: 2;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.6);
+}
+.sub b {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+}
+
+/* ---------- 返回原点 ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 34px;
+  padding: 14px 42px;
+  border: 1.5px solid rgba(255, 255, 255, 0.78);
+  border-radius: 999px;
+  color: #f6f7f8;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.35s ease, color 0.35s ease, box-shadow 0.35s ease,
+    letter-spacing 0.35s ease, border-color 0.35s ease;
+}
+.btn:hover {
+  background: #f4f4f4;
+  border-color: #f4f4f4;
+  color: #17181a;
+  letter-spacing: 0.2em;
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.32);
+}
+.btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 4px;
+}
+.btn svg {
+  transition: transform 0.35s ease;
+}
+.btn:hover svg {
+  transform: translateX(-3px);
+}
+
+/* ---------- 矮视口压缩：保证「返回原点」始终同屏可见可点 ---------- */
+@media (max-height: 900px) {
+  .page {
+    padding-top: 24px;
+    padding-bottom: 26px;
+  }
+  .textBlock {
+    margin-top: clamp(10px, 3.2vh, 26px);
+  }
+  .btn {
+    margin-top: clamp(14px, 3.6vh, 28px);
+  }
+}
+
+@media (max-height: 760px) {
+  .hole {
+    width: min(300px, 82vw, 46vh);
+    height: min(300px, 82vw, 46vh);
+  }
+  .title {
+    font-size: clamp(64px, 21vh, 150px);
+  }
+  .sub {
+    margin-top: 10px;
+  }
+}
+
+@media (max-height: 620px) {
+  .page {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+  .hole {
+    width: min(250px, 82vw, 42vh);
+    height: min(250px, 82vw, 42vh);
+  }
+  .title {
+    font-size: clamp(48px, 17vh, 110px);
+  }
+  .eyebrow {
+    margin-bottom: 6px;
+  }
+  .btn {
+    padding: 10px 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave, .disc, .title, .hole {
+    animation: none;
+  }
+}
