@@ -109,6 +109,8 @@ const LOUPE_CELL = 12
 const LOUPE_PX = LOUPE_SIZE * LOUPE_CELL
 /** 尚未导入数据库的毛布种类（折叠展示，仅提示不可选） */
 const PENDING_KINDS = ["兔毛", "银狐绒", "麂皮"]
+/** 商家×种类组合开关键：同商家不同毛种类（如海鲜毛长毛 / 海鲜毛弹力短毛）独立开合 */
+const kvKey = (vendor: string, kind: string) => `${vendor}\u0000${kind}`
 
 export default function UnifiedSampler() {
   const { t, lang } = useLanguage();
@@ -132,8 +134,8 @@ export default function UnifiedSampler() {
   const [fabrics, setFabrics] = useState<NormalizedFabric[]>([])
   const [dataSource, setDataSource] = useState<"loading" | "sample" | "external">("loading")
 
-  // ===== 数据库筛选：商家开关（默认全部开启，关闭后不出现在匹配结果）=====
-  const [vendorOn, setVendorOn] = useState<Record<string, boolean>>({})
+  // ===== 数据库筛选：商家×种类组合开关（默认全部开启，关闭后不出现在匹配结果）=====
+  const [kvOn, setKvOn] = useState<Record<string, boolean>>({})
   const [dbOpen, setDbOpen] = useState(false)
   const [moreKindsOpen, setMoreKindsOpen] = useState(false)
 
@@ -204,18 +206,19 @@ export default function UnifiedSampler() {
     statusTimerRef.current = setTimeout(() => setStatus(""), 5000)
   }, [])
 
-  // ===== 数据库筛选派生：商家清单 / 开启商家 / 种类分组 / 全量判断 =====
+  // ===== 数据库筛选派生：商家清单 / 组合开关 / 种类分组 / 全量判断 =====
   const vendorList = useMemo(() => [...new Set(fabrics.map((f) => f.vendor))], [fabrics])
-  // 关闭的商家完全不参与匹配（含预览 TopN 与计数）
+  // 关闭的组合完全不参与匹配（含预览 TopN 与计数）
   const activeFabrics = useMemo(
-    () => fabrics.filter((f) => vendorOn[f.vendor] !== false),
-    [fabrics, vendorOn]
+    () => fabrics.filter((f) => kvOn[kvKey(f.vendor, f.fabricKind)] !== false),
+    [fabrics, kvOn]
   )
-  const allVendorsOn = useMemo(
-    () => vendorList.length > 0 && vendorList.every((v) => vendorOn[v] !== false),
-    [vendorList, vendorOn]
-  )
-  // 商家按 fabricKind 分组（真实库均为"长毛"；示例数据含多种类用于开发演示）
+  // 全部组合（商家×种类）开启才视为「全量」
+  const allVendorsOn = useMemo(() => {
+    const keys = [...new Set(fabrics.map((f) => kvKey(f.vendor, f.fabricKind)))]
+    return keys.length > 0 && keys.every((k) => kvOn[k] !== false)
+  }, [fabrics, kvOn])
+  // 商家按 fabricKind 分组（组内每行为商家×种类组合；同商家可跨多种类）
   const kindGroups = useMemo(() => {
     const byKind = new Map<string, { vendor: string; count: number }[]>()
     for (const f of fabrics) {
@@ -228,20 +231,21 @@ export default function UnifiedSampler() {
     return [...byKind.entries()].map(([kind, vendors]) => ({ kind, vendors }))
   }, [fabrics])
 
-  const toggleVendor = useCallback(
-    (vendor: string) => {
-      setVendorOn((prev) => {
-        const currentlyOn = prev[vendor] !== false
-        // 关闭最后一个开启商家 → 拒绝（毛布色库不能为空）
+  const toggleRow = useCallback(
+    (vendor: string, kind: string) => {
+      const key = kvKey(vendor, kind)
+      setKvOn((prev) => {
+        const currentlyOn = prev[key] !== false
+        // 关闭最后一个开启组合 → 拒绝（毛布色库不能为空）
         if (currentlyOn) {
           const onCount = Object.values(prev).filter((v) => v !== false).length
           if (onCount <= 1) {
             showStatus(t("sampler.status.keepOneVendor"))
             return prev
           }
-          return { ...prev, [vendor]: false }
+          return { ...prev, [key]: false }
         }
-        return { ...prev, [vendor]: true }
+        return { ...prev, [key]: true }
       })
     },
     [showStatus, t]
@@ -304,8 +308,10 @@ export default function UnifiedSampler() {
         pantoneCount: PANTONE_DATA.length,
         fabricCount: fabrics.length,
         fabricSource: dataSource,
-        vendors: Object.keys(vendorOn),
-        vendorsOn: Object.keys(vendorOn).filter((v) => vendorOn[v]),
+        vendors: vendorList,
+        vendorsOn: [
+          ...new Set(fabrics.filter((f) => kvOn[kvKey(f.vendor, f.fabricKind)] !== false).map((f) => f.vendor)),
+        ],
       },
       points: points.map((p, idx) => {
         const d = pointDerived.get(p.id)
@@ -330,7 +336,7 @@ export default function UnifiedSampler() {
         }
       }),
     }
-  }, [points, pointDerived, imageSize, fileName, fabrics, vendorOn, dataSource])
+  }, [points, pointDerived, imageSize, fileName, fabrics, vendorList, kvOn, dataSource])
 
   // 容器尺寸监听
   useEffect(() => {
@@ -378,10 +384,10 @@ export default function UnifiedSampler() {
       if (cancelled) return
       setFabrics(result.fabrics)
       setDataSource(result.external ? "external" : "sample")
-      // 默认全部开启（数据库按钮 → 全量）
-      const vendors = [...new Set(result.fabrics.map((f) => f.vendor))]
-      setVendorOn(Object.fromEntries(vendors.map((v) => [v, true])))
-      const vendorCount = vendors.length
+      // 默认全部开启（数据库按钮 → 全量；按 商家×种类 组合初始化）
+      const kvRows = [...new Set(result.fabrics.map((f) => kvKey(f.vendor, f.fabricKind)))]
+      setKvOn(Object.fromEntries(kvRows.map((k) => [k, true])))
+      const vendorCount = new Set(result.fabrics.map((f) => f.vendor)).size
       // 语言切换后本 effect 会随 lang 重跑：仅在空闲状态（未上图/未选点）才刷新提示文案
       if (!imageLoadedRef.current && pointCountRef.current === 0) {
         showStatus(
@@ -920,23 +926,27 @@ export default function UnifiedSampler() {
 
   // ===== 渲染 =====
   const hasImage = imageUrl && imageSize && fitRect
-  // 数据库按钮 hover 概要
+  // 数据库按钮 hover 概要（统计单位为「商家×种类」组合行）
   const dbSummary = useMemo(() => {
     if (dataSource === "loading") return t("sampler.db.loadingSummary")
-    const onCount = vendorList.filter((v) => vendorOn[v] !== false).length
+    const seriesCount = kindGroups.reduce((n, g) => n + g.vendors.length, 0)
+    const onCount = kindGroups.reduce(
+      (n, g) => n + g.vendors.filter((v) => kvOn[kvKey(v.vendor, g.kind)] !== false).length,
+      0
+    )
     const detail = kindGroups
       .map((g) => {
-        const on = g.vendors.filter((v) => vendorOn[v.vendor] !== false).length
+        const on = g.vendors.filter((v) => kvOn[kvKey(v.vendor, g.kind)] !== false).length
         return fill(t("sampler.db.kindSummary"), { kind: g.kind, on, total: g.vendors.length })
       })
       .join(t("sampler.db.summarySep"))
     return fill(t("sampler.db.summary"), {
       pantone: PANTONE_DATA.length,
-      vendor: vendorList.length,
+      vendor: seriesCount,
       on: onCount,
       detail,
     })
-  }, [dataSource, vendorList, vendorOn, kindGroups, t])
+  }, [dataSource, kindGroups, kvOn, t])
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-0 lg:h-full">
@@ -1040,14 +1050,14 @@ export default function UnifiedSampler() {
                         </p>
                         <div className="rounded-xl border border-neutral-100 overflow-hidden">
                           {g.vendors.map((v) => {
-                            const on = vendorOn[v.vendor] !== false
+                            const on = kvOn[kvKey(v.vendor, g.kind)] !== false
                             return (
                               <button
-                                key={v.vendor}
+                                key={kvKey(v.vendor, g.kind)}
                                 type="button"
                                 role="switch"
                                 aria-checked={on}
-                                onClick={() => toggleVendor(v.vendor)}
+                                onClick={() => toggleRow(v.vendor, g.kind)}
                                 title={on ? t("sampler.fabricLib.vendorOnTitle") : t("sampler.fabricLib.vendorOffTitle")}
                                 className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left transition-colors cursor-pointer ${
                                   on ? "bg-white hover:bg-emerald-50/60" : "bg-neutral-50 hover:bg-neutral-100"

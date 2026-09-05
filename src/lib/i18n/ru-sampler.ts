@@ -47,7 +47,7 @@ export const RU_SAMPLER: Record<string, string> = {
   'sampler.db.custom': 'Пользовательские',
   'sampler.db.loadingSummary': 'Загрузка базы данных…',
   'sampler.db.summary':
-    'База данных · эталонов Pantone — {pantone} · поставщиков — {vendor} (включено — {on}): {detail}',
+    'База данных · эталонов Pantone — {pantone} · серий тканей — {vendor} (включено — {on}): {detail}',
   'sampler.db.kindSummary': '{kind}: включено {on} из {total}',
   'sampler.db.summarySep': '; ',
   'sampler.db.mobileTitle': 'Фильтр базы данных',
@@ -60,8 +60,8 @@ export const RU_SAMPLER: Record<string, string> = {
   // ===== Библиотека меховых тканей =====
   'sampler.fabricLib.label': 'Библиотека меховых тканей',
   'sampler.fabricLib.kindPrefix': 'Вид · {kind}',
-  'sampler.fabricLib.vendorOffTitle': 'Нажмите, чтобы включить этого поставщика',
-  'sampler.fabricLib.vendorOnTitle': 'Нажмите, чтобы отключить этого поставщика',
+  'sampler.fabricLib.vendorOffTitle': 'Нажмите, чтобы включить эту серию',
+  'sampler.fabricLib.vendorOnTitle': 'Нажмите, чтобы отключить эту серию',
   'sampler.fabricLib.colorCount': 'цветов — {count}',
   'sampler.fabricLib.moreKinds': 'Другие виды (пока не включены)',
   'sampler.fabricLib.notImported': 'Не импортировано',

@@ -21,7 +21,7 @@ export const EN_SAMPLER: Record<string, string> = {
   'sampler.db.custom': 'Custom',
   'sampler.db.loadingSummary': 'Loading database…',
   'sampler.db.summary':
-    'Database · {pantone} Pantone swatches · {vendor} vendors ({on} enabled): {detail}',
+    'Database · {pantone} Pantone swatches · {vendor} fabric series ({on} on): {detail}',
   'sampler.db.kindSummary': '{kind} {on}/{total} enabled',
   'sampler.db.summarySep': ', ',
   'sampler.db.mobileTitle': 'Database Filter',
@@ -34,8 +34,8 @@ export const EN_SAMPLER: Record<string, string> = {
   // ===== Fabric library panel =====
   'sampler.fabricLib.label': 'Fabric Library',
   'sampler.fabricLib.kindPrefix': 'Kind · {kind}',
-  'sampler.fabricLib.vendorOffTitle': 'Click to enable this vendor',
-  'sampler.fabricLib.vendorOnTitle': 'Click to disable this vendor',
+  'sampler.fabricLib.vendorOffTitle': 'Click to enable this series',
+  'sampler.fabricLib.vendorOnTitle': 'Click to disable this series',
   'sampler.fabricLib.colorCount': '{count} colors',
   'sampler.fabricLib.moreKinds': 'More kinds (not enabled yet)',
   'sampler.fabricLib.notImported': 'Not imported',

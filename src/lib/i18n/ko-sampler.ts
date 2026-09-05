@@ -34,8 +34,8 @@ export const KO_SAMPLER: Record<string, string> = {
   'sampler.db.custom': '사용자 지정',
   'sampler.db.loadingSummary': '데이터베이스 불러오는 중…',
   'sampler.db.summary':
-    '데이터베이스 · Pantone {pantone}개 · 업체 {vendor}곳(활성 {on}곳): {detail}',
-  'sampler.db.kindSummary': '{kind} {on}/{total}곳 활성',
+    '데이터베이스 · Pantone {pantone}개 · 원단 시리즈 {vendor}개(활성 {on}개): {detail}',
+  'sampler.db.kindSummary': '{kind} {on}/{total}개 활성',
   'sampler.db.summarySep': ', ',
   'sampler.db.mobileTitle': '데이터베이스 필터',
   'sampler.db.closePanel': '데이터베이스 패널 닫기',
@@ -47,8 +47,8 @@ export const KO_SAMPLER: Record<string, string> = {
   // ===== 퍼 원단 라이브러리 패널 =====
   'sampler.fabricLib.label': '퍼 원단 라이브러리',
   'sampler.fabricLib.kindPrefix': '종류 · {kind}',
-  'sampler.fabricLib.vendorOffTitle': '클릭하여 이 업체 활성화',
-  'sampler.fabricLib.vendorOnTitle': '클릭하여 이 업체 비활성화',
+  'sampler.fabricLib.vendorOffTitle': '클릭하여 이 시리즈 활성화',
+  'sampler.fabricLib.vendorOnTitle': '클릭하여 이 시리즈 비활성화',
   'sampler.fabricLib.colorCount': '{count}색',
   'sampler.fabricLib.moreKinds': '추가 종류(아직 활성화되지 않음)',
   'sampler.fabricLib.notImported': '가져오지 않음',

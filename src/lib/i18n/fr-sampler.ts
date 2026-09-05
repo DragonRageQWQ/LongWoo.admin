@@ -33,8 +33,8 @@ export const FR_SAMPLER: Record<string, string> = {
   'sampler.db.custom': 'Personnalisé',
   'sampler.db.loadingSummary': 'Chargement de la base de données…',
   'sampler.db.summary':
-    'Base de données · {pantone} références Pantone · {vendor} fournisseurs ({on} activés) : {detail}',
-  'sampler.db.kindSummary': '{kind} : {on}/{total} activés',
+    'Base de données · {pantone} références Pantone · {vendor} séries de tissus ({on} activées) : {detail}',
+  'sampler.db.kindSummary': '{kind} : {on}/{total} activées',
   'sampler.db.summarySep': ', ',
   'sampler.db.mobileTitle': 'Filtre de la base de données',
   'sampler.db.closePanel': 'Fermer le panneau de la base de données',
@@ -46,8 +46,8 @@ export const FR_SAMPLER: Record<string, string> = {
   // ===== Panneau Bibliothèque de tissus de fourrure =====
   'sampler.fabricLib.label': 'Bibliothèque de tissus de fourrure',
   'sampler.fabricLib.kindPrefix': 'Type · {kind}',
-  'sampler.fabricLib.vendorOffTitle': 'Cliquez pour activer ce fournisseur',
-  'sampler.fabricLib.vendorOnTitle': 'Cliquez pour désactiver ce fournisseur',
+  'sampler.fabricLib.vendorOffTitle': 'Cliquez pour activer cette série',
+  'sampler.fabricLib.vendorOnTitle': 'Cliquez pour désactiver cette série',
   'sampler.fabricLib.colorCount': '{count} couleurs',
   'sampler.fabricLib.moreKinds': 'Autres types (non activés pour le moment)',
   'sampler.fabricLib.notImported': 'Non importé',
