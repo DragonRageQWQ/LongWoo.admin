@@ -30,7 +30,8 @@ describe("毛布数据库（public/fabric/fabric-data.json）", () => {
     expect(counts.get("似水毛")).toBe(93);
     expect(counts.get("冰淇淋")).toBe(94);
     expect(counts.get("软糖鲨")).toBe(103);
-    expect(raw).toHaveLength(789);
+    expect(counts.get("吱吱毛")).toBe(36);
+    expect(raw).toHaveLength(825);
   });
 
   it("id 唯一且 cid 合法", () => {
