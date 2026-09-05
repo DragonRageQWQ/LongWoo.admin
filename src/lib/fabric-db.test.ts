@@ -24,11 +24,13 @@ describe("毛布数据库（public/fabric/fabric-data.json）", () => {
     expect(counts.get("年糕毛")).toBe(43);
     expect(counts.get("犬物语")).toBe(71);
     expect(counts.get("月亮毛")).toBe(102);
-    expect(counts.get("海鲜毛")).toBe(68);
+    expect(counts.get("海鲜毛")).toBe(108);
     expect(counts.get("柔光狐")).toBe(50);
     expect(counts.get("瑶光狐")).toBe(54);
     expect(counts.get("似水毛")).toBe(93);
-    expect(raw).toHaveLength(552);
+    expect(counts.get("冰淇淋")).toBe(94);
+    expect(counts.get("软糖鲨")).toBe(103);
+    expect(raw).toHaveLength(789);
   });
 
   it("id 唯一且 cid 合法", () => {

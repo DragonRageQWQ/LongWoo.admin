@@ -108,7 +108,7 @@ const LOUPE_SIZE = 7
 const LOUPE_CELL = 12
 const LOUPE_PX = LOUPE_SIZE * LOUPE_CELL
 /** 尚未导入数据库的毛布种类（折叠展示，仅提示不可选） */
-const PENDING_KINDS = ["弹力短毛", "兔毛", "银狐绒", "麂皮"]
+const PENDING_KINDS = ["兔毛", "银狐绒", "麂皮"]
 
 export default function UnifiedSampler() {
   const { t, lang } = useLanguage();
